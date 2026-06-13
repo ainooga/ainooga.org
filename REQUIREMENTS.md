@@ -1,6 +1,56 @@
 # Club Site — Requirements
 
-## 1. Overview
+## 1. Identity & Brand
+
+### 1.1 Club description
+
+**AI Nooga** is a Chattanooga-based AI club centered on four pillars:
+
+| Pillar | Description |
+|--------|-------------|
+| **Education** | Hands-on workshops, study groups, technical deep-dives. Demystify AI for all skill levels. |
+| **Policy Influence** | Inform local/state policy on AI regulation, economic development, workforce training. Position Chattanooga as a thoughtful AI hub. |
+| **Research** | Collaborative projects, paper discussions, connecting academic researchers with practitioners. |
+| **Networking** | Social events, mixers, mentorship. Build the human fabric of Chattanooga's AI community. |
+
+### 1.2 Core values
+
+- **Face-to-face is primary.** Digital presence serves IRL connection, not replaces it. The site exists to drive people to events, conversations, and relationships.
+- **High signal, low noise.** Every page, every component justifies its existence. No clutter.
+- **Chattanooga pride.** The site belongs to Chattanooga's specific character — "Gig City", Scenic City, innovation district, Tennessee River, bridges, industrial heritage revitalized.
+
+### 1.3 Design brief
+
+The site must look like a billion-dollar design firm (Pentagram, Collins, Instrument) created it for a high-end AI club. Premium, refined, warm but not cold-tech. Think: *monocle magazine meets seriously good software.*
+
+**Design principles:**
+
+1. **Typography-first.** Editorial layouts. Generous type scale. A refined serif for headings signals intellectual authority. A clean sans for body ensures readability.
+2. **Warmth, not sterility.** Off-white backgrounds, subtle texture, warm accent colors. Avoid the cold blue-white of typical tech.
+3. **Generous whitespace.** Content breathes. Padding is luxurious, not cramped.
+4. **Subtle motion.** Micro-interactions on hover, smooth page transitions, skeleton loading — but no gratuitous animation.
+5. **Human photography.** Events show people face-to-face, engaged, present. No stock robot hands touching glowing brains.
+6. **Chattanooga in the details.** Color palette nods to the river, the bridges, the copper/metal of the industrial past. Not literal iconography.
+
+### 1.4 Sponsorship program
+
+The club will solicit sponsorships from:
+
+- **Local businesses** — tech companies, law firms, banks, real estate, healthcare organizations with AI interests
+- **Benevolent individuals** — Chattanooga philanthropists who want to build the city's AI talent pipeline
+
+Sponsorship tiers and benefits are defined in the sponsor content model (see 3.6). A dedicated `/sponsor` page explains the program with a clear call-to-action.
+
+### 1.5 Key content (immediate)
+
+**Event: Train a Language Model from Scratch**
+- Date: June 20, 2026
+- Location: The Enterprise Center, Chattanooga
+- Format: Hands-on workshop — build, train, and evaluate a small language model
+
+---
+
+## 2. Overview
 
 Server-less SPA for a club. Content in markdown + frontmatter, compiled to JSON during build. Svelte 5 SPA served from static hosting (GitHub Pages, Cloudflare Pages, Netlify). No runtime server, no database, no API.
 
@@ -8,7 +58,8 @@ Content changes flow: `edit markdown → commit → push → build → deploy`.
 
 ---
 
-## 2. Architecture
+
+## 3. Architecture
 
 ```
 ┌────────────────────────────────────────────────┐
@@ -18,7 +69,8 @@ Content changes flow: `edit markdown → commit → push → build → deploy`.
 │  ├──posts/*.md     ├──build.ts       ├──lib/      │
 │  ├──events/*.md    ├──validate.ts    ├──routes/   │
 │  ├──members/*.md   ├──images.ts      ├──app.html  │
-│  └──site.yml       └──types.ts       └──main.ts   │
+│  ├──sponsors/*.md  └──types.ts       └──main.ts   │
+│  └──site.yml                                       │
 │                                                   │
 │  ┌──────────────── build ───────────────────┐    │
 │  │  gray-matter → validate → sharp → emit   │    │
@@ -33,27 +85,29 @@ Content changes flow: `edit markdown → commit → push → build → deploy`.
 └────────────────────────────────────────────────┘
 ```
 
-### Key decisions
+Note: `scripts/validate.ts` handled by parse stage. `scripts/render.ts` separated. `content/sponsors/` added for sponsorship program.
+
+### 3.1 Key decisions
 
 | Decision | Choice | Rationale |
 |----------|--------|-----------|
 | Framework | Svelte 5 (SPA via Vite) | Lowest JS overhead, fine-grained reactivity (`$state`, `$derived`) |
-| Router | svelte-spa-router or page.js | Client-side hash/pushstate routing, no SSR needed |
+| Router | svelte-spa-router | Client-side hash routing, no SSR needed, well-maintained |
 | Content source | Markdown + frontmatter | Human-writable, git-friendly, universal parse |
 | Content transport | Static JSON files | Pre-rendered at build, fetch-on-demand at runtime |
 | Build | Custom TypeScript scripts | No framework lock-in, full control, no hidden magic |
 | Image processing | sharp | Fast, proven, resizes + converts at build |
-| Hosting | Static file server | Cloudflare Pages (preferred) or GitHub Pages |
+| Hosting | Cloudflare Pages | Preferred over GitHub Pages for flexibility, faster global CDN |
 
 ---
 
-## 3. Content Model
+## 4. Content Model
 
-### 3.1 Site metadata — `content/site.yml`
+### 4.1 Site metadata — `content/site.yml`
 
 ```yaml
-title: Ainooga Club
-description: A community for makers and tinkerers
+title: AI Nooga
+description: Chattanooga's AI club — education, policy, research, networking
 url: https://ainooga.org
 theme:
   primary: "#3b82f6"
@@ -67,7 +121,7 @@ nav:
     path: /members
 ```
 
-### 3.2 Post — `content/posts/YYYY-MM-DD-slug.md`
+### 4.2 Post — `content/posts/YYYY-MM-DD-slug.md`
 
 ```yaml
 ---
@@ -84,7 +138,7 @@ Markdown body here. Supports **formatting**, images, links.
 ![alt](/images/workshop-setup.jpg)
 ```
 
-### 3.3 Event — `content/events/YYYY-MM-DD-slug.md`
+### 4.3 Event — `content/events/YYYY-MM-DD-slug.md`
 
 ```yaml
 ---
@@ -99,7 +153,7 @@ status: published
 ---
 ```
 
-### 3.4 Member — `content/members/slug.md`
+### 4.4 Member — `content/members/slug.md`
 
 ```yaml
 ---
@@ -115,7 +169,31 @@ links:
 Bio in markdown — optional, shown on member detail page.
 ```
 
-### 3.5 Frontmatter validation — strict schema, no silent errors
+### 4.5 Sponsor — `content/sponsors/slug.md`
+
+```yaml
+---
+name: Enterprise Center
+tier: platinum    # platinum | gold | silver | bronze | community
+since: 2025-01-01
+url: https://enterprisecenter.org
+logo: ./images/sponsors/enterprise-center.png
+description: The Enterprise Center drives technology-led economic development in Chattanooga.
+featured: true     # Show on home page sponsor bar
+---
+```
+
+Tier definitions:
+
+| Tier | Annual contribution | Benefits |
+|------|--------------------|----------|
+| Platinum | $10,000+ | Hero logo on homepage + sponsor page, named in all event materials, dedicated event sponsorship option, mention in newsletter |
+| Gold | $5,000+ | Logo on sponsor page, named in event materials, newsletter mention |
+| Silver | $2,000+ | Logo on sponsor page, newsletter mention |
+| Bronze | $500+ | Name on sponsor page |
+| Community | In-kind | Acknowledged on sponsor page |
+
+### 4.6 Frontmatter validation — strict schema, no silent errors
 
 All frontmatter validated at build against Zod schemas. Build fails hard — no partial output, no fallback defaults, no silent swallows.
 
@@ -162,11 +240,11 @@ Zod error formatting uses `zod-validation-error` for human-readable messages. Th
 
 ---
 
-## 4. Build Pipeline
+## 5. Build Pipeline
 
 Single script entry point: `npm run build:content`.
 
-### 4.1 Stages
+### 5.1 Stages
 
 | Stage | Script | Responsibility |
 |-------|--------|----------------|
@@ -176,7 +254,7 @@ Single script entry point: `npm run build:content`.
 | 4. Emit | `scripts/emit.ts` | Write per-doc JSON + index JSON to `static/data/` |
 | 5. Verify | `scripts/verify.ts` | Validate output JSON, check for broken image refs |
 
-### 4.2 Output JSON structure
+### 5.2 Output JSON structure
 
 **Index file** — e.g. `static/data/posts/index.json`:
 
@@ -224,7 +302,7 @@ Single script entry point: `npm run build:content`.
 }
 ```
 
-### 4.3 Image processing rules
+### 5.3 Image processing rules
 
 | Source format | Output formats | Sizes |
 |---------------|----------------|-------|
@@ -237,28 +315,30 @@ Image references in markdown bodies and frontmatter (banner, avatar) rewritten t
 
 ---
 
-## 5. SPA Structure
+## 6. SPA Structure
 
-### 5.1 Route design
+### 6.1 Route design
 
 | Route | Content | Loads |
 |-------|---------|-------|
-| `/` | Landing / recent posts | `data/posts/index.json` |
+| `/` | Landing / hero + recent events + posts | `data/posts/index.json`, `data/events/index.json` |
 | `/posts` | Post list | `data/posts/index.json` |
 | `/posts/:slug` | Post detail | `data/posts/:slug.json` |
 | `/events` | Event list (past/future) | `data/events/index.json` |
 | `/events/:slug` | Event detail | `data/events/:slug.json` |
 | `/members` | Member directory | `data/members/index.json` |
 | `/members/:slug` | Member detail | `data/members/:slug.json` |
+| `/sponsor` | Sponsorship tiers, benefits, CTA | `data/sponsors/index.json` |
+| `/about` | Club mission, pillars, team | Static content in page |
 
-### 5.2 Progressive loading contract
+### 6.2 Progressive loading contract
 
 - List pages fetch only index JSON (lightweight, contains excerpts)
 - Detail pages fetch individual doc JSON on navigation
 - Prefetch detail JSON on hover / link intersection (optional enhancement)
 - No page requires loading all documents at once
 
-### 5.3 Component tree (outline)
+### 6.3 Component tree (outline)
 
 ```
 App.svelte
@@ -278,7 +358,7 @@ App.svelte
 └── OfflineBanner.svelte       — placeholder for future PWA
 ```
 
-### 5.4 CSS management — semantic styles, design tokens
+### 6.4 CSS management — semantic styles, design tokens
 
 CSS uses **semantic class names** (what component IS) not utility classes (what it LOOKS like). No Tailwind, no utility-first system.
 
@@ -335,9 +415,9 @@ CSS uses **semantic class names** (what component IS) not utility classes (what 
 
 ---
 
-## 6. Developer Tooling
+## 7. Developer Tooling
 
-### 6.1 Language & build
+### 7.1 Language & build
 
 | Tool | Version | Purpose |
 |------|---------|---------|
@@ -347,7 +427,7 @@ CSS uses **semantic class names** (what component IS) not utility classes (what 
 | Vite | ~8.0 | Bundler + dev server |
 | @sveltejs/vite-plugin-svelte | ~7.1 | Svelte Vite integration |
 
-### 6.2 Lint & format
+### 7.2 Lint & format
 
 | Tool | Purpose |
 |------|---------|
@@ -379,7 +459,7 @@ CSS uses **semantic class names** (what component IS) not utility classes (what 
 }
 ```
 
-### 6.3 Complexity analysis
+### 7.3 Complexity analysis
 
 Replaces what `radon` provides in Python. Three levels:
 
@@ -400,7 +480,7 @@ Replaces what `radon` provides in Python. Three levels:
 | File lines | > 200 | > 300 |
 | Maintainability index | < 70 | < 60 |
 
-### 6.4 Testing
+### 7.4 Testing
 
 | Tool | Purpose |
 |------|---------|
@@ -544,7 +624,7 @@ tests/
 
 Component tests run server-side in jsdom (no browser needed). Playwright tests run in CI via `@playwright/test` with Chromium headless.
 
-### 6.5 Git hooks
+### 7.5 Git hooks
 
 Hooks live in `.githooks/` tracked in the repo (version controlled, shared across team). `simple-git-hooks` config in `package.json` points `core.hooksPath` to `.githooks/` so git picks them up automatically after `pnpm install`. The `scripts/setup.ts` script also runs the `simple-git-hooks` install step.
 
@@ -599,7 +679,7 @@ Source images are checked at commit time. Build pipeline (sharp) handles resizin
 }
 ```
 
-### 6.6 Package scripts
+### 7.6 Package scripts
 
 ```json
 {
@@ -623,7 +703,7 @@ Source images are checked at commit time. Build pipeline (sharp) handles resizin
 
 ---
 
-## 7. CI/CD
+## 8. CI/CD
 
 ### GitHub Actions workflow — `.github/workflows/deploy.yml`
 
@@ -676,7 +756,7 @@ If any gate fails, deploy stops. No broken content reaches production.
 
 ---
 
-## 8. Dependencies
+## 9. Dependencies
 
 ### Production
 
@@ -722,9 +802,9 @@ If any gate fails, deploy stops. No broken content reaches production.
 
 ---
 
-## 9. Project skeleton (once scaffolded)
+## 10. Project skeleton (once scaffolded)
 
-### 9.1 Setup (after node + pnpm installed)
+### 10.1 Setup (after node + pnpm installed)
 
 ```bash
 # One command — clones, installs, sets up git hooks
@@ -748,7 +828,7 @@ pnpm build:content
 **README.md must contain:**
 
 ```markdown
-# Ainooga Club
+# AI Nooga
 
 Static SPA for ainooga.org. Content in markdown, compiled to JSON at build.
 
@@ -778,7 +858,7 @@ Add markdown files to content/posts/, content/events/, content/members/.
 Frontmatter validated strictly at build. See content model in REQUIREMENTS.md.
 ```
 
-### 9.2 Setup script — `scripts/setup.ts`
+### 10.2 Setup script — `scripts/setup.ts`
 
 ```typescript
 import { execSync } from 'node:child_process';
@@ -813,7 +893,7 @@ main();
 }
 ```
 
-### 9.3 Developer workflow
+### 10.3 Developer workflow
 
 ```bash
 # First time
@@ -891,7 +971,7 @@ ainooga.org/
 
 ---
 
-## 10. Future milestones
+## 11. Future milestones
 
 | Milestone | When | What |
 |-----------|------|------|
@@ -904,7 +984,7 @@ ainooga.org/
 
 ---
 
-## 11. Constraints & non-goals
+## 12. Constraints & non-goals
 
 | Out of scope | Reason |
 |--------------|--------|
@@ -917,9 +997,9 @@ ainooga.org/
 
 ---
 
-## 12. Other considerations
+## 13. Other considerations
 
-### 12.1 SEO & social meta tags
+### 13.1 SEO & social meta tags
 
 SPA with no SSR means `og:title`, `og:image`, `twitter:card` are set once (the homepage) and stay fixed. Social shares of individual posts/events will show generic previews.
 
@@ -934,7 +1014,7 @@ SPA with no SSR means `og:title`, `og:image`, `twitter:card` are set once (the h
 
 **Recommendation for v1:** Critical-route pre-render. Add to build pipeline as an emit stage that writes `static/posts/<slug>/index.html` for recent posts. Extend later if social sharing becomes a priority.
 
-### 12.2 404 & error handling
+### 13.2 404 & error handling
 
 Every data fetch can fail (file missing, renamed slug, old URL bookmarked). Must handle gracefully:
 
@@ -958,7 +1038,7 @@ Every data fetch can fail (file missing, renamed slug, old URL bookmarked). Must
 {/await}
 ```
 
-### 12.3 Loading states
+### 13.3 Loading states
 
 Progressive loading means every route transition has at least one async fetch. Must show progress:
 
@@ -967,7 +1047,7 @@ Progressive loading means every route transition has at least one async fetch. M
 - **No spinners** — skeletons feel faster because they show structure upfront
 - **Prefetch on hover** — `<a>` link hover triggers `fetch()` for that JSON, data arrives before click. Svelte reactive store merges seamlessly.
 
-### 12.4 Accessibility (a11y)
+### 13.4 Accessibility (a11y)
 
 - **Focus management** — SPA route changes must move focus to the `<h1>` of the new page (not leave focus on the clicked link). Use `onMount` + `focus()` on a sentinel element.
 - **Skip link** — first focusable element on page, skip to main content
@@ -976,7 +1056,7 @@ Progressive loading means every route transition has at least one async fetch. M
 - **Color contrast** — tokens must meet WCAG AA (4.5:1 for body text). Verify against chosen `--color-primary` + `--color-bg` combo.
 - **Reduced motion** — `prefers-reduced-motion` respected in CSS transitions
 
-### 12.5 Client-side search
+### 13.5 Client-side search
 
 Once content grows beyond ~20 docs, users need search. Approach:
 
@@ -985,7 +1065,7 @@ Once content grows beyond ~20 docs, users need search. Approach:
 - Search index fetched and cached in memory on first search interaction (not on page load)
 - Filter results by tags, date range, content type
 
-### 12.6 Image size enforcement
+### 13.6 Image size enforcement
 
 Source images checked at two gates:
 
@@ -996,7 +1076,7 @@ Source images checked at two gates:
 
 500 KB limit covers typical 12MP phone photos saved at reasonable JPEG quality (~80). Keeps repo clone times fast. Build pipeline handles size optimization for production.
 
-### 12.7 Performance budget
+### 13.7 Performance budget
 
 | Asset | Budget (gzipped) |
 |-------|-------------------|
@@ -1008,6 +1088,6 @@ Source images checked at two gates:
 
 Enforce with `vite.config.ts` `rollupOptions.output.manualChunks`. Lighthouse CI check in pipeline (separate workflow, non-blocking).
 
-### 12.8 Image lazy loading
+### 13.8 Image lazy loading
 
 Images in markdown content (rendered to HTML) must use `loading="lazy"` by default. Banner images above the fold can use `loading="eager"` (configurable in frontmatter via `bannerLoading: eager`). The render stage adds `loading="lazy"` to all `<img>` tags unless overridden.
