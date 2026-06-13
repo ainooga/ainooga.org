@@ -1,0 +1,14 @@
+title: AI Nooga
+description: Chattanooga's AI club — education, policy, research, networking
+url: https://ainooga.org
+nav:
+  - label: Events
+    path: /events
+  - label: Posts
+    path: /posts
+  - label: Members
+    path: /members
+  - label: Sponsor
+    path: /sponsor
+  - label: About
+    path: /about

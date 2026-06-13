@@ -1,0 +1,25 @@
+#!/usr/bin/env bash
+set -e
+
+# Pre-commit hook: lint-staged + image size check
+
+# Run lint-staged
+npx lint-staged
+
+# Check staged image sizes
+MAX_SIZE=$((500 * 1024))
+OVERSIZED=""
+while read -r file; do
+  [ -z "$file" ] && continue
+  size=$(stat -f%z "$file" 2>/dev/null || stat -c%s "$file" 2>/dev/null)
+  if [ "$size" -gt "$MAX_SIZE" ]; then
+    OVERSIZED="$OVERSIZED\n  $file ($(( size / 1024 )) KB)"
+  fi
+done <<< "$(git diff --cached --name-only --diff-filter=ACM | grep -iE '\.(jpg|jpeg|png|gif)$' || true)"
+
+if [ -n "$OVERSIZED" ]; then
+  echo "Error: Images exceeding 500 KB cannot be committed."
+  echo "Resize or compress before committing:"
+  echo -e "$OVERSIZED"
+  exit 1
+fi
