@@ -9,6 +9,9 @@ export default defineConfig({
       $lib: resolve('./src/lib'),
     },
   },
+  preview: {
+    allowedHosts: ['ainooga.org', 'www.ainooga.org'],
+  },
   build: {
     outDir: 'dist',
     emptyOutDir: true,
