@@ -20,6 +20,12 @@ export default [
   },
   {
     files: ['src/**/*.ts', 'scripts/**/*.ts'],
+    languageOptions: {
+      parserOptions: {
+        project: true,
+        tsconfigRootDir: import.meta.dirname,
+      },
+    },
     rules: {
       '@typescript-eslint/no-explicit-any': 'error',
       '@typescript-eslint/strict-boolean-expressions': 'error',

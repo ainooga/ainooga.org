@@ -2,13 +2,13 @@ import { readFileSync, existsSync } from 'node:fs';
 import { globSync } from 'node:fs';
 import matter from 'gray-matter';
 import { z } from 'zod';
-import { fromZodError } from 'zod-validation-error';
 import {
   PostFrontmatter,
   EventFrontmatter,
   MemberFrontmatter,
   SponsorFrontmatter,
   SiteConfig,
+  type SiteConfigType,
   type ParsedDoc,
   type ContentType,
 } from './types.js';
@@ -48,11 +48,6 @@ function validateFrontmatter(
     return { data: result.data as Record<string, unknown>, errors: [] };
   }
 
-  const validationError = fromZodError(result.error, {
-    prefix: filePath,
-    prefixSeparator: ': ',
-  });
-
   const errors: FieldError[] = result.error.issues.map((issue) => ({
     filePath,
     field: issue.path.join('.'),
@@ -62,7 +57,7 @@ function validateFrontmatter(
   return { data, errors };
 }
 
-export function parseSiteConfig(): SiteConfig {
+export function parseSiteConfig(): SiteConfigType {
   const path = 'content/site.yml';
   if (!existsSync(path)) {
     throw new Error('content/site.yml not found');
@@ -91,7 +86,11 @@ export function parseAll(): { docs: ParsedDoc[]; errors: FieldError[] } {
       const raw = readFileSync(filePath, 'utf-8');
       const parsed = matter(raw);
       const slug = slugFromPath(filePath);
-      const { data, errors } = validateFrontmatter(type, parsed.data as Record<string, unknown>, filePath);
+      const { data, errors } = validateFrontmatter(
+        type,
+        parsed.data as Record<string, unknown>,
+        filePath,
+      );
       allErrors.push(...errors);
       if (errors.length === 0) {
         docs.push({ type, slug, frontmatter: data, body: parsed.content, filePath });

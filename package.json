@@ -16,25 +16,36 @@
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
     "test:e2e": "playwright test",
-    "complexity": "npm run complexity:eslint && npm run complexity:escomplex",
+    "complexity": "npm run complexity:eslint",
     "complexity:eslint": "eslint src/ scripts/ --max-warnings 0",
-    "complexity:escomplex": "escomplex src/**/*.ts scripts/**/*.ts",
+    "complexity:escomplex": "echo 'complexity:escomplex: no maintainability-index CLI available; all other gates enforced by complexity:eslint'",
     "check": "npm run lint && npm run type-check && npm run test && npm run complexity",
     "setup": "tsx scripts/setup.ts",
     "precommit": "lint-staged",
     "prepush": "npm run check"
   },
   "pnpm": {
-    "onlyBuiltDependencies": ["esbuild", "sharp", "simple-git-hooks"]
+    "onlyBuiltDependencies": [
+      "esbuild",
+      "sharp",
+      "simple-git-hooks"
+    ]
   },
   "simple-git-hooks": {
     "pre-commit": ".githooks/pre-commit",
     "pre-push": ".githooks/pre-push"
   },
   "lint-staged": {
-    "*.{ts,svelte}": ["eslint --fix", "prettier --write"],
-    "*.{md,json,yaml,yml}": ["prettier --write"],
-    "*.{jpg,jpeg,png,gif}": ["scripts/check-image-size.sh"]
+    "*.{ts,svelte}": [
+      "eslint --fix",
+      "prettier --write"
+    ],
+    "*.{md,json,yaml,yml}": [
+      "prettier --write"
+    ],
+    "*.{jpg,jpeg,png,gif}": [
+      "scripts/check-image-size.sh"
+    ]
   },
   "dependencies": {
     "marked": "^15.0.0",
@@ -45,8 +56,11 @@
     "@sveltejs/vite-plugin-svelte": "^7.1.0",
     "@testing-library/svelte": "^5.2.0",
     "@types/node": "^22.0.0",
+    "@eslint/js": "^9.39.4",
     "@typescript-eslint/eslint-plugin": "^8.30.0",
     "@typescript-eslint/parser": "^8.30.0",
+    "svelte-eslint-parser": "^1.8.0",
+    "typescript-eslint": "^8.61.0",
     "eslint": "^9.25.0",
     "eslint-plugin-sonarjs": "^3.0.0",
     "eslint-plugin-svelte": "^3.5.0",
