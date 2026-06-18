@@ -1,6 +1,7 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import Skeleton from '../components/Skeleton.svelte';
+  import { fetchData } from '$lib/fetch.ts';
 
   interface IndexItem {
     slug: string;
@@ -19,9 +20,7 @@
 
   async function load() {
     try {
-      const res = await fetch('/data/members/index.json');
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const data: ContentIndex = await res.json();
+      const data = await fetchData<ContentIndex>('/data/members/index.json');
       members = data.items;
     } catch (err) {
       error = err instanceof Error ? err.message : 'Failed to load';
@@ -38,14 +37,19 @@
 <div class="container">
   {#if loading}
     <div class="grid-3" style="margin-top: var(--space-xl)">
-      {#each [1,2,3,4,5,6] as _}
+      {#each [1, 2, 3, 4, 5, 6] as _, i (i)}
         <div class="card"><Skeleton height="6rem" /></div>
       {/each}
     </div>
   {:else if error}
-    <p class="error-msg">Could not load members. <button onclick={load} class="link-btn">Retry</button></p>
+    <p class="error-msg">
+      Could not load members. <button onclick={load} class="link-btn">Retry</button>
+    </p>
   {:else}
-    <div class="grid-3" style="margin-top: var(--space-xl); padding-bottom: var(--space-4xl)">
+    <div
+      class="grid-3"
+      style="margin-top: var(--space-xl); padding-bottom: var(--space-4xl)"
+    >
       {#each members as member (member.slug)}
         <a href="#/members/{member.slug}" class="member-card card">
           <div class="member-card__avatar">
@@ -55,7 +59,7 @@
             <h3 class="member-card__name">{member.title}</h3>
             {#if member.tags && member.tags.length > 0}
               <div class="cluster" style="margin-top: var(--space-xs)">
-                {#each member.tags.slice(0, 3) as tag}
+                {#each member.tags.slice(0, 3) as tag (tag)}
                   <span class="tag">{tag}</span>
                 {/each}
               </div>

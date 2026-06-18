@@ -1,6 +1,7 @@
 import { mkdirSync, writeFileSync } from 'node:fs';
-import { join, dirname } from 'node:path';
+import { join } from 'node:path';
 import type { ProcessedDoc, ContentType } from './types.js';
+import { getBuildVersion } from './version.js';
 
 interface IndexItem {
   slug: string;
@@ -49,7 +50,7 @@ function buildIndex(docs: ProcessedDoc[]): ContentIndex {
     items,
     meta: {
       total: items.length,
-      tags: [...tagSet].sort(),
+      tags: [...tagSet].sort((a, b) => a.localeCompare(b)),
     },
   };
 }
@@ -65,6 +66,14 @@ export function emitAll(docs: ProcessedDoc[]): void {
 
   const dataDir = 'static/data';
   mkdirSync(dataDir, { recursive: true });
+
+  // Write version file
+  const version = getBuildVersion();
+  const versionPath = join(dataDir, 'version.json');
+  writeFileSync(
+    versionPath,
+    JSON.stringify({ v: version, updatedAt: new Date().toISOString() }, null, 2),
+  );
 
   // Write per-doc JSON and collect for index
   for (const [type, typeDocs] of byType) {

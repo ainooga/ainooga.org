@@ -1,6 +1,7 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import Skeleton from '../components/Skeleton.svelte';
+  import { fetchData } from '$lib/fetch.ts';
 
   interface SponsorItem {
     slug: string;
@@ -19,7 +20,7 @@
 
   const tiers = ['platinum', 'gold', 'silver', 'bronze', 'community'] as const;
 
-  type Tier = typeof tiers[number];
+  type Tier = (typeof tiers)[number];
 
   const tierInfo: Record<Tier, { label: string; amount: string; color: string }> = {
     platinum: { label: 'Platinum', amount: '$10,000+', color: '#1B2A3C' },
@@ -50,7 +51,7 @@
       formError = 'Name and phone number required.';
       return;
     }
-    const phoneClean = formPhone.replace(/[\s\-\(\)]/g, '');
+    const phoneClean = formPhone.replace(/[\s()-]/g, '');
     if (phoneClean.length < 7) {
       formError = 'Enter a valid phone number.';
       return;
@@ -58,7 +59,6 @@
 
     formSubmitted = true;
     // In production: POST to a form handler or mail service
-    console.log('Contact request:', { name: formName, phone: formPhone, date: formDate, time: formTime });
   }
 
   function resetForm() {
@@ -73,9 +73,7 @@
 
   async function load() {
     try {
-      const res = await fetch('/data/sponsors/index.json');
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const data: ContentIndex = await res.json();
+      const data = await fetchData<ContentIndex>('/data/sponsors/index.json');
       sponsors = data.items;
     } catch (err) {
       error = err instanceof Error ? err.message : 'Failed to load';
@@ -91,8 +89,8 @@
   <p class="section__label" style="padding-top: var(--space-3xl)">Sponsorship</p>
   <h1 class="page-title">Support AI Nooga</h1>
   <p class="sponsor-page__intro">
-    AI Nooga is a volunteer-run club. Sponsorships from local businesses and benevolent individuals
-    make our events, workshops, and community programs possible.
+    AI Nooga is a volunteer-run club. Sponsorships from local businesses and benevolent
+    individuals make our events, workshops, and community programs possible.
   </p>
 
   <hr class="divider" />
@@ -103,15 +101,24 @@
     <div class="sponsor-page__reasons">
       <div class="reason">
         <h3>Invest in talent</h3>
-        <p>Chattanooga's AI community is growing. Sponsors get early access to the people who will shape the city's technology workforce.</p>
+        <p>
+          Chattanooga's AI community is growing. Sponsors get early access to the people
+          who will shape the city's technology workforce.
+        </p>
       </div>
       <div class="reason">
         <h3>Shape policy</h3>
-        <p>AI Nooga engages with local and state policy. Sponsors help ensure Chattanooga's voice is heard in AI governance conversations.</p>
+        <p>
+          AI Nooga engages with local and state policy. Sponsors help ensure Chattanooga's
+          voice is heard in AI governance conversations.
+        </p>
       </div>
       <div class="reason">
         <h3>Build community</h3>
-        <p>Your support makes free and low-cost events accessible to everyone. It's a direct investment in the city's intellectual fabric.</p>
+        <p>
+          Your support makes free and low-cost events accessible to everyone. It's a
+          direct investment in the city's intellectual fabric.
+        </p>
       </div>
     </div>
   </section>
@@ -122,7 +129,7 @@
     <p class="section__label">Tiers</p>
     <h2 class="section__title">Sponsorship levels</h2>
     <div class="tier-list" style="margin-top: var(--space-lg)">
-      {#each tiers as tier}
+      {#each tiers as tier (tier)}
         <div class="tier-item" style="border-left-color: {tierInfo[tier].color}">
           <div class="tier-item__header">
             <h3 class="tier-item__name">{tierInfo[tier].label}</h3>
@@ -158,14 +165,27 @@
     <p class="section__label">Current sponsors</p>
     <h2 class="section__title">Supported by</h2>
     {#if loading}
-      <div class="stack" style="margin-top: var(--space-lg)"><Skeleton height="3rem" width="200px" /></div>
+      <div class="stack" style="margin-top: var(--space-lg)">
+        <Skeleton height="3rem" width="200px" />
+      </div>
     {:else if error}
-      <p class="error-msg">Could not load sponsors. <button onclick={load} class="link-btn">Retry</button></p>
+      <p class="error-msg">
+        Could not load sponsors. <button onclick={load} class="link-btn">Retry</button>
+      </p>
     {:else}
       <div class="current-sponsors" style="margin-top: var(--space-lg)">
         {#each sponsors as sponsor (sponsor.slug)}
-          <a href={sponsor.url ?? '#'} class="sponsor-card card" target="_blank" rel="noopener">
-            <span class="sponsor-card__tier" style="color: {tierInfo[sponsor.tier as Tier]?.color ?? '#6B6560'}">{sponsor.tier}</span>
+          <a
+            href={sponsor.url ?? '#'}
+            class="sponsor-card card"
+            target="_blank"
+            rel="noopener"
+          >
+            <span
+              class="sponsor-card__tier"
+              style="color: {tierInfo[sponsor.tier as Tier]?.color ?? '#6B6560'}"
+              >{sponsor.tier}</span
+            >
             <h3 class="sponsor-card__name">{sponsor.title}</h3>
             {#if sponsor.description}
               <p class="sponsor-card__desc">{sponsor.description}</p>
@@ -183,7 +203,11 @@
       <div class="form-success">
         <h2 class="section__title">Thank you</h2>
         <p>We'll call you back at {formPhone} to discuss sponsorship opportunities.</p>
-        <button class="btn btn-outline" onclick={resetForm} style="margin-top: var(--space-lg)">Send another</button>
+        <button
+          class="btn btn-outline"
+          onclick={resetForm}
+          style="margin-top: var(--space-lg)">Send another</button
+        >
       </div>
     {:else if showForm}
       <p class="section__label">Contact us</p>
@@ -194,11 +218,23 @@
       <form class="contact-form" onsubmit={handleSubmit}>
         <label class="form-field">
           <span class="form-label">Name</span>
-          <input type="text" class="form-input" bind:value={formName} placeholder="Your name" required />
+          <input
+            type="text"
+            class="form-input"
+            bind:value={formName}
+            placeholder="Your name"
+            required
+          />
         </label>
         <label class="form-field">
           <span class="form-label">Phone number</span>
-          <input type="tel" class="form-input" bind:value={formPhone} placeholder="(423) 555-0123" required />
+          <input
+            type="tel"
+            class="form-input"
+            bind:value={formPhone}
+            placeholder="(423) 555-0123"
+            required
+          />
         </label>
         <label class="form-field">
           <span class="form-label">Best date to call</span>
@@ -213,15 +249,29 @@
         {/if}
         <div class="form-actions">
           <button type="submit" class="btn btn-primary">Send request</button>
-          <button type="button" class="btn btn-outline" onclick={() => { showForm = false; }}>Cancel</button>
+          <button
+            type="button"
+            class="btn btn-outline"
+            onclick={() => {
+              showForm = false;
+            }}>Cancel</button
+          >
         </div>
       </form>
     {:else}
       <div class="sponsor-cta">
         <p class="section__label">Get involved</p>
         <h2 class="section__title">Interested in sponsoring?</h2>
-        <p>Reach out and we'll call you back to discuss how your organization can support Chattanooga's AI community.</p>
-        <button class="btn btn-primary" onclick={() => { showForm = true; }}>Contact us</button>
+        <p>
+          Reach out and we'll call you back to discuss how your organization can support
+          Chattanooga's AI community.
+        </p>
+        <button
+          class="btn btn-primary"
+          onclick={() => {
+            showForm = true;
+          }}>Contact us</button
+        >
       </div>
     {/if}
   </section>

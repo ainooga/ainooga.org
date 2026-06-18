@@ -2,6 +2,7 @@ import { readFileSync, existsSync } from 'node:fs';
 import { globSync } from 'node:fs';
 import matter from 'gray-matter';
 import { z } from 'zod';
+import { fromZodError } from 'zod-validation-error';
 import {
   PostFrontmatter,
   EventFrontmatter,

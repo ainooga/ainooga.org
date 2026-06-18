@@ -2,6 +2,7 @@
   import { onMount } from 'svelte';
   import EventCard from '../components/EventCard.svelte';
   import Skeleton from '../components/Skeleton.svelte';
+  import { fetchData } from '$lib/fetch.ts';
 
   interface IndexItem {
     slug: string;
@@ -25,18 +26,15 @@
 
   async function load() {
     try {
-      const [eventsRes, postsRes] = await Promise.all([
-        fetch('/data/events/index.json'),
-        fetch('/data/posts/index.json'),
+      const [eventsData, postsData] = await Promise.all([
+        fetchData<ContentIndex>('/data/events/index.json'),
+        fetchData<ContentIndex>('/data/posts/index.json'),
       ]);
-      if (!eventsRes.ok) throw new Error(`Events: ${eventsRes.status}`);
-      if (!postsRes.ok) throw new Error(`Posts: ${postsRes.status}`);
-
-      const eventsData: ContentIndex = await eventsRes.json();
-      const postsData: ContentIndex = await postsRes.json();
 
       // Upcoming events first, then past
-      events = [...eventsData.items].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+      events = [...eventsData.items].sort(
+        (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime(),
+      );
 
       // Most recent posts first
       posts = [...postsData.items]
@@ -63,8 +61,8 @@
         Connect.
       </h1>
       <p class="hero__subtitle">
-        AI Nooga is a club for education, policy, research, and networking around artificial intelligence.
-        We meet in person, in Chattanooga.
+        AI Nooga is a club for education, policy, research, and networking around
+        artificial intelligence. We meet in person, in Chattanooga.
       </p>
       <div class="hero__actions">
         <a href="#/events" class="btn btn-primary">View events</a>
@@ -86,12 +84,12 @@
         <Skeleton height="4rem" />
       </div>
     {:else if error}
-      <p class="error-msg">Could not load events. <button onclick={load} class="link-btn">Retry</button></p>
+      <p class="error-msg">
+        Could not load events. <button onclick={load} class="link-btn">Retry</button>
+      </p>
     {:else}
-      {#each events as event, i}
-        {#if i === 0}
-          <EventCard {...event} />
-        {/if}
+      {#each events as event (event.slug)}
+        <EventCard {...event} />
       {/each}
     {/if}
   </div>
@@ -104,7 +102,7 @@
     <h2 class="section__title">All events</h2>
     <div class="grid-2" style="margin-top: var(--space-xl)">
       {#if loading}
-        {#each [1,2,3] as _}
+        {#each [1, 2, 3] as _, i (i)}
           <div class="card"><Skeleton height="6rem" /></div>
         {/each}
       {:else if error}
@@ -125,7 +123,7 @@
     <h2 class="section__title">Recent posts</h2>
     <div class="grid-3" style="margin-top: var(--space-xl)">
       {#if loading}
-        {#each [1,2,3] as _}
+        {#each [1, 2, 3] as _, i (i)}
           <div class="card"><Skeleton height="8rem" /></div>
         {/each}
       {:else if error}
@@ -133,7 +131,13 @@
       {:else}
         {#each posts as post (post.slug)}
           <a href="#/posts/{post.slug}" class="post-card card">
-            <time class="post-card__date">{new Date(post.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</time>
+            <time class="post-card__date"
+              >{new Date(post.date).toLocaleDateString('en-US', {
+                month: 'short',
+                day: 'numeric',
+                year: 'numeric',
+              })}</time
+            >
             <h3 class="post-card__title">{post.title}</h3>
             {#if post.excerpt}
               <p class="post-card__excerpt">{post.excerpt}</p>
@@ -154,10 +158,16 @@
     <p class="section__label">Sponsors</p>
     <h2 class="section__title">Supported by</h2>
     <p class="section__subtitle" style="margin-bottom: var(--space-xl)">
-      AI Nooga is made possible by organizations and individuals who believe in Chattanooga's AI future.
+      AI Nooga is made possible by organizations and individuals who believe in
+      Chattanooga's AI future.
     </p>
     <div class="sponsor-bar">
-      <a href="https://enterprisecenter.org" class="sponsor-item" target="_blank" rel="noopener">
+      <a
+        href="https://enterprisecenter.org"
+        class="sponsor-item"
+        target="_blank"
+        rel="noopener"
+      >
         <span class="sponsor-item__name">Enterprise Center</span>
         <span class="sponsor-item__tier">Platinum</span>
       </a>

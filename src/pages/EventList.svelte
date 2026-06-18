@@ -2,6 +2,7 @@
   import { onMount } from 'svelte';
   import EventCard from '../components/EventCard.svelte';
   import Skeleton from '../components/Skeleton.svelte';
+  import { fetchData } from '$lib/fetch.ts';
 
   interface IndexItem {
     slug: string;
@@ -25,13 +26,13 @@
 
   async function load() {
     try {
-      const res = await fetch('/data/events/index.json');
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const data: ContentIndex = await res.json();
+      const data = await fetchData<ContentIndex>('/data/events/index.json');
       const now = new Date();
-      upcoming = data.items.filter((e) => new Date(e.date) >= now)
+      upcoming = data.items
+        .filter((e) => new Date(e.date) >= now)
         .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
-      past = data.items.filter((e) => new Date(e.date) < now)
+      past = data.items
+        .filter((e) => new Date(e.date) < now)
         .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
     } catch (err) {
       error = err instanceof Error ? err.message : 'Failed to load';
@@ -53,7 +54,9 @@
       <Skeleton height="6rem" />
     </div>
   {:else if error}
-    <p class="error-msg">Could not load events. <button onclick={load} class="link-btn">Retry</button></p>
+    <p class="error-msg">
+      Could not load events. <button onclick={load} class="link-btn">Retry</button>
+    </p>
   {:else}
     {#if upcoming.length > 0}
       <section class="events-section">

@@ -3,6 +3,7 @@ import tseslint from 'typescript-eslint';
 import sonarjs from 'eslint-plugin-sonarjs';
 import sveltePlugin from 'eslint-plugin-svelte';
 import svelteParser from 'svelte-eslint-parser';
+import globals from 'globals';
 
 export default [
   eslint.configs.recommended,
@@ -16,10 +17,17 @@ export default [
       parserOptions: {
         parser: tseslint.parser,
       },
+      globals: {
+        ...globals.browser,
+      },
+    },
+    rules: {
+      'no-unused-vars': 'off',
+      '@typescript-eslint/no-unused-vars': ['error', { varsIgnorePattern: '^_', argsIgnorePattern: '^_' }],
     },
   },
   {
-    files: ['src/**/*.ts', 'scripts/**/*.ts'],
+    files: ['src/**/*.ts'],
     languageOptions: {
       parserOptions: {
         project: true,
@@ -38,6 +46,28 @@ export default [
       'max-lines-per-function': ['error', 50],
       'max-nested-callbacks': ['error', 3],
       'no-console': 'warn',
+    },
+  },
+  {
+    files: ['scripts/**/*.ts'],
+    languageOptions: {
+      parserOptions: {
+        project: true,
+        tsconfigRootDir: import.meta.dirname,
+      },
+    },
+    rules: {
+      '@typescript-eslint/no-explicit-any': 'error',
+      '@typescript-eslint/strict-boolean-expressions': 'error',
+      '@typescript-eslint/no-floating-promises': 'error',
+      'sonarjs/cognitive-complexity': ['error', 15],
+      'sonarjs/no-nested-template-literals': 'off',
+      'complexity': ['error', 10],
+      'max-depth': ['error', 5],
+      'max-lines': ['error', 300],
+      'max-lines-per-function': ['error', 50],
+      'max-nested-callbacks': ['error', 3],
+      'no-console': 'off',
     },
   },
   {

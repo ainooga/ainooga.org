@@ -21,7 +21,9 @@
   });
 
   function isActive(path: string): boolean {
-    return window.location.hash === `#${path}` || window.location.hash.startsWith(`#${path}/`);
+    return (
+      window.location.hash === `#${path}` || window.location.hash.startsWith(`#${path}/`)
+    );
   }
 </script>
 
@@ -32,7 +34,7 @@
       <span class="site-header__name">AI Nooga</span>
     </a>
     <nav class="site-header__nav" aria-label="Main navigation">
-      {#each navItems as item}
+      {#each navItems as item (item.path)}
         <a
           href="#{item.path}"
           class="site-header__link"
@@ -54,7 +56,9 @@
     backdrop-filter: blur(8px);
     -webkit-backdrop-filter: blur(8px);
     border-bottom: 1px solid transparent;
-    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+    transition:
+      border-color 0.2s ease,
+      box-shadow 0.2s ease;
   }
 
   .site-header--scrolled {
@@ -113,7 +117,9 @@
     text-decoration: none;
     padding: var(--space-xs) 0;
     border-bottom: 2px solid transparent;
-    transition: color 0.15s ease, border-color 0.15s ease;
+    transition:
+      color 0.15s ease,
+      border-color 0.15s ease;
   }
 
   .site-header__link:hover {
@@ -126,8 +132,14 @@
   }
 
   @media (max-width: 640px) {
-    .site-header__name { display: none; }
-    .site-header__nav { gap: var(--space-md); }
-    .site-header__link { font-size: var(--text-xs); }
+    .site-header__name {
+      display: none;
+    }
+    .site-header__nav {
+      gap: var(--space-md);
+    }
+    .site-header__link {
+      font-size: var(--text-xs);
+    }
   }
 </style>

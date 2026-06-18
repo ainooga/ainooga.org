@@ -19,16 +19,6 @@ function resolveImagePath(src: string): string {
   return `/images/${src}`;
 }
 
-function extractImagesFromHtml(html: string): ImageRef[] {
-  const images: ImageRef[] = [];
-  const imgRegex = /<img[^>]+src=["']([^"']+)["'][^>]*alt=["']([^"']*)["']/g;
-  let match;
-  while ((match = imgRegex.exec(html)) !== null) {
-    images.push({ src: match[1]!, alt: match[2]! });
-  }
-  return images;
-}
-
 export function renderDoc(doc: ParsedDoc): ProcessedDoc {
   const frontmatter = doc.frontmatter;
   const images: ImageRef[] = [];
@@ -46,10 +36,18 @@ export function renderDoc(doc: ParsedDoc): ProcessedDoc {
 
   // Configure marked to rewrite image srcs
   const renderer = new marked.Renderer();
-  renderer.image = ({ href, title, text }: { href: string; title: string | null; text: string }): string => {
+  renderer.image = ({
+    href,
+    title,
+    text,
+  }: {
+    href: string;
+    title: string | null;
+    text: string;
+  }): string => {
     const resolved = resolveImagePath(href);
     const alt = text ? ` alt="${text.replace(/"/g, '&quot;')}"` : '';
-    const titleAttr = title ? ` title="${title}"` : '';
+    const titleAttr = title != null && title !== '' ? ` title="${title}"` : '';
     images.push({ src: resolved, alt: text });
     return `<img src="${resolved}"${alt}${titleAttr} loading="lazy">`;
   };

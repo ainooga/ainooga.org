@@ -1,6 +1,7 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import Skeleton from '../components/Skeleton.svelte';
+  import { fetchData } from '$lib/fetch.ts';
 
   interface IndexItem {
     slug: string;
@@ -21,10 +22,10 @@
 
   async function load() {
     try {
-      const res = await fetch('/data/posts/index.json');
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const data: ContentIndex = await res.json();
-      posts = data.items.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+      const data = await fetchData<ContentIndex>('/data/posts/index.json');
+      posts = data.items.sort(
+        (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime(),
+      );
     } catch (err) {
       error = err instanceof Error ? err.message : 'Failed to load';
     } finally {
@@ -41,24 +42,32 @@
   {#if loading}
     <div class="stack-lg">
       <Skeleton height="2rem" width="200px" />
-      {#each [1,2,3] as _}
+      {#each [1, 2, 3] as _, i (i)}
         <div class="card"><Skeleton height="6rem" /></div>
       {/each}
     </div>
   {:else if error}
-    <p class="error-msg">Could not load posts. <button onclick={load} class="link-btn">Retry</button></p>
+    <p class="error-msg">
+      Could not load posts. <button onclick={load} class="link-btn">Retry</button>
+    </p>
   {:else}
     <div class="post-list" style="margin-top: var(--space-xl)">
       {#each posts as post (post.slug)}
         <a href="#/posts/{post.slug}" class="post-list__item card">
-          <time class="post-list__date">{new Date(post.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</time>
+          <time class="post-list__date"
+            >{new Date(post.date).toLocaleDateString('en-US', {
+              month: 'short',
+              day: 'numeric',
+              year: 'numeric',
+            })}</time
+          >
           <h2 class="post-list__title">{post.title}</h2>
           {#if post.excerpt}
             <p class="post-list__excerpt">{post.excerpt}</p>
           {/if}
           {#if post.tags && post.tags.length > 0}
             <div class="cluster" style="margin-top: var(--space-sm)">
-              {#each post.tags as tag}
+              {#each post.tags as tag (tag)}
                 <span class="tag">{tag}</span>
               {/each}
             </div>

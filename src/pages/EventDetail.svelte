@@ -2,6 +2,7 @@
   import { onMount } from 'svelte';
   import Skeleton from '../components/Skeleton.svelte';
   import NotFound from './NotFound.svelte';
+  import { fetchData } from '$lib/fetch.ts';
 
   let { slug }: { slug: string } = $props();
 
@@ -23,12 +24,13 @@
     loading = true;
     error = null;
     try {
-      const res = await fetch(`/data/events/${slug}.json`);
-      if (res.status === 404) { error = 'notfound'; return; }
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      event = await res.json();
-    } catch {
-      error = 'fetch';
+      event = await fetchData<EventDetail>(`/data/events/${slug}.json`);
+    } catch (err) {
+      if (err instanceof Error && err.message.includes('HTTP 404')) {
+        error = 'notfound';
+      } else {
+        error = 'fetch';
+      }
     } finally {
       loading = false;
     }
@@ -49,21 +51,32 @@
     <NotFound />
   {:else if error === 'fetch'}
     <div class="error-state container">
-      <p class="error-msg">Could not load event. <button onclick={load} class="link-btn">Retry</button></p>
+      <p class="error-msg">
+        Could not load event. <button onclick={load} class="link-btn">Retry</button>
+      </p>
     </div>
   {:else if event}
     <div class="event-detail__header">
       <p class="section__label">
-        {new Date(event.date).toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })}
+        {new Date(event.date).toLocaleDateString('en-US', {
+          weekday: 'long',
+          month: 'long',
+          day: 'numeric',
+          year: 'numeric',
+        })}
         {#if event.endDate}
-          &ndash; {new Date(event.endDate).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
+          &ndash; {new Date(event.endDate).toLocaleDateString('en-US', {
+            month: 'long',
+            day: 'numeric',
+            year: 'numeric',
+          })}
         {/if}
       </p>
       <h1 class="event-detail__title">{event.title}</h1>
       <p class="event-detail__location">{event.location}</p>
       {#if event.tags && event.tags.length > 0}
         <div class="cluster" style="margin-top: var(--space-md)">
-          {#each event.tags as tag}
+          {#each event.tags as tag (tag)}
             <span class="tag">{tag}</span>
           {/each}
         </div>
@@ -71,6 +84,7 @@
     </div>
     <hr class="divider" />
     <div class="event-detail__body">
+      <!-- eslint-disable-next-line svelte/no-at-html-tags -->
       {@html event.bodyHtml}
     </div>
     <div style="margin-top: var(--space-2xl)">

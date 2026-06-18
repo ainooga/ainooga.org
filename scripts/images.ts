@@ -1,5 +1,5 @@
 import sharp from 'sharp';
-import { existsSync, mkdirSync, readFileSync } from 'node:fs';
+import { mkdirSync, readFileSync } from 'node:fs';
 import { basename, dirname, extname, join } from 'node:path';
 import { globSync } from 'node:fs';
 
@@ -53,10 +53,7 @@ export async function processImage(
       const outName = `${name}-${size}w.${fmt}`;
       const outPath = join('static/images', outName);
       mkdirSync(dirname(outPath), { recursive: true });
-      await sharp(sourcePath)
-        .resize(size)
-        .toFormat(fmt)
-        .toFile(outPath);
+      await sharp(sourcePath).resize(size).toFormat(fmt).toFile(outPath);
       outputs.push(outPath);
     }
   }

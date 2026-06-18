@@ -1,1 +1,9 @@
-onlyBuiltDependencies: '["esbuild","sharp","simple-git-hooks"]'
+allowBuilds:
+  core-js: set this to true or false
+  esbuild: true
+  sharp: true
+  simple-git-hooks: true
+onlyBuiltDependencies:
+  - esbuild
+  - sharp
+  - simple-git-hooks

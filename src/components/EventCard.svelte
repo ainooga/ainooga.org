@@ -1,17 +1,4 @@
 <script lang="ts">
-  import Skeleton from './Skeleton.svelte';
-
-  interface IndexItem {
-    slug: string;
-    title: string;
-    date: string;
-    excerpt?: string;
-    tags: string[];
-    path: string;
-    location?: string;
-    endDate?: string;
-  }
-
   let {
     title,
     slug,
@@ -46,7 +33,11 @@
   }
 </script>
 
-<a class="event-card" href={href ?? `#/events/${slug ?? ''}`} class:event-card--past={date && isPast(date)}>
+<a
+  class="event-card"
+  href={href ?? `#/events/${slug ?? ''}`}
+  class:event-card--past={date && isPast(date)}
+>
   <div class="event-card__meta">
     {#if date}
       <time class="event-card__date" datetime={date}>
@@ -66,7 +57,7 @@
   {/if}
   {#if tags && tags.length > 0}
     <div class="cluster event-card__tags">
-      {#each tags as tag}
+      {#each tags as tag (tag)}
         <span class="tag">{tag}</span>
       {/each}
     </div>
@@ -82,7 +73,9 @@
     padding: var(--space-xl);
     text-decoration: none;
     color: inherit;
-    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+    transition:
+      border-color 0.2s ease,
+      box-shadow 0.2s ease;
   }
 
   .event-card:hover {

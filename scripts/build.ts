@@ -1,5 +1,3 @@
-import { execSync } from 'node:child_process';
-import { existsSync } from 'node:fs';
 import { parseAll } from './parse.js';
 import { processAllImages } from './images.js';
 import { renderAll } from './render.js';
@@ -10,6 +8,27 @@ function log(step: string, msg: string) {
   console.log(`  [${step}] ${msg}`);
 }
 
+function logErrors(errors: { filePath: string; field: string; message: string }[]): void {
+  console.error('\n  Validation errors:');
+  for (const err of errors) {
+    console.error(`    ${err.filePath} — ${err.field}: ${err.message}`);
+  }
+  const fileCount = new Set(errors.map((e) => e.filePath)).size;
+  console.error(`\n  Build failed. ${errors.length} error(s) in ${fileCount} file(s).`);
+}
+
+async function processStageImages(): Promise<void> {
+  log('images', 'Processing images...');
+  const imgResult = await processAllImages();
+  log('images', `${imgResult.processed} images processed.`);
+  if (imgResult.errors.length > 0) {
+    for (const err of imgResult.errors) {
+      console.error(`    ${err}`);
+    }
+    process.exit(1);
+  }
+}
+
 async function main() {
   console.log('\n  Building AI Nooga content...\n');
 
@@ -17,26 +36,13 @@ async function main() {
   log('parse', 'Reading and validating markdown...');
   const { docs, errors } = parseAll();
   if (errors.length > 0) {
-    console.error('\n  Validation errors:');
-    for (const err of errors) {
-      console.error(`    ${err.filePath} — ${err.field}: ${err.message}`);
-    }
-    console.error(`\n  Build failed. ${errors.length} error(s) in ${new Set(errors.map((e) => e.filePath)).size} file(s).`);
+    logErrors(errors);
     process.exit(1);
   }
   log('parse', `${docs.length} documents parsed successfully.`);
 
   // Stage 2: Process images
-  log('images', 'Processing images...');
-  const imgResult = await processAllImages();
-  log('images', `${imgResult.processed} images processed.`);
-  if (imgResult.errors.length > 0) {
-    console.error('\n  Image processing errors:');
-    for (const err of imgResult.errors) {
-      console.error(`    ${err}`);
-    }
-    process.exit(1);
-  }
+  await processStageImages();
 
   // Stage 3: Render
   log('render', 'Converting markdown to HTML...');
@@ -52,7 +58,6 @@ async function main() {
   log('verify', 'Running sanity checks...');
   const verification = verifyOutput();
   if (!verification.pass) {
-    console.error('\n  Verification errors:');
     for (const err of verification.errors) {
       console.error(`    ${err}`);
     }

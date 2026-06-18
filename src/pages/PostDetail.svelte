@@ -2,6 +2,7 @@
   import { onMount } from 'svelte';
   import Skeleton from '../components/Skeleton.svelte';
   import NotFound from './NotFound.svelte';
+  import { fetchData } from '$lib/fetch.ts';
 
   let { slug }: { slug: string } = $props();
 
@@ -22,12 +23,13 @@
     loading = true;
     error = null;
     try {
-      const res = await fetch(`/data/posts/${slug}.json`);
-      if (res.status === 404) { error = 'notfound'; return; }
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      post = await res.json();
-    } catch {
-      error = 'fetch';
+      post = await fetchData<PostDetail>(`/data/posts/${slug}.json`);
+    } catch (err) {
+      if (err instanceof Error && err.message.includes('HTTP 404')) {
+        error = 'notfound';
+      } else {
+        error = 'fetch';
+      }
     } finally {
       loading = false;
     }
@@ -47,15 +49,23 @@
     <NotFound />
   {:else if error === 'fetch'}
     <div class="error-state">
-      <p class="error-msg">Could not load post. <button onclick={load} class="link-btn">Retry</button></p>
+      <p class="error-msg">
+        Could not load post. <button onclick={load} class="link-btn">Retry</button>
+      </p>
     </div>
   {:else if post}
     <div class="post-detail__header">
-      <p class="section__label">{new Date(post.date).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}</p>
+      <p class="section__label">
+        {new Date(post.date).toLocaleDateString('en-US', {
+          month: 'long',
+          day: 'numeric',
+          year: 'numeric',
+        })}
+      </p>
       <h1 class="post-detail__title">{post.title}</h1>
       {#if post.tags && post.tags.length > 0}
         <div class="cluster" style="margin-top: var(--space-md)">
-          {#each post.tags as tag}
+          {#each post.tags as tag (tag)}
             <span class="tag">{tag}</span>
           {/each}
         </div>
@@ -63,6 +73,7 @@
     </div>
     <hr class="divider" />
     <div class="post-detail__body">
+      <!-- eslint-disable-next-line svelte/no-at-html-tags -->
       {@html post.bodyHtml}
     </div>
     <div style="margin-top: var(--space-2xl)">

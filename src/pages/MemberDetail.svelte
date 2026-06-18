@@ -2,6 +2,7 @@
   import { onMount } from 'svelte';
   import Skeleton from '../components/Skeleton.svelte';
   import NotFound from './NotFound.svelte';
+  import { fetchData } from '$lib/fetch.ts';
 
   let { slug }: { slug: string } = $props();
 
@@ -21,12 +22,13 @@
     loading = true;
     error = null;
     try {
-      const res = await fetch(`/data/members/${slug}.json`);
-      if (res.status === 404) { error = 'notfound'; return; }
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      member = await res.json();
-    } catch {
-      error = 'fetch';
+      member = await fetchData<MemberDetail>(`/data/members/${slug}.json`);
+    } catch (err) {
+      if (err instanceof Error && err.message.includes('HTTP 404')) {
+        error = 'notfound';
+      } else {
+        error = 'fetch';
+      }
     } finally {
       loading = false;
     }
@@ -46,7 +48,9 @@
     <NotFound />
   {:else if error === 'fetch'}
     <div class="error-state">
-      <p class="error-msg">Could not load member. <button onclick={load} class="link-btn">Retry</button></p>
+      <p class="error-msg">
+        Could not load member. <button onclick={load} class="link-btn">Retry</button>
+      </p>
     </div>
   {:else if member}
     <div class="member-detail__header">
@@ -59,7 +63,7 @@
       {/if}
       {#if member.tags && member.tags.length > 0}
         <div class="cluster" style="margin-top: var(--space-sm)">
-          {#each member.tags as tag}
+          {#each member.tags as tag (tag)}
             <span class="tag">{tag}</span>
           {/each}
         </div>
@@ -67,8 +71,10 @@
     </div>
     {#if member.links}
       <div class="member-detail__links" style="margin-top: var(--space-lg)">
-        {#each Object.entries(member.links) as [label, url]}
-          <a href={url} class="member-detail__link" target="_blank" rel="noopener">{label}</a>
+        {#each Object.entries(member.links) as [label, url] (label)}
+          <a href={url} class="member-detail__link" target="_blank" rel="noopener"
+            >{label}</a
+          >
         {/each}
       </div>
     {/if}

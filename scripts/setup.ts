@@ -3,13 +3,17 @@ import { existsSync } from 'node:fs';
 
 function run(cmd: string) {
   console.log(`> ${cmd}`);
+  // eslint-disable-next-line sonarjs/os-command
   execSync(cmd, { stdio: 'inherit' });
 }
 
 function main() {
   console.log('\n  Setting up AI Nooga...\n');
 
-  if (!existsSync('node_modules/.package-lock.json') && !existsSync('node_modules/.modules.yaml')) {
+  if (
+    !existsSync('node_modules/.package-lock.json') &&
+    !existsSync('node_modules/.modules.yaml')
+  ) {
     run('pnpm install');
   }
 
