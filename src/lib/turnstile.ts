@@ -1,3 +1,41 @@
+/* ---- Ambient declarations for Cloudflare Turnstile ---- */
+
+interface TurnstileRenderOptions {
+  sitekey: string;
+  action?: string;
+  cData?: string;
+  callback?: (token: string) => void;
+  'error-callback'?: () => void;
+  'expired-callback'?: () => void;
+  'timeout-callback'?: () => void;
+  theme?: 'light' | 'dark' | 'auto';
+  language?: string;
+  tabindex?: number;
+  'refresh-expired'?: 'auto' | 'manual' | 'never';
+  retry?: 'auto' | 'never';
+  'retry-interval'?: number;
+  size?: 'normal' | 'compact' | 'flexible';
+  appearance?: 'always' | 'execute' | 'interaction-only';
+}
+
+interface TurnstileObject {
+  render(
+    container: string | HTMLElement,
+    params: TurnstileRenderOptions,
+  ): string | undefined;
+  getResponse(widgetId?: string): string | undefined;
+  reset(widgetId: string): void;
+  remove(widgetId: string): void;
+}
+
+declare global {
+  interface Window {
+    turnstile?: TurnstileObject;
+  }
+}
+
+/* ---- Application service interface ---- */
+
 export interface TurnstileService {
   render(element: HTMLElement): string | null;
   getResponse(widgetId: string): string;
@@ -8,9 +46,8 @@ export interface TurnstileService {
 export const TURNSTILE_WORKER_URL =
   'https://turnstile-siteverify-ainooga-org.withered-bonus-e8ad.workers.dev';
 
-function getTurnstile(): Record<string, unknown> | undefined {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  return (window as any).turnstile;
+function getTurnstile(): TurnstileObject | undefined {
+  return window.turnstile;
 }
 
 /**
@@ -35,32 +72,29 @@ export class BrowserTurnstile implements TurnstileService {
   render(element: HTMLElement): string | null {
     const ts = getTurnstile();
     if (ts == null) return null;
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    return (ts as any).render(element, {
+    const options: TurnstileRenderOptions = {
       sitekey: this.siteKey,
       action: 'turnstile-spin-v1',
-    }) as string;
+    };
+    return ts.render(element, options) ?? null;
   }
 
   getResponse(widgetId: string): string {
     const ts = getTurnstile();
     if (ts == null) return '';
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    return (ts as any).getResponse(widgetId) as string;
+    return ts.getResponse(widgetId) ?? '';
   }
 
   reset(widgetId: string): void {
     const ts = getTurnstile();
     if (ts == null) return;
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    (ts as any).reset(widgetId);
+    ts.reset(widgetId);
   }
 
   remove(widgetId: string): void {
     const ts = getTurnstile();
     if (ts == null) return;
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    (ts as any).remove(widgetId);
+    ts.remove(widgetId);
   }
 }
 
