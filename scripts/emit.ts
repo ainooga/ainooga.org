@@ -34,7 +34,7 @@ function buildIndex(docs: ProcessedDoc[]): ContentIndex {
 
     const item: IndexItem = {
       slug: doc.slug,
-      title: (data.title as string) ?? doc.slug,
+      title: (data.title as string) ?? (data.name as string) ?? doc.slug,
       date: (data.date as string) ?? '',
       excerpt: data.excerpt as string | undefined,
       tags,

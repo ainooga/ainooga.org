@@ -7,7 +7,8 @@
   let { slug }: { slug: string } = $props();
 
   interface MemberDetail {
-    title: string;
+    name?: string;
+    title?: string;
     role?: string;
     bio?: string;
     tags?: string[];
@@ -15,6 +16,8 @@
   }
 
   let member = $state<MemberDetail | null>(null);
+
+  const displayName = $derived(member?.name ?? member?.title ?? '');
   let loading = $state(true);
   let error = $state<'notfound' | 'fetch' | null>(null);
 
@@ -55,9 +58,9 @@
   {:else if member}
     <div class="member-detail__header">
       <div class="member-detail__avatar">
-        {member.title.charAt(0).toUpperCase()}
+        {displayName.charAt(0).toUpperCase()}
       </div>
-      <h1 class="member-detail__name">{member.title}</h1>
+      <h1 class="member-detail__name">{displayName}</h1>
       {#if member.role}
         <p class="member-detail__role">{member.role}</p>
       {/if}
