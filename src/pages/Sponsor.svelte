@@ -1,7 +1,7 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import Skeleton from '../components/Skeleton.svelte';
-  import { fetchData } from '$lib/fetch.ts';
+  import { fetchData } from '$lib/fetch';
 
   interface SponsorItem {
     slug: string;
