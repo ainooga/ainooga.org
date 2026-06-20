@@ -1,4 +1,6 @@
 <script lang="ts">
+  import { formatEventCardRange, formatTime, isPast } from '$lib/utils';
+
   let {
     title,
     slug,
@@ -18,19 +20,6 @@
     endDate?: string;
     href?: string;
   } = $props();
-
-  function formatDate(iso: string): string {
-    const d = new Date(iso);
-    return d.toLocaleDateString('en-US', {
-      month: 'short',
-      day: 'numeric',
-      year: 'numeric',
-    });
-  }
-
-  function isPast(d: string): boolean {
-    return new Date(d) < new Date();
-  }
 </script>
 
 <a
@@ -41,11 +30,13 @@
   <div class="event-card__meta">
     {#if date}
       <time class="event-card__date" datetime={date}>
-        {formatDate(date)}
-        {#if endDate}
-          &ndash; {formatDate(endDate)}
-        {/if}
+        {formatEventCardRange(date, endDate)}
       </time>
+    {/if}
+    {#if endDate}
+      <span class="event-card__time">
+        {formatTime(new Date(date))}–{formatTime(new Date(endDate))}
+      </span>
     {/if}
     {#if location}
       <span class="event-card__location">{location}</span>
@@ -93,7 +84,8 @@
 
   .event-card__meta {
     display: flex;
-    align-items: center;
+    flex-wrap: wrap;
+    align-items: baseline;
     gap: var(--space-md);
     font-size: var(--text-sm);
     color: var(--color-text-secondary);
@@ -103,6 +95,12 @@
   .event-card__date {
     font-weight: 500;
     color: var(--color-accent);
+    white-space: nowrap;
+  }
+
+  .event-card__time {
+    white-space: nowrap;
+    color: var(--color-text-muted);
   }
 
   .event-card__location::before {

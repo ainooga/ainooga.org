@@ -2,7 +2,8 @@
   import { onMount } from 'svelte';
   import Skeleton from '../components/Skeleton.svelte';
   import NotFound from './NotFound.svelte';
-  import { fetchData } from '$lib/fetch.ts';
+  import { fetchData } from '$lib/fetch';
+  import { formatEventRange } from '$lib/utils';
 
   let { slug }: { slug: string } = $props();
 
@@ -58,19 +59,7 @@
   {:else if event}
     <div class="event-detail__header">
       <p class="section__label">
-        {new Date(event.date).toLocaleDateString('en-US', {
-          weekday: 'long',
-          month: 'long',
-          day: 'numeric',
-          year: 'numeric',
-        })}
-        {#if event.endDate}
-          &ndash; {new Date(event.endDate).toLocaleDateString('en-US', {
-            month: 'long',
-            day: 'numeric',
-            year: 'numeric',
-          })}
-        {/if}
+        {formatEventRange(event.date, event.endDate)}
       </p>
       <h1 class="event-detail__title">{event.title}</h1>
       <p class="event-detail__location">{event.location}</p>
