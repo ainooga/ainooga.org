@@ -41,15 +41,15 @@ describe('TurnstileService interface', () => {
   });
 
   describe('BrowserTurnstile', () => {
-    it('render returns undefined when window.turnstile is missing', () => {
+    it('render returns null when window.turnstile is missing', () => {
       const ts = new BrowserTurnstile('site-key');
       const result = ts.render(document.createElement('div'));
-      expect(result).toBeUndefined();
+      expect(result).toBeNull();
     });
 
-    it('getResponse returns undefined when window.turnstile is missing', () => {
+    it('getResponse returns empty string when window.turnstile is missing', () => {
       const ts = new BrowserTurnstile('site-key');
-      expect(ts.getResponse('widget-id')).toBeUndefined();
+      expect(ts.getResponse('widget-id')).toBe('');
     });
 
     it('reset does not throw when window.turnstile is missing', () => {

@@ -100,6 +100,7 @@ export default [
       'static/images/',
       '.githooks/',
       '.claude/',
+      'tests/e2e/',
       'vitest.config.ts',
       '*.config.*',
     ],

@@ -4,7 +4,7 @@
   import { fetchData } from '$lib/fetch';
   import { apiPost } from '$lib/api';
   import { getTurnstileService } from '$lib/context';
-  import { TURNSTILE_WORKER_URL } from '$lib/turnstile.js';
+  import { TURNSTILE_WORKER_URL, whenTurnstileReady } from '$lib/turnstile.js';
 
   interface SponsorItem {
     slug: string;
@@ -52,7 +52,16 @@
 
   function renderTurnstile() {
     if (turnstileContainer && turnstileWidgetId === null) {
-      turnstileWidgetId = turnstile.render(turnstileContainer!);
+      const id = turnstile.render(turnstileContainer!);
+      if (id) {
+        turnstileWidgetId = id;
+      } else {
+        whenTurnstileReady().then(() => {
+          if (turnstileContainer && turnstileWidgetId === null) {
+            turnstileWidgetId = turnstile.render(turnstileContainer!);
+          }
+        });
+      }
     }
   }
 
@@ -136,14 +145,6 @@
 
   onMount(load);
 </script>
-
-<svelte:head>
-  <script
-    src="https://challenges.cloudflare.com/turnstile/v0/api.js"
-    async
-    defer
-  ></script>
-</svelte:head>
 
 <div class="container sponsor-page">
   <p class="section__label" style="padding-top: var(--space-3xl)">Sponsorship</p>

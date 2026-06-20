@@ -1,7 +1,7 @@
 <script lang="ts">
   import { apiPost } from '$lib/api';
   import { getTurnstileService } from '$lib/context';
-  import { TURNSTILE_WORKER_URL } from '$lib/turnstile.js';
+  import { TURNSTILE_WORKER_URL, whenTurnstileReady } from '$lib/turnstile.js';
 
   const year = new Date().getFullYear();
 
@@ -15,7 +15,17 @@
 
   function renderTurnstile() {
     if (turnstileContainer && turnstileWidgetId === null) {
-      turnstileWidgetId = turnstile.render(turnstileContainer!);
+      const id = turnstile.render(turnstileContainer!);
+      if (id) {
+        turnstileWidgetId = id;
+      } else {
+        // Turnstile script hasn't loaded yet — retry once it's ready
+        whenTurnstileReady().then(() => {
+          if (turnstileContainer && turnstileWidgetId === null) {
+            turnstileWidgetId = turnstile.render(turnstileContainer!);
+          }
+        });
+      }
     }
   }
 
@@ -118,14 +128,6 @@
     <p class="site-footer__copy">&copy; {year} AI Nooga. Chattanooga, Tennessee.</p>
   </div>
 </footer>
-
-<svelte:head>
-  <script
-    src="https://challenges.cloudflare.com/turnstile/v0/api.js"
-    async
-    defer
-  ></script>
-</svelte:head>
 
 <style>
   .site-footer {
