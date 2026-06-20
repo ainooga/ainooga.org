@@ -4,7 +4,7 @@
   import { fetchData } from '$lib/fetch';
   import { apiPost } from '$lib/api';
   import { getTurnstileService } from '$lib/context';
-  import { TURNSTILE_WORKER_URL, whenTurnstileReady } from '$lib/turnstile.js';
+  import { whenTurnstileReady } from '$lib/turnstile.js';
 
   interface SponsorItem {
     slug: string;
@@ -84,17 +84,6 @@
       : '';
     if (!turnstileToken) {
       formError = 'Please complete the verification.';
-      return;
-    }
-
-    const verifyRes = await fetch(TURNSTILE_WORKER_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ token: turnstileToken }),
-    });
-    const verifyData = await verifyRes.json();
-    if (!verifyData.success) {
-      formError = 'Verification failed. Try again.';
       return;
     }
 

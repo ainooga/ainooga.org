@@ -1,7 +1,7 @@
 <script lang="ts">
   import { apiPost } from '$lib/api';
   import { getTurnstileService } from '$lib/context';
-  import { TURNSTILE_WORKER_URL, whenTurnstileReady } from '$lib/turnstile.js';
+  import { whenTurnstileReady } from '$lib/turnstile.js';
 
   const year = new Date().getFullYear();
 
@@ -43,18 +43,6 @@
     const turnstileToken = turnstileWidgetId
       ? turnstile.getResponse(turnstileWidgetId)
       : '';
-
-    const verifyRes = await fetch(TURNSTILE_WORKER_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ token: turnstileToken }),
-    });
-    const verifyData = await verifyRes.json();
-    if (!verifyData.success) {
-      subscribeStatus = 'error';
-      subscribeMessage = 'Verification failed. Try again.';
-      return;
-    }
 
     const result = await apiPost('subscribe', {
       email: subscribeEmail,
