@@ -1,0 +1,5 @@
+# SPA fallback: all non-file routes → index.html (200 rewrite)
+# NOTE: Pages Functions (/confirm, /api/*) take priority over this rule.
+# Cloudflare evaluates Functions before _redirects, so /confirm?token=...
+# hits the Function, not the SPA shell. Do not add an exclusion rule.
+/*  /index.html  200

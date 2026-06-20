@@ -1,2 +1,20 @@
 /data/version.json
   Cache-Control: no-cache, no-store, must-revalidate
+
+/data/*
+  Cache-Control: public, max-age=31536000, immutable
+
+/images/*
+  Cache-Control: public, max-age=31536000, immutable
+
+/
+  Cache-Control: no-cache
+  X-Frame-Options: DENY
+
+/api/*
+  X-Robots-Tag: noindex
+  Cache-Control: no-store
+
+# These rules do not apply to Pages Functions — Functions set their own
+# headers. These apply only to static files served from the Pages assets.
+# Function routes match and execute before _headers is consulted.

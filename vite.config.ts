@@ -9,6 +9,14 @@ export default defineConfig({
       $lib: resolve('./src/lib'),
     },
   },
+  server: {
+    proxy: {
+      '/api': {
+        target: 'http://localhost:8788',
+        changeOrigin: true,
+      },
+    },
+  },
   preview: {
     allowedHosts: ['ainooga.org', 'www.ainooga.org'],
   },

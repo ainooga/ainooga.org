@@ -11,6 +11,12 @@ export default [
   sonarjs.configs.recommended,
   ...sveltePlugin.configs['flat/recommended'],
   {
+    rules: {
+      'no-unused-vars': 'off',
+      '@typescript-eslint/no-unused-vars': ['error', { varsIgnorePattern: '^_', argsIgnorePattern: '^_' }],
+    },
+  },
+  {
     files: ['src/**/*.svelte'],
     languageOptions: {
       parser: svelteParser,
@@ -20,10 +26,6 @@ export default [
       globals: {
         ...globals.browser,
       },
-    },
-    rules: {
-      'no-unused-vars': 'off',
-      '@typescript-eslint/no-unused-vars': ['error', { varsIgnorePattern: '^_', argsIgnorePattern: '^_' }],
     },
   },
   {
@@ -71,12 +73,33 @@ export default [
     },
   },
   {
+    files: ['functions/**/*.ts'],
+    languageOptions: {
+      globals: {
+        ...globals.worker,
+      },
+    },
+    rules: {
+      '@typescript-eslint/no-explicit-any': 'error',
+      'sonarjs/no-nested-template-literals': 'off',
+      'sonarjs/slow-regex': 'off',
+      'sonarjs/cognitive-complexity': ['error', 15],
+      'complexity': ['error', 10],
+      'max-depth': ['error', 5],
+      'max-lines': ['error', 300],
+      'max-lines-per-function': ['error', 50],
+      'max-nested-callbacks': ['error', 3],
+      'no-console': 'off',
+    },
+  },
+  {
     ignores: [
       'node_modules/',
       'dist/',
       'static/data/',
       'static/images/',
       '.githooks/',
+      '.claude/',
       'vitest.config.ts',
       '*.config.*',
     ],

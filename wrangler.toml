@@ -1,0 +1,14 @@
+name = "ainooga-org"
+compatibility_date = "2026-06-19"
+pages_build_output_dir = "dist"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "ainooga-d1"
+database_id = "3072a675-8a15-4019-8648-17a17ad1cadd"
+
+[[send_email]]
+name = "EMAIL"
+
+[vars]
+SITE_URL = "https://ainooga.org"

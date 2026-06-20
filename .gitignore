@@ -24,6 +24,10 @@ Thumbs.db
 *.swo
 *~
 
+# Cloudflare
+.wrangler/
+backups/
+
 # Temp / debug
 *.log
 tmp/

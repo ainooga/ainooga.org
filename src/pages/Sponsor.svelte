@@ -2,6 +2,9 @@
   import { onMount } from 'svelte';
   import Skeleton from '../components/Skeleton.svelte';
   import { fetchData } from '$lib/fetch';
+  import { apiPost } from '$lib/api';
+  import { getTurnstileService } from '$lib/context';
+  import { TURNSTILE_WORKER_URL } from '$lib/turnstile.js';
 
   interface SponsorItem {
     slug: string;
@@ -42,8 +45,18 @@
   let formTime = $state('');
   let formSubmitted = $state(false);
   let formError = $state<string | null>(null);
+  let turnstileWidgetId = $state<string | null>(null);
+  let turnstileContainer = $state<HTMLDivElement | null>(null);
 
-  function handleSubmit(e: Event) {
+  let turnstile = $state(getTurnstileService());
+
+  function renderTurnstile() {
+    if (turnstileContainer && turnstileWidgetId === null) {
+      turnstileWidgetId = turnstile.render(turnstileContainer!);
+    }
+  }
+
+  async function handleSubmit(e: Event) {
     e.preventDefault();
     formError = null;
 
@@ -57,8 +70,38 @@
       return;
     }
 
-    formSubmitted = true;
-    // In production: POST to a form handler or mail service
+    const turnstileToken = turnstileWidgetId
+      ? turnstile.getResponse(turnstileWidgetId)
+      : '';
+    if (!turnstileToken) {
+      formError = 'Please complete the verification.';
+      return;
+    }
+
+    const verifyRes = await fetch(TURNSTILE_WORKER_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token: turnstileToken }),
+    });
+    const verifyData = await verifyRes.json();
+    if (!verifyData.success) {
+      formError = 'Verification failed. Try again.';
+      return;
+    }
+
+    const result = await apiPost('contact-sponsor', {
+      name: formName,
+      phone: formPhone,
+      preferredDate: formDate || undefined,
+      preferredTime: formTime || undefined,
+      turnstileToken,
+    });
+
+    if (result.ok) {
+      formSubmitted = true;
+    } else {
+      formError = result.error ?? 'Something went wrong.';
+    }
   }
 
   function resetForm() {
@@ -69,6 +112,9 @@
     formTime = '';
     formSubmitted = false;
     formError = null;
+    if (turnstileWidgetId) {
+      turnstile.reset(turnstileWidgetId);
+    }
   }
 
   async function load() {
@@ -82,8 +128,22 @@
     }
   }
 
+  $effect(() => {
+    if (showForm && turnstileContainer) {
+      renderTurnstile();
+    }
+  });
+
   onMount(load);
 </script>
+
+<svelte:head>
+  <script
+    src="https://challenges.cloudflare.com/turnstile/v0/api.js"
+    async
+    defer
+  ></script>
+</svelte:head>
 
 <div class="container sponsor-page">
   <p class="section__label" style="padding-top: var(--space-3xl)">Sponsorship</p>
@@ -244,6 +304,7 @@
           <span class="form-label">Best time to call</span>
           <input type="time" class="form-input" bind:value={formTime} />
         </label>
+        <div bind:this={turnstileContainer}></div>
         {#if formError}
           <p class="error-msg">{formError}</p>
         {/if}
