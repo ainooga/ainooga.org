@@ -10,5 +10,11 @@ database_id = "3072a675-8a15-4019-8648-17a17ad1cadd"
 [[email_send]]
 binding = "EMAIL"
 
+[observability]
+enabled = true
+
+[observability.logs]
+invocation_logs = true
+
 [vars]
 SITE_URL = "https://ainooga.org"
