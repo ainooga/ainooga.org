@@ -22,3 +22,10 @@ export interface EmailSender {
 export interface TurnstileVerifier {
   verify(token: string): Promise<boolean>;
 }
+
+export interface Env {
+  DB: D1Database;
+  EMAIL: SendEmail;
+  TURNSTILE_SECRET_KEY: string;
+  SITE_URL: string;
+}

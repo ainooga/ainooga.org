@@ -1,0 +1,22 @@
+name = "ainooga-api"
+compatibility_date = "2026-06-22"
+main = "src/index.ts"
+
+# Routes — /api/* and /confirm go to this Worker, everything else to Pages
+routes = [
+  { pattern = "ainooga.org/api/*", zone_id = "b973825a865d2deb4c37e6651513a84a" },
+  { pattern = "ainooga.org/confirm", zone_id = "b973825a865d2deb4c37e6651513a84a" },
+]
+
+# D1 database (works for both Workers and Pages)
+[[d1_databases]]
+binding = "DB"
+database_name = "ainooga-d1"
+database_id = "3072a675-8a15-4019-8648-17a17ad1cadd"
+
+# Send Email — supported in Workers wrangler.toml (unlike Pages)
+[[send_email]]
+name = "EMAIL"
+
+[vars]
+SITE_URL = "https://ainooga.org"

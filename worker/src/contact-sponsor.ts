@@ -10,10 +10,18 @@ export interface ContactSponsorInput {
 
 export async function handleContactSponsor(
   input: ContactSponsorInput,
-  deps: { db: DbClient; turnstile: TurnstileVerifier },
+  deps: {
+    db: DbClient;
+    turnstile: TurnstileVerifier;
+  },
 ): Promise<Response> {
-  if (!input.name?.trim() || !input.phone?.trim()) {
-    return Response.json({ error: 'Name and phone required.' }, { status: 400 });
+  if (!input.name.trim() || !input.phone.trim()) {
+    return Response.json({ error: 'Name and phone number required.' }, { status: 400 });
+  }
+
+  const phoneClean = input.phone.replace(/[\s()-]/g, '');
+  if (phoneClean.length < 7) {
+    return Response.json({ error: 'Valid phone number required.' }, { status: 400 });
   }
 
   const turnstileOk = await deps.turnstile.verify(input.turnstileToken);
@@ -23,10 +31,13 @@ export async function handleContactSponsor(
 
   await deps.db.insertContactRequest({
     name: input.name,
-    phone: input.phone,
+    phone: phoneClean,
     preferredDate: input.preferredDate,
     preferredTime: input.preferredTime,
   });
 
-  return Response.json({ message: "Thanks! We'll call you back." }, { status: 201 });
+  return Response.json(
+    { message: `Thanks ${input.name}! We'll call you back.` },
+    { status: 201 },
+  );
 }

@@ -336,7 +336,7 @@ by resolving the mock with the desired status + body.
 
 ## Backend contract reference
 
-The Pages Function at `functions/api/subscribe.ts` expects:
+The Worker at `worker/src/index.ts` expects:
 
 ```
 POST /api/subscribe

@@ -31,3 +31,6 @@ backups/
 # Temp / debug
 *.log
 tmp/
+
+# Worker
+worker/.dev.vars

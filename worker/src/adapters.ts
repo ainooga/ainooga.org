@@ -1,4 +1,4 @@
-import type { DbClient, EmailSender, TurnstileVerifier } from '../lib/types.js';
+import type { DbClient, EmailSender, TurnstileVerifier } from './types.js';
 
 export function createDb(db: D1Database): DbClient {
   return {

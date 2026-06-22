@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "dev:all": "pnpm run build:content && (pnpm run cf:dev &) && pnpm run dev",
+    "dev:all": "pnpm run build:content && (pnpm run worker:dev & sleep 2 && pnpm run dev)",
     "build": "npm run build:content && npm run build:spa",
     "build:content": "tsx scripts/build.ts",
     "build:spa": "vite build",
@@ -24,7 +24,10 @@
     "check": "npm run lint && npm run type-check && npm run test && npm run complexity",
     "setup": "tsx scripts/setup.ts",
     "cf:login": "wrangler login",
-    "cf:dev": "wrangler pages dev dist/",
+    "worker:dev": "cd worker && wrangler dev",
+    "worker:deploy": "cd worker && wrangler deploy",
+    "cf:dev": "cd worker && wrangler dev",
+    "cf:dev:pages-old": "wrangler pages dev dist/",
     "cf:migrate": "wrangler d1 migrations apply ainooga-d1 --remote",
     "cf:migrate:local": "wrangler d1 migrations apply ainooga-d1 --local",
     "cf:deploy": "wrangler pages deploy dist/ --project-name=ainooga-org",
@@ -37,7 +40,7 @@
     "pre-push": ".githooks/pre-push"
   },
   "lint-staged": {
-    "{src,scripts,functions,tests}/**/*.{ts,svelte}": [
+    "{src,scripts,worker,tests}/**/*.{ts,svelte}": [
       "eslint --fix",
       "prettier --write"
     ],

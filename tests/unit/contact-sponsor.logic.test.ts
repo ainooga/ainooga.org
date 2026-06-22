@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { handleContactSponsor } from '../../functions/lib/contact-sponsor.logic';
-import type { DbClient, TurnstileVerifier } from '../../functions/lib/types';
+import { handleContactSponsor } from '../../worker/src/contact-sponsor';
+import type { DbClient, TurnstileVerifier } from '../../worker/src/types';
 
 class FakeDbClient implements DbClient {
   public requests: Array<{
@@ -55,7 +55,7 @@ describe('handleContactSponsor', () => {
     );
     expect(res.status).toBe(400);
     const body = await res.json();
-    expect(body.error).toBe('Name and phone required.');
+    expect(body.error).toBe('Name and phone number required.');
     expect(db.requests.length).toBe(0);
   });
 
@@ -67,7 +67,7 @@ describe('handleContactSponsor', () => {
     );
     expect(res.status).toBe(400);
     const body = await res.json();
-    expect(body.error).toBe('Name and phone required.');
+    expect(body.error).toBe('Name and phone number required.');
     expect(db.requests.length).toBe(0);
   });
 
@@ -91,11 +91,11 @@ describe('handleContactSponsor', () => {
     );
     expect(res.status).toBe(201);
     const body = await res.json();
-    expect(body.message).toBe("Thanks! We'll call you back.");
+    expect(body.message).toBe("Thanks Alice! We'll call you back.");
 
     expect(db.requests.length).toBe(1);
     expect(db.requests[0].name).toBe('Alice');
-    expect(db.requests[0].phone).toBe('555-0123');
+    expect(db.requests[0].phone).toBe('5550123');
     expect(db.requests[0].preferredDate).toBeUndefined();
     expect(db.requests[0].preferredTime).toBeUndefined();
   });
@@ -117,15 +117,26 @@ describe('handleContactSponsor', () => {
     expect(db.requests[0].preferredTime).toBe('14:00');
   });
 
+  it('rejects phone number with fewer than 7 digits after cleaning', async () => {
+    const turnstile = new FakeTurnstileVerifier(true);
+    const res = await handleContactSponsor(
+      { name: 'Alice', phone: '12-34', turnstileToken: 'token' },
+      { db, turnstile },
+    );
+    expect(res.status).toBe(400);
+    const body = await res.json();
+    expect(body.error).toBe('Valid phone number required.');
+    expect(db.requests.length).toBe(0);
+  });
+
   it('trims whitespace from name and phone', async () => {
     const turnstile = new FakeTurnstileVerifier(true);
     const res = await handleContactSponsor(
       { name: '  Alice  ', phone: '  555-0123  ', turnstileToken: 'token' },
       { db, turnstile },
     );
-    // Name with only whitespace should trigger 400
-    // The implementation uses .trim() check — "  Alice  " is not empty after trim
-    // so this should succeed
     expect(res.status).toBe(201);
+    // Phone is cleaned
+    expect(db.requests[0].phone).toBe('5550123');
   });
 });

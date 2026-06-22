@@ -73,7 +73,7 @@ export default [
     },
   },
   {
-    files: ['functions/**/*.ts'],
+    files: ['worker/**/*.ts'],
     languageOptions: {
       globals: {
         ...globals.worker,

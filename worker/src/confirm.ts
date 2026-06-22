@@ -1,18 +1,15 @@
-import { createDb } from './api/_adapters.js';
+import { createDb } from './adapters.js';
+import type { Env } from './types.js';
 
-interface Env {
-  DB: D1Database;
-}
-
-export const onRequest: PagesFunction<Env> = async (context) => {
-  const url = new URL(context.request.url);
+export async function handleConfirm(request: Request, env: Env): Promise<Response> {
+  const url = new URL(request.url);
   const token = url.searchParams.get('token');
 
   if (!token) {
     return new Response('Missing confirmation token', { status: 400 });
   }
 
-  const db = createDb(context.env.DB);
+  const db = createDb(env.DB);
   const changes = await db.confirmSubscription(token);
 
   if (changes === 0) {
@@ -23,4 +20,4 @@ export const onRequest: PagesFunction<Env> = async (context) => {
     "<html><body><h1>Confirmed!</h1><p>You're on the AI Nooga mailing list.</p></body></html>",
     { headers: { 'Content-Type': 'text/html' } },
   );
-};
+}

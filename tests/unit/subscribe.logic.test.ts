@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { handleSubscribe } from '../../functions/lib/subscribe.logic';
-import type { DbClient, EmailSender, TurnstileVerifier } from '../../functions/lib/types';
+import { handleSubscribe } from '../../worker/src/subscribe';
+import type { DbClient, EmailSender, TurnstileVerifier } from '../../worker/src/types';
 
 class FakeDbClient implements DbClient {
   private subscribers: Map<
