@@ -4,6 +4,7 @@ role: Organizer
 joined: 2026-04-14
 tags: [organizer, founder]
 links:
+  website: https://hiretn.com
   linkedin: https://www.linkedin.com/in/johnhgoodwin/
   email: john.goodwin@ainooga.org
 bio: >

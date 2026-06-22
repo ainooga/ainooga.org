@@ -4,6 +4,7 @@ role: Lead Director
 joined: 2026-04-14
 tags: [organizer, founder]
 links:
+  website: https://ardea.io
   linkedin: https://www.linkedin.com/in/johnathangardner/
   email: john.gardner@ainooga.org
 bio: >
