@@ -2,21 +2,13 @@ name = "ainooga-org"
 compatibility_date = "2026-06-19"
 pages_build_output_dir = "dist"
 
-# EMAIL (SendEmail) binding is configured in the Cloudflare dashboard only —
-# Pages does not support [[email_send]] in wrangler.toml.
-# Dashboard → Pages → ainooga-org → Settings → Functions → Email Send Bindings
-#   Name: EMAIL  |  Allowed destination addresses: (blank)
+[[send_email]]
+name = "EMAIL"
 
 [[d1_databases]]
 binding = "DB"
 database_name = "ainooga-d1"
 database_id = "3072a675-8a15-4019-8648-17a17ad1cadd"
-
-[observability]
-enabled = true
-
-[observability.logs]
-invocation_logs = true
 
 [vars]
 SITE_URL = "https://ainooga.org"
