@@ -8,11 +8,12 @@ export default defineConfig({
     alias: {
       $lib: resolve('./src/lib'),
     },
+    conditions: ['browser'],
   },
   test: {
     globals: true,
     environment: 'jsdom',
-    include: ['tests/unit/**/*.test.ts'],
+    include: ['tests/unit/**/*.test.ts', 'tests/components/**/*.test.ts'],
     coverage: {
       provider: 'v8',
       include: ['src/**/*.ts', 'scripts/**/*.ts'],

@@ -36,8 +36,15 @@ declare global {
 
 /* ---- Application service interface ---- */
 
+export interface TurnstileWidgetCallbacks {
+  onToken?: (token: string) => void;
+  onError?: () => void;
+  onTimeout?: () => void;
+  onExpired?: () => void;
+}
+
 export interface TurnstileService {
-  render(element: HTMLElement): string | null;
+  render(element: HTMLElement, callbacks?: TurnstileWidgetCallbacks): string | null;
   getResponse(widgetId: string): string;
   reset(widgetId: string): void;
   remove(widgetId: string): void;
@@ -69,12 +76,17 @@ export function whenTurnstileReady(): Promise<void> {
 export class BrowserTurnstile implements TurnstileService {
   constructor(private siteKey: string) {}
 
-  render(element: HTMLElement): string | null {
+  render(element: HTMLElement, callbacks?: TurnstileWidgetCallbacks): string | null {
     const ts = getTurnstile();
     if (ts == null) return null;
     const options: TurnstileRenderOptions = {
       sitekey: this.siteKey,
       action: 'turnstile-spin-v1',
+      callback: callbacks?.onToken,
+      'error-callback': callbacks?.onError,
+      'timeout-callback': callbacks?.onTimeout,
+      'expired-callback': callbacks?.onExpired,
+      'refresh-expired': 'auto',
     };
     return ts.render(element, options) ?? null;
   }
@@ -100,11 +112,14 @@ export class BrowserTurnstile implements TurnstileService {
 
 export class FakeTurnstile implements TurnstileService {
   private counter = 0;
+  callbacks = new Map<string, TurnstileWidgetCallbacks>();
 
   constructor(private siteKey = 'fake-key') {}
 
-  render(_element: HTMLElement): string {
-    return `fake-widget-${++this.counter}`;
+  render(_element: HTMLElement, callbacks?: TurnstileWidgetCallbacks): string {
+    const id = `fake-widget-${++this.counter}`;
+    if (callbacks) this.callbacks.set(id, callbacks);
+    return id;
   }
 
   getResponse(_widgetId: string): string {

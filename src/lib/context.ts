@@ -10,3 +10,13 @@ export function setTurnstileService(service: TurnstileService): void {
 export function getTurnstileService(): TurnstileService {
   return getContext<TurnstileService>(TURNSTILE_KEY);
 }
+
+/**
+ * Create a Svelte context map for injecting a TurnstileService.
+ * Used in component tests via `render(Component, { context: createTurnstileContext(fake) })`.
+ */
+export function createTurnstileContext(
+  service: TurnstileService,
+): Map<symbol, TurnstileService> {
+  return new Map([[TURNSTILE_KEY, service]]);
+}

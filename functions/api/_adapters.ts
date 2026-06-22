@@ -44,9 +44,16 @@ export function createDb(db: D1Database): DbClient {
   };
 }
 
-export function createEmailSender(email: SendEmail): EmailSender {
+export function createEmailSender(email: SendEmail | undefined): EmailSender {
   return {
     async sendConfirmation(to, name, confirmToken, siteUrl) {
+      if (email == null) {
+        console.log(
+          `[local] Confirmation email for ${to}${name ? ` (${name})` : ''}: ` +
+            `${siteUrl}/confirm?token=${confirmToken}`,
+        );
+        return;
+      }
       await email.send({
         from: 'noreply@ainooga.org',
         to,

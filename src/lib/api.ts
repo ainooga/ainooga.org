@@ -2,6 +2,8 @@ interface ApiResponse<T> {
   ok: boolean;
   data?: T;
   error?: string;
+  /** True when fetch threw (network failure, DNS, timeout, CORS) — token was never sent. */
+  networkError?: boolean;
 }
 
 export async function apiPost<T>(
@@ -23,6 +25,7 @@ export async function apiPost<T>(
     return {
       ok: false,
       error: err instanceof Error ? err.message : 'Network error',
+      networkError: true,
     };
   }
 }

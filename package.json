@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "dev:all": "pnpm run build:content && (pnpm run cf:dev &) && pnpm run dev",
     "build": "npm run build:content && npm run build:spa",
     "build:content": "tsx scripts/build.ts",
     "build:spa": "vite build",
@@ -25,6 +26,7 @@
     "cf:login": "wrangler login",
     "cf:dev": "wrangler pages dev dist/",
     "cf:migrate": "wrangler d1 migrations apply ainooga-d1 --remote",
+    "cf:migrate:local": "wrangler d1 migrations apply ainooga-d1 --local",
     "cf:deploy": "wrangler pages deploy dist/ --project-name=ainooga-org",
     "cf:backup": "wrangler d1 export ainooga-d1 --output=./backups/$(date +%F).sql",
     "precommit": "lint-staged",
