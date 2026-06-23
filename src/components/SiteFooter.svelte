@@ -471,6 +471,7 @@
 
   .site-footer__subscribe-input {
     flex: 1;
+    padding-left: 0.5rem;
   }
 
   .site-footer__turnstile {

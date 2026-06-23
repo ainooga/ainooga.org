@@ -10,20 +10,28 @@
   ];
 
   let scrolled = $state(false);
+  let currentHash = $state('');
 
   function onScroll() {
     scrolled = window.scrollY > 20;
   }
 
+  function onHashChange() {
+    currentHash = window.location.hash;
+  }
+
   onMount(() => {
+    currentHash = window.location.hash;
     window.addEventListener('scroll', onScroll, { passive: true });
-    return () => window.removeEventListener('scroll', onScroll);
+    window.addEventListener('hashchange', onHashChange);
+    return () => {
+      window.removeEventListener('scroll', onScroll);
+      window.removeEventListener('hashchange', onHashChange);
+    };
   });
 
   function isActive(path: string): boolean {
-    return (
-      window.location.hash === `#${path}` || window.location.hash.startsWith(`#${path}/`)
-    );
+    return currentHash === `#${path}` || currentHash.startsWith(`#${path}/`);
   }
 </script>
 
