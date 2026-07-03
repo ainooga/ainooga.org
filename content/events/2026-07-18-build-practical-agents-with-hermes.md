@@ -5,38 +5,88 @@ endDate: 2026-07-18T17:00:00-04:00
 location: Technology Training Room, Business Development Center (BDC), 100 Cherokee Blvd. Suite 100, Chattanooga, TN 37405
 organizer: ainooga-founders
 tags: [workshop, agents, hermes, hands-on]
-excerpt: Build an agent that does something useful for you and lives where you work. From 0 to 1 — for beginners and veterans alike.
-status: draft
+banner: ./2026-07-18-workshop-hero.png
+excerpt: Build your own useful AI agent in one afternoon. Agents are most powerful when they are pointed at a real job you actually have. In this hands-on workshop, you'll learn what AI agents are good for, identify your own use case, and build a working agent with Hermes.
+status: published
 ---
 
-Build an agent that does something useful for you and lives where you work. From 0 → 1. This workshop is for you if you've never built an agent or if you've built dozens and want to learn how Hermes makes it easier than ever.
+![](./2026-07-18-workshop-hero.png)
 
-## What we'll cover
+Build your own useful AI agent in one afternoon.
+
+Agents are most powerful when they are pointed at a real job you actually have.
+
+In this hands-on workshop, you'll learn what AI agents are good for, identify your own use case, build a working agent with Hermes on your laptop, connect it to the places where you already do your work, and set it up to talk to you and your team where you already work (Slack, Teams, Discord, Telegram, Signal, and more).
+
+[Register on Luma](https://luma.com/aic-ch-7-18)
+
+## Who is this workshop for?
+
+- You've never built an agent and want to learn
+- You've got ideas about tasks you want to automate with agents but don't know where to start
+- You've built dozens of agents and want to learn Hermes
+- Anyone in between — business, builders, hobbyists, and curious beginners are welcome
+
+## The Agenda
 
 ### Part 1 — Art of the Possible
 
-- **What's an agent** — not a chatbot. Memory, tools, skills, and a schedule
-- **Real use cases** — daily intelligence briefing, business KPI report, homelab health, incident triage, chat over your data
-- **Why Hermes** — works where you already work, self-improving skills, multi-platform, ease of setup
-- **Use-case brainstorm** — figure out what _you_ want to build before touching install
+We'll start with the mental model:
 
-### Part 2 — Setup Your Agent
+- What's an agent?
+- Real-world use cases across work, life, ops, and research
+- Why Hermes Agent by Nous Research?
 
-- **Install and setup** — Hermes on your machine, provider connected
-- **Connect where you work** — gateway to Discord, Telegram, Slack, or Teams
+### Part 2 — Use Case Brainstorm: Find a Real Problem
 
-### Part 3 — Make Your Agent Maximally Useful for You
+Agents are useful when they take over information work you already do by hand.
 
-- **Build your agent** — pick a use case, bootstrap a skill, run your first report
-- **Feedback loop** — teach your skill to get sharper with every run
-- **Schedule and delivery** — run your agent on a schedule, have it message you where you already work
+- **Self-improving regular briefings**: read newsletters, websites, events, releases, or updates and summarize only what matters
+- **Alert triage and resolution**: automatically evaluate inbound issues, even automate resolution or escalation
+- **Research tracking**: watch a topic, grant, policy, market, company, competitor, or project and report meaningful changes
+- **Operations health**: inspect systems, dashboards, services, or recurring checks and report only what needs attention
+- **Personal admin**: help track, manage, and schedule your events, appointments, renewals, reminders, purchases, travel, or recurring chores
+- **Virtual employee**: train your agent to manage specific knowledge work tasks with browser and computer use automation
+- And more!
 
-## What you'll leave with
+### Part 3 — Setup Your Agent
+
+We'll get Hermes running and configured:
+
+- Install Hermes
+- Connect a model/provider
+- Configure tools, skills, MCP/connectors, and local context
+- Chat where you already work: Discord, Telegram, Slack, Teams, email, or another target
+
+![](./2026-07-18-workshop-demo.png)
+
+### Part 4 — Make Your Agent Useful for You
+
+This is the main build block. You'll pick a use case, bootstrap a Hermes skill, run it, inspect the result, and improve it through feedback.
+
+We'll cover:
+
+- Building your first agent around your chosen use case
+- Teaching the agent to get sharper with each iteration
+- Scheduling and delivery so the agent can run and message you where you already work
+
+## What You'll Leave With
 
 - Your own AI agent installed and working
-- Connected to your messaging platform
+- Connected to your messaging platform of choice
 - One agent skill bootstrapped for something you actually care about
-- The pattern to build more
+- A practical pattern you can reuse to build more agents later
+
+## What to Bring
+
+- **Laptop and charger**
+- **Ideas for what to build** — we'll help you find a practical use case during the workshop
+
+### Optional Pre-work
+
+Get more out of the workshop by installing and configuring Hermes before you come. This will prevent you from losing time on snags.
+
+<https://hermes.arcadian.cloud/pre-work>
 
 ## Location
 

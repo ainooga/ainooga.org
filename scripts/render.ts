@@ -13,7 +13,7 @@ function resolveImagePath(src: string): string {
     const parts = src.split('/');
     const filename = parts[parts.length - 1] ?? '';
     const name = filename.replace(/\.[^.]+$/, '');
-    return `/images/${name}-800.webp`;
+    return `/images/${name}-800w.webp`;
   }
   if (src.startsWith('/')) return src;
   return `/images/${src}`;
