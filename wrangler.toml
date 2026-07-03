@@ -2,9 +2,6 @@ name = "ainooga-org"
 compatibility_date = "2026-06-19"
 pages_build_output_dir = "dist"
 
-[[send_email]]
-name = "EMAIL"
-
 [[d1_databases]]
 binding = "DB"
 database_name = "ainooga-d1"
