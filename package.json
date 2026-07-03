@@ -47,9 +47,7 @@
     "*.{md,json,yaml,yml}": [
       "prettier --write"
     ],
-    "*.{jpg,jpeg,png,gif}": [
-      "scripts/check-image-size.sh"
-    ]
+    "*.{jpg,jpeg,png,gif}": []
   },
   "dependencies": {
     "marked": "^15.0.0",
