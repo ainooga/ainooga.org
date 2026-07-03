@@ -18,7 +18,11 @@ Agents are most powerful when they are pointed at a real job you actually have.
 
 In this hands-on workshop, you'll learn what AI agents are good for, identify your own use case, build a working agent with Hermes on your laptop, connect it to the places where you already do your work, and set it up to talk to you and your team where you already work (Slack, Teams, Discord, Telegram, Signal, and more).
 
-[Register on Luma](https://luma.com/aic-ch-7-18)
+<p style="text-align:center; margin: var(--space-2xl) 0;">
+  <a href="https://luma.com/aic-ch-7-18" class="btn btn-primary" style="font-size: var(--text-lg); padding: var(--space-md) var(--space-2xl);">
+    Register on Luma →
+  </a>
+</p>
 
 ## Who is this workshop for?
 
@@ -94,3 +98,15 @@ Get more out of the workshop by installing and configuring Hermes before you com
 Business Development Center (BDC)  
 100 Cherokee Blvd. Suite 100  
 Chattanooga, TN 37405
+
+<hr class="divider" />
+
+<p style="text-align:center; margin: var(--space-2xl) 0;">
+  <a href="https://luma.com/aic-ch-7-18" class="btn btn-primary" style="font-size: var(--text-lg); padding: var(--space-md) var(--space-2xl);">
+    Register on Luma →
+  </a>
+</p>
+
+<p style="text-align:center; color: var(--color-text-secondary); font-size: var(--text-sm);">
+  Spaces are limited — grab your spot now.
+</p>
