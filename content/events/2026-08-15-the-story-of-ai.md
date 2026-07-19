@@ -11,9 +11,11 @@ status: draft
 
 Were you blindsided by ChatGPT in 2023?
 
-It didn't come from nowhere. Large language models, deep learning, neural networks — none of it appeared overnight. Every breakthrough you've heard about stands on decades of forgotten failures, abandoned ideas, and stubborn researchers who kept going when the field was laughed at.
+It didn't come from nowhere.
 
-In this talk, we'll trace the 70-year arc from the Dartmouth workshop (where John McCarthy coined "artificial intelligence" in 1956) through the AI winters, the quiet resurgence of connectionism, the ImageNet moment, the transformer paper, and the scale decisions that produced the models we use today.
+It came from over 70 years of ideological, technical, and philosophical conflict about what thinking even *is*, and how to mechanize it. Movements and careers came and went. Basically the entire human race rejected the truth, chased red herrings for *decades*, and finally gave them up only when there was no way left to reject the truth.
+
+AI is not unique this way. The World Wide Web, for example, followed a similar path, and whatever the next big thing is, it's simmering in labs and universities as we speak, visible only in a steady stream of papers that make a normal person think "Who cares?" Maybe you will.
 
 <p style="text-align:center; margin: var(--space-2xl) 0;">
   <a href="https://luma.com/aic-ch-8-15" class="btn btn-primary" style="font-size: var(--text-lg); padding: var(--space-md) var(--space-2xl);">
@@ -23,23 +25,22 @@ In this talk, we'll trace the 70-year arc from the Dartmouth workshop (where Joh
 
 ## What You'll Walk Away With
 
-- A mental model of how we got here — not just the highlights but the struggles that shaped each era
-- Why the field nearly died twice and what brought it back
+- A case study on what a "next big thing" looks like in the womb.
+- A compelling story of human failings -- Both in the small and the large.
+- An enriched understanding of and appreciation for the AI tools we all take for granted now.
 - Which of today's ideas are new and which are old ideas that finally had enough compute
-- Context for where things might go next
+- Context for what AI's trajectory might look like.
 
-## Who this is for
-
-- You use AI tools and want to understand where they came from
-- You heard terms like "transformer," "backpropagation," or "neural network" and want the story behind them
-- You remember the last AI winter and are wondering if we're headed for another one
-- You're new to AI and want a coherent narrative to anchor everything you learn next
 
 No technical background required. This is a story, not a lecture.
 
 ## Location
 
-**TBD** — Venue announced once confirmed.
+**The Enterprise Center**  
+1010 Georgia Ave, FLOOR 3  
+Chattanooga, TN 37402
+
+🅿️ Parking map: [https://bit.ly/4uCnVqp](https://bit.ly/4uCnVqp)
 
 ---
 
