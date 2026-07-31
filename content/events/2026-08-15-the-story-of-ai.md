@@ -13,7 +13,7 @@ Were you blindsided by ChatGPT in 2023?
 
 It didn't come from nowhere.
 
-It came from over 70 years of ideological, technical, and philosophical conflict about what thinking even *is*, and how to mechanize it. Movements and careers came and went. Basically the entire human race rejected the truth, chased red herrings for *decades*, and finally gave them up only when there was no way left to reject the truth.
+It came from over 70 years of ideological, technical, and philosophical conflict about what thinking even _is_, and how to mechanize it. Movements and careers came and went. Basically the entire human race rejected the truth, chased red herrings for _decades_, and finally gave them up only when there was no way left to reject the truth.
 
 AI is not unique this way. The World Wide Web, for example, followed a similar path, and whatever the next big thing is, it's simmering in labs and universities as we speak, visible only in a steady stream of papers that make a normal person think "Who cares?" Maybe you will.
 
@@ -31,16 +31,16 @@ AI is not unique this way. The World Wide Web, for example, followed a similar p
 - Which of today's ideas are new and which are old ideas that finally had enough compute
 - Context for what AI's trajectory might look like.
 
-
 No technical background required. This is a story, not a lecture.
 
 ## Location
 
-**The Enterprise Center**  
-1010 Georgia Ave, FLOOR 3  
-Chattanooga, TN 37402
+**[Chattanooga Business Development Center](https://maps.app.goo.gl/GfJhUMQDTvphEaQX7)**<br />
+100 Cherokee Blvd.
+Chattanooga, TN 37405
 
-🅿️ Parking map: [https://bit.ly/4uCnVqp](https://bit.ly/4uCnVqp)
+Regarding parking, please consult the graphic below:
+![Park in the back, by the railroad](./bdc-parking.png)
 
 ---
 
