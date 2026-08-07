@@ -25,24 +25,30 @@ Anchor: `$50K+/yr within 2 years`. At current ~40+ attendance/mo, even a modest
 first-year conversion (20–30 members) supports a sustainable base, not the full
 target — memberships are the foundation, ad products + special events scale.
 
-Tier shape (draft — pricing to be pressure-tested in a separate PR):
+Tier shape (pricing agreed):
 
-| Tier             | Price band (draft)        | Core benefits                                                                                                    |
-| ---------------- | ------------------------- | ---------------------------------------------------------------------------------------------------------------- |
-| **Basic**        | ~$10–15/mo or $100–150/yr | Event access, member profile, community, early-bird pricing on paid events/training                              |
-| **Professional** | ~$25–35/mo or $250–350/yr | Everything in Basic + **directory listing** (contact card, services offered, rank/title), 1x ad slot eligibility |
-| **Organizer**    | ~$50–75/mo                | Everything + recurring promotion placement in workshops/meetings, priority special-event access                  |
+| Tier         | Price   | Core benefits                                                                                                    |
+| ------------ | ------- | ---------------------------------------------------------------------------------------------------------------- |
+| **Student**  | $10/yr  | Basic-level benefits at discounted rate; for enrolled students. Same access as Basic, reduced price.             |
+| **Basic**    | $120/yr | Event access, member profile, community, early-bird pricing on paid events/training.                             |
+| **Pro**      | $300/yr | Everything in Basic + **directory listing** (contact card, services offered, rank/title), 1x ad slot eligibility |
+| **Pro Plus** | $999/yr | Everything in Pro + recurring promotion placement in workshops/meetings, priority special-event access           |
 
 Notes:
 
-- Offer monthly AND annual (annual discounted ~15–20% to encourage annual, boost
-  near-term cash).
+- **Organizers get free memberships** in exchange for running the club (revenue-
+  neutral: they compensate via labor, not dues). Closest tier: Pro (or Pro Plus),
+  granted gratis while actively organizing. Decouple "organizer-status" (earned,
+  free) from "paid tier" — an organizer who wants Pro Plus-level ad benefits pays
+  the difference or gets Pro Plus matched to their organizing level.
+- Annual-only pricing across all tiers (quoted as annual rates). Consider a monthly
+  convenience option at slight premium later if demand shows.
 - Membership is the access gate for buying/using ad products (bundling idea below).
-- Keep tiers few (3) — pricing clarity beats options sprawl.
+- Keep tiers few (4) — pricing clarity beats options sprawl.
 
 ---
 
-## 3. Directory listing ("benefit" of Professional+ membership)
+## 3. Directory listing ("benefit" of Pro+ membership)
 
 Purpose: members opt in to be listed on the site directory **as part of their
 membership card/profile**. Drives value for professional members + organizers.
@@ -149,18 +155,21 @@ directory rich.
 
 Target: `$50K+/yr by year 2`. Composition sketches:
 
-- **Memberships**: 40–60 paid members → ~$12K–25K/yr (mix of Basic/Pro/Organizer).
+- **Memberships**: with prices now set (Basic $120, Pro $300, Pro Plus $999, Student
+  $10; organizers free). A plausible year-2 mix: ~60–80 Basic, ~15–25 Pro, 2–4 Pro
+  Plus, ~20–30 Student → roughly $10K–20K/yr. Organizers at ~free do not add dues.
 - **Ad products + sponsorships**: 6–10 deals/yr, $1K–8K avg → $15K–40K/yr.
 - **Special events**: 4–6/yr, sponsored participation + tickets → $10K–30K/yr.
 
 All conservative-ish bands; sum comfortably ≥ $50K with only partial attainment in
 each — target is believable at current 40+ attendance IF ad-product sales pipeline
 exists. ~40 attendees/mo is a reasonable base to convert ~30–50% of regular
-professionals to Basic and a handful to Pro/Organizer.
+professionals to Basic and a handful to Pro/Pro Plus; a single annual Pro Plus
+($999) ≈ ten Students. Pro Plus + Pro/Pro Plus ad deals carry the high end.
 
 Open gaps to close before building:
 
-- Real pricing signals (survey current attendees: would they join at $X?).
+- Demand signals (survey current attendees: would they join at these prices?).
 - How many orgs/members would buy ad slots per month (inventory demand).
 - Special-event formats attendees actually want to pay for.
 - Payments/fulfillment path (billing for memberships+ads, invoicing, booking system)
@@ -169,13 +178,18 @@ Open gaps to close before building:
 
 ## 9. Open questions / decisions needed
 
-1. **Membership pricing** — validate band above. Annual vs monthly ratio decision.
+1. **Pricing set** — Student $10, Basic $120, Pro $300, Pro Plus $999 (annual).
+   Validate demand via survey; revisit monthly option if needed. Remaining open:
+   **organizer free-membership tier level** — Pro for all organizers, or Pro Plus
+   for lead organizers / by contribution?
 2. **Free tier vs. all-paid** — should any site membership stay free? (Suggest: keep
    a free community tier, restrict directory listing + ad products to paid.)
 3. **Directory opt-in & privacy** — default opt-in or opt-out? Field-level control?
 4. **Use/lose enforcement** — how do we confirm a slot was used and log forfeits?
    Need an ops/booking mechanism before selling. Reschedule-window rule (e.g. 7 days).
 5. **Self-asserted rank vs. earned** — who can claim "Organizer" / titles?
+   (Note: organizers get free membership — so "Organizer" is an earned status
+   conferring a free tier, not a purchasable title.)
 6. **Sponsorship rebrand** — fold current `sponsors` tiers into ad-product packages?
 7. **Payment provider + fulfillment** — recurring billing for memberships, invoices
    for ad deals, booking calendar for slots. What handles this (Stripe? manual + form?).
@@ -188,7 +202,7 @@ Open gaps to close before building:
 
 ## 10. Sequencing proposal (once ideas are agreed)
 
-1. Validate pricing + demand (survey → quick decisions on §9).
+1. Validate pricing + demand (survey → quick decisions on remaining §9 items).
 2. Content/model foundation: extend member schema (listed/services/rank) + a
    `products`/packages content type (new frontmatter). No UI first.
 3. Directory listing surfacing on member profile (build on existing member pages).
