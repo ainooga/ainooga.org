@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 60" role="img" aria-label="RevRise Media">
+  <rect width="200" height="60" rx="12" fill="#FBF9F6"/>
+  <polygon points="26,18 44,30 26,42" fill="#B87333"/>
+  <polygon points="42,18 60,30 42,42" fill="#2D4A6B"/>
+  <text x="68" y="35" font-family="Inter, sans-serif" font-size="14" font-weight="700" fill="#1B2A3C">RevRise</text>
+  <text x="68" y="47" font-family="Inter, sans-serif" font-size="9" fill="#6B6560">MEDIA</text>
+</svg>

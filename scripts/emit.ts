@@ -25,6 +25,8 @@ interface IndexItem {
   description?: string;
   url?: string;
   featured?: boolean;
+  // Optional SVG logo path (hand-placed under static/images/sponsor-logos).
+  logo?: string;
 }
 
 interface ContentIndex {
@@ -63,6 +65,7 @@ function buildIndex(docs: ProcessedDoc[]): ContentIndex {
       description: data.description as string | undefined,
       url: data.url as string | undefined,
       featured: data.featured as boolean | undefined,
+      logo: data.logo as string | undefined,
     };
     items.push(item);
   }

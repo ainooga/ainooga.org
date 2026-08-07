@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 60" role="img" aria-label="Chattanooga Bank and Trust">
+  <rect width="200" height="60" rx="12" fill="#FFFFFF"/>
+  <circle cx="30" cy="30" r="13" fill="none" stroke="#1B2A3C" stroke-width="4"/>
+  <text x="50" y="35" font-family="Georgia, serif" font-size="16" font-weight="700" fill="#1B2A3C">Chattanooga Bank</text>
+  <text x="50" y="47" font-family="Inter, sans-serif" font-size="9" letter-spacing="2" fill="#B87333">&amp; TRUST</text>
+</svg>

@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 60" role="img" aria-label="Hamilton County Workforce">
+  <rect width="200" height="60" rx="12" fill="#2D4A6B"/>
+  <path d="M24 40l0-16 8-6 8 6 0 16" fill="none" stroke="#D4935A" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M20 40h24" stroke="#FBF9F6" stroke-width="4" stroke-linecap="round"/>
+  <text x="54" y="35" font-family="Inter, sans-serif" font-size="12" font-weight="700" fill="#FBF9F6">Hamilton County</text>
+  <text x="54" y="48" font-family="Inter, sans-serif" font-size="9" fill="#D4935A">WORKFORCE</text>
+</svg>

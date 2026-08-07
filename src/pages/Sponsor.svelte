@@ -13,6 +13,7 @@
     description?: string;
     url?: string;
     featured?: boolean;
+    logo?: string;
     path: string;
     tags: string[];
   }
@@ -36,6 +37,18 @@
   let sponsors = $state<SponsorItem[]>([]);
   let loading = $state(true);
   let error = $state<string | null>(null);
+
+  // "Become a Sponsor" is the on-brand CTA tile, surfaced separately and larger
+  // than real sponsors so it reads as an invitation rather than a current member.
+  const CTA_SLUG = 'become-a-sponsor';
+
+  let featuredSponsors = $derived(
+    sponsors.filter((s) => s.slug !== CTA_SLUG && s.featured),
+  );
+  let directorySponsors = $derived(
+    sponsors.filter((s) => s.slug !== CTA_SLUG && !s.featured),
+  );
+  let ctaSponsor = $derived(sponsors.find((s) => s.slug === CTA_SLUG));
 
   // Contact form state
   let showForm = $state(false);
@@ -231,25 +244,92 @@
         Could not load sponsors. <button onclick={load} class="link-btn">Retry</button>
       </p>
     {:else}
-      <div class="current-sponsors" style="margin-top: var(--space-lg)">
-        {#each sponsors as sponsor (sponsor.slug)}
-          <a
-            href={sponsor.url ?? '#'}
-            class="sponsor-card card"
-            target="_blank"
-            rel="noopener"
-          >
-            <span
-              class="sponsor-card__tier"
-              style="color: {tierInfo[sponsor.tier as Tier]?.color ?? '#6B6560'}"
-              >{sponsor.tier}</span
+      <div class="support-grid">
+        <!-- Featured sponsors: larger cards with logo + description -->
+        <div class="featured-sponsors" style="margin-top: var(--space-lg)">
+          {#each featuredSponsors as sponsor (sponsor.slug)}
+            <a
+              href={sponsor.url ?? '#'}
+              class="sponsor-card sponsor-card--featured card"
+              target="_blank"
+              rel="noopener"
             >
-            <h3 class="sponsor-card__name">{sponsor.title}</h3>
-            {#if sponsor.description}
-              <p class="sponsor-card__desc">{sponsor.description}</p>
-            {/if}
-          </a>
-        {/each}
+              {#if sponsor.logo}
+                <img
+                  class="sponsor-card__logo"
+                  src={sponsor.logo}
+                  alt={sponsor.title + ' logo'}
+                  loading="lazy"
+                />
+              {/if}
+              <h3 class="sponsor-card__name">{sponsor.title}</h3>
+              <span
+                class="sponsor-card__tier"
+                style="color: {tierInfo[sponsor.tier as Tier]?.color ?? '#6B6560'}"
+                >{sponsor.tier}</span
+              >
+              {#if sponsor.description}
+                <p class="sponsor-card__desc">{sponsor.description}</p>
+              {/if}
+            </a>
+          {/each}
+
+          <!-- "Become a Sponsor" invitation tile: distinct, larger, not a real card -->
+          <button
+            type="button"
+            class="sponsor-cta-tile"
+            onclick={() => (showForm = true)}
+          >
+            <span class="sponsor-cta-tile__icon" aria-hidden="true">+</span>
+            <span class="sponsor-cta-tile__body">
+              <span class="sponsor-cta-tile__title"
+                >{ctaSponsor?.title ?? 'Become a Sponsor'}</span
+              >
+              <span class="sponsor-cta-tile__desc">
+                {ctaSponsor?.description ??
+                  "Put your brand in front of Chattanooga's AI community."}
+              </span>
+            </span>
+          </button>
+        </div>
+
+        <!-- Remaining sponsors: compact directory grid -->
+        {#if directorySponsors.length > 0}
+          <div class="sponsor-grid" style="margin-top: var(--space-xl)">
+            {#each directorySponsors as sponsor (sponsor.slug)}
+              <a
+                href={sponsor.url ?? '#'}
+                class="sponsor-card card"
+                target="_blank"
+                rel="noopener"
+              >
+                {#if sponsor.logo}
+                  <img
+                    class="sponsor-card__logo sponsor-card__logo--sm"
+                    src={sponsor.logo}
+                    alt={sponsor.title + ' logo'}
+                    loading="lazy"
+                  />
+                {/if}
+                <div class="sponsor-card__inner">
+                  <h3 class="sponsor-card__name" style="margin: 0 0 var(--space-xs)">
+                    {sponsor.title}
+                  </h3>
+                  <span
+                    class="sponsor-card__tier"
+                    style="color: {tierInfo[sponsor.tier as Tier]?.color ?? '#6B6560'}"
+                    >{sponsor.tier}</span
+                  >
+                  {#if sponsor.description}
+                    <p class="sponsor-card__desc" style="margin-top: var(--space-sm)">
+                      {sponsor.description}
+                    </p>
+                  {/if}
+                </div>
+              </a>
+            {/each}
+          </div>
+        {/if}
       </div>
     {/if}
   </section>
@@ -434,15 +514,45 @@
     margin-bottom: var(--space-xs);
   }
 
-  .current-sponsors {
-    display: flex;
-    flex-direction: column;
-    gap: var(--space-md);
+  .featured-sponsors {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: var(--space-lg);
   }
 
   .sponsor-card {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--space-sm);
     text-decoration: none;
     color: inherit;
+  }
+
+  .sponsor-card--featured {
+    min-height: 220px;
+    justify-content: flex-start;
+    padding: var(--space-2xl);
+    transition:
+      transform 0.15s ease,
+      box-shadow 0.15s ease;
+  }
+
+  .sponsor-card--featured:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-md);
+  }
+
+  .sponsor-card__logo {
+    width: 160px;
+    height: 60px;
+    object-fit: contain;
+    object-position: left;
+    margin-bottom: var(--space-sm);
+  }
+
+  .sponsor-card__logo--sm {
+    width: 132px;
   }
 
   .sponsor-card__tier {
@@ -454,14 +564,102 @@
 
   .sponsor-card__name {
     font-family: var(--font-heading);
-    font-size: var(--text-lg);
+    font-size: var(--text-xl);
     font-weight: 400;
-    margin: var(--space-xs) 0;
+    margin: 0;
   }
 
   .sponsor-card__desc {
     font-size: var(--text-sm);
     color: var(--color-text-secondary);
+    line-height: var(--leading-relaxed);
+    margin: 0;
+  }
+
+  .sponsor-card__inner {
+    display: block;
+  }
+
+  .sponsor-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: var(--space-md);
+  }
+
+  .sponsor-grid .sponsor-card {
+    flex-direction: row;
+    align-items: flex-start;
+    gap: var(--space-md);
+    padding: var(--space-lg);
+  }
+
+  .sponsor-grid .sponsor-card__name {
+    font-size: var(--text-lg);
+  }
+
+  /* "Become a Sponsor" invitation tile — deliberately distinct from real cards */
+  .sponsor-cta-tile {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--space-lg);
+    min-height: 220px;
+    padding: var(--space-2xl);
+    border: 1.5px dashed var(--color-accent);
+    border-radius: var(--radius-lg);
+    background: var(--color-accent-subtle);
+    text-decoration: none;
+    text-align: left;
+    font-family: var(--font-body);
+    color: inherit;
+    cursor: pointer;
+    transition:
+      background 0.15s ease,
+      border-color 0.15s ease;
+  }
+
+  .sponsor-cta-tile:hover {
+    background: #ead9c2;
+    border-color: var(--color-accent);
+  }
+
+  .sponsor-cta-tile__icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 44px;
+    height: 44px;
+    border-radius: var(--radius-full);
+    background: var(--color-accent);
+    color: var(--color-surface);
+    font-size: var(--text-2xl);
+    font-weight: 500;
+    flex-shrink: 0;
+  }
+
+  .sponsor-cta-tile__body {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-sm);
+  }
+
+  .sponsor-cta-tile__title {
+    font-family: var(--font-heading);
+    font-size: var(--text-2xl);
+    font-weight: 400;
+    color: var(--color-text);
+  }
+
+  .sponsor-cta-tile__desc {
+    font-size: var(--text-sm);
+    color: var(--color-text-secondary);
+    line-height: var(--leading-relaxed);
+  }
+
+  @media (max-width: 768px) {
+    .featured-sponsors,
+    .sponsor-grid {
+      grid-template-columns: 1fr;
+    }
   }
 
   .sponsor-cta {

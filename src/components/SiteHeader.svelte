@@ -1,13 +1,8 @@
 <script lang="ts">
   import { onMount } from 'svelte';
+  import { NAV_ITEMS } from '$lib/nav';
 
-  const navItems = [
-    { label: 'Membership', path: '/membership' },
-    { label: 'Advertise', path: '/advertise' },
-    { label: 'Events', path: '/events' },
-    { label: 'Members', path: '/members' },
-    { label: 'About', path: '/about' },
-  ];
+  const navItems = NAV_ITEMS;
 
   let scrolled = $state(false);
   let currentHash = $state('');
@@ -137,6 +132,15 @@
   .site-header__link--active {
     color: var(--color-text);
     border-bottom-color: var(--color-accent);
+  }
+
+  @media (max-width: 900px) {
+    .site-header__nav {
+      gap: var(--space-md);
+    }
+    .site-header__link {
+      font-size: var(--text-sm);
+    }
   }
 
   @media (max-width: 640px) {

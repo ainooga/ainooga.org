@@ -2,6 +2,7 @@
   import { apiPost } from '$lib/api';
   import { getTurnstileService } from '$lib/context';
   import { whenTurnstileReady } from '$lib/turnstile.js';
+  import { NAV_ITEMS, FOOTER_EXTRA } from '$lib/nav.js';
   import type { TurnstileWidgetCallbacks } from '$lib/turnstile.js';
 
   const year = new Date().getFullYear();
@@ -262,13 +263,9 @@
       <span class="site-footer__name">AI Nooga</span>
     </div>
     <nav class="site-footer__nav" aria-label="Footer navigation">
-      <a href="#/membership">Membership</a>
-      <a href="#/advertise">Advertise</a>
-      <a href="#/events">Events</a>
-      <a href="#/posts">Posts</a>
-      <a href="#/members">Members</a>
-      <a href="#/sponsor">Sponsor</a>
-      <a href="#/about">About</a>
+      {#each [...NAV_ITEMS, ...FOOTER_EXTRA] as item (item.path)}
+        <a href="#{item.path}">{item.label}</a>
+      {/each}
     </nav>
 
     {#if subscribeState === 'success'}
