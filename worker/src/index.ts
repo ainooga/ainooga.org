@@ -8,6 +8,7 @@ function corsHeaders(origin: string | null): HeadersInit {
   const allowed = [
     'https://ainooga.org',
     'https://www.ainooga.org',
+    'https://proto.ainooga.org',
     /^https:\/\/[a-z0-9-]+\.ainooga-org\.pages\.dev$/,
     /^http:\/\/localhost:\d+$/,
   ];
@@ -31,24 +32,31 @@ function attachCors(response: Response, origin: string | null): void {
   }
 }
 
+// siteUrl derives from the request origin so confirmation links match the host
+// that handled subscribe: proto.ainooga.org, ainooga.org, previews, localhost.
+async function subscribeFromRequest(request: Request, env: Env): Promise<Response> {
+  const url = new URL(request.url);
+  const body = (await request.json()) as {
+    email: string;
+    name?: string;
+    turnstileToken: string;
+  };
+  return await handleSubscribe(
+    { email: body.email, name: body.name, turnstileToken: body.turnstileToken },
+    {
+      db: createDb(env.DB),
+      email: createEmailSender(env.EMAIL),
+      turnstile: createTurnstileVerifier(env.TURNSTILE_SECRET_KEY),
+      siteUrl: url.origin,
+    },
+  );
+}
+
 async function dispatch(request: Request, env: Env): Promise<Response> {
   const url = new URL(request.url);
 
   if (url.pathname === '/api/subscribe' && request.method === 'POST') {
-    const body = (await request.json()) as {
-      email: string;
-      name?: string;
-      turnstileToken: string;
-    };
-    return await handleSubscribe(
-      { email: body.email, name: body.name, turnstileToken: body.turnstileToken },
-      {
-        db: createDb(env.DB),
-        email: createEmailSender(env.EMAIL),
-        turnstile: createTurnstileVerifier(env.TURNSTILE_SECRET_KEY),
-        siteUrl: env.SITE_URL,
-      },
-    );
+    return await subscribeFromRequest(request, env);
   }
 
   if (url.pathname === '/api/contact-sponsor' && request.method === 'POST') {
