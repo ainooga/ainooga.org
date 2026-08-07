@@ -13,7 +13,7 @@ benefit projects, ~40+ monthly workshop attendance, target $50K+/yr within 2 yea
 - Products are two families:
   1. **Paid membership** — recurring, low-touch, benefits-based.
   2. **Advertising / promotions products** — events-centric, time-bound,
-     "use/lose" consumption.
+     time-bound consumption (fulfilled by period earmark, not usage).
 - Revenue targets: near-term from sponsorships + ad products; recurring base from
   memberships; upside from special events.
 
@@ -78,8 +78,8 @@ Ideas / open questions:
 
 ## 4. Advertising products (club sales)
 
-Family: event-centric promotions the club sells to businesses/members. **Default
-terms are use/lose** — unused slide placements or announcement slots do NOT bank.
+Family: event-centric promotions the club sells to businesses/members. **Sold by
+period earmark, not by per-event use.**
 
 Products (draft):
 
@@ -90,14 +90,26 @@ Products (draft):
 3. **Branded presence** — subtler recurring placement (banner in venue, listing,
    featured on site). Longer-running, less time-reactive than slots.
 
-Use/lose mechanics to nail down:
+**Fulfillment model — earmark-based (use/lose), NOT per-event:**
 
-- Sold per **specific event** (not flex-pool): buyer picks a dated workshop/meeting.
-- If they miss the confirmed slot → forfeit. No credits rollover. (This is the
-  stated model — keep hard, but allow rescheduling BEFORE an SLA cutoff, e.g.
-  "reschedule ≥7 days out or it's burned".)
-- Need a booking/confirmation mechanism so "use" is unambiguous and logged. This
-  is the hard part — see open questions below.
+- A product is sold for a **named period earmark** (e.g. "Winter 2026"), not a
+  specific dated event. Buyer gets advertising availability for that period.
+- **Fulfillment = the earmark itself.** Making the period availability (slide
+  rotation, announcement slots, or presence) available to the client IS the
+  delivered product. Exercising it is optional; whether or not they use each slot,
+  the product is already fulfilled.
+- Once the period is over, the availability ends. **No banking, no rollover, no
+  credits carried into a later period** — the opportunity was offered and is gone.
+- We **actively push clients to use their placement/slots** (nudge, onboarding,
+  scheduling help), but that push is good service, not a prerequisite for
+  fulfillment. Non-use does not refund, extend, or credit.
+- Because there is no confirmed per-event slot, there is **no missed-event
+  forfeiture and no reschedule window** — those only mattered under the per-event
+  model. The sales/copy must state this clearly: client buys a period of guaranteed
+  availability, not a date-specific airing.
+- What still needs light ops: a **period tracking record** (client, product,
+  period-start/end) so we can log what was earmarked, remind clients to use it, and
+  show availability in each period's events. Simpler than a booking calendar.
 
 ---
 
@@ -172,7 +184,7 @@ Open gaps to close before building:
 - Demand signals (survey current attendees: would they join at these prices?).
 - How many orgs/members would buy ad slots per month (inventory demand).
 - Special-event formats attendees actually want to pay for.
-- Payments/fulfillment path (billing for memberships+ads, invoicing, booking system)
+- Payments/fulfillment path (billing for memberships+ads, invoicing).
 
 ---
 
@@ -185,14 +197,16 @@ Open gaps to close before building:
 2. **Free tier vs. all-paid** — should any site membership stay free? (Suggest: keep
    a free community tier, restrict directory listing + ad products to paid.)
 3. **Directory opt-in & privacy** — default opt-in or opt-out? Field-level control?
-4. **Use/lose enforcement** — how do we confirm a slot was used and log forfeits?
-   Need an ops/booking mechanism before selling. Reschedule-window rule (e.g. 7 days).
+4. **Earmark/fulfillment tracking** — no per-event booking or reschedule needed now
+   (correction in §4). Remaining: how we record each client's period earmark
+   (product, period-start/end), remind them to use it, and surface availability per
+   period. Simplify: a lightweight records store, not a booking calendar.
 5. **Self-asserted rank vs. earned** — who can claim "Organizer" / titles?
    (Note: organizers get free membership — so "Organizer" is an earned status
    conferring a free tier, not a purchasable title.)
 6. **Sponsorship rebrand** — fold current `sponsors` tiers into ad-product packages?
 7. **Payment provider + fulfillment** — recurring billing for memberships, invoices
-   for ad deals, booking calendar for slots. What handles this (Stripe? manual + form?).
+   for ad deals, period record for ad earmarks. What handles this (Stripe? manual + form?).
 8. **Special events calendar** — which formats first, frequency, staffing.
 9. **Legal/for-profit structure** — for-profit club selling ads + memberships; any
    tax/business-consumer implications, refund/cancellation policy for memberships,
@@ -207,6 +221,6 @@ Open gaps to close before building:
    `products`/packages content type (new frontmatter). No UI first.
 3. Directory listing surfacing on member profile (build on existing member pages).
 4. Membership signup/eligibility + payment path.
-5. Ad-product catalog page + booking mechanism (use/lose enforcement).
+5. Ad-product catalog page + period earmark records (fulfillment = earmark).
 6. Special events with bundled top packages; fold sponsor tiers in.
 7. Measurement: track members, ad fulfillment/loss rate, revenue vs. $50K target.
