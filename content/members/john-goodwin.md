@@ -3,6 +3,13 @@ name: John Goodwin
 role: Organizer
 joined: 2026-04-14
 tags: [organizer, founder]
+listed: true
+rank: Co-Founder / Organizer
+organizer: true
+services:
+  - AI infrastructure & cost optimization
+  - Performance engineering (P99 / scale)
+  - Build & team coaching
 links:
   website: https://hiretn.com
   linkedin: https://www.linkedin.com/in/johnhgoodwin/

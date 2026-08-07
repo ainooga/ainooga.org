@@ -12,6 +12,19 @@ interface IndexItem {
   path: string;
   location?: string;
   endDate?: string;
+  // Directory fields surfaced on member indexes (IDEAS §3, §7).
+  listed?: boolean;
+  rank?: string;
+  services?: string[];
+  organizer?: boolean;
+  // Product family for filtering membership vs advertising on list pages.
+  family?: string;
+  // Sponsor/advertiser card fields (tier, description, url, featured) so the
+  // sponsor index carries what the Sponsor page renders without a per-doc fetch.
+  tier?: string;
+  description?: string;
+  url?: string;
+  featured?: boolean;
 }
 
 interface ContentIndex {
@@ -41,6 +54,15 @@ function buildIndex(docs: ProcessedDoc[]): ContentIndex {
       path: `/data/${doc.type}/${doc.slug}.json`,
       location: data.location as string | undefined,
       endDate: data.endDate as string | undefined,
+      listed: data.listed as boolean | undefined,
+      rank: data.rank as string | undefined,
+      services: data.services as string[] | undefined,
+      organizer: data.organizer as boolean | undefined,
+      family: data.family as string | undefined,
+      tier: data.tier as string | undefined,
+      description: data.description as string | undefined,
+      url: data.url as string | undefined,
+      featured: data.featured as boolean | undefined,
     };
     items.push(item);
   }

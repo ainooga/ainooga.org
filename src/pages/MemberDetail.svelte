@@ -13,6 +13,10 @@
     bio?: string;
     tags?: string[];
     links?: Record<string, string>;
+    listed?: boolean;
+    rank?: string;
+    services?: string[];
+    organizer?: boolean;
   }
 
   let member = $state<MemberDetail | null>(null);
@@ -61,8 +65,14 @@
         {displayName.charAt(0).toUpperCase()}
       </div>
       <h1 class="member-detail__name">{displayName}</h1>
+      {#if member.listed && member.organizer}
+        <span class="member-detail__organizer-tag">Organizer</span>
+      {/if}
       {#if member.role}
         <p class="member-detail__role">{member.role}</p>
+      {/if}
+      {#if member.listed && member.rank}
+        <p class="member-detail__rank">{member.rank}</p>
       {/if}
       {#if member.tags && member.tags.length > 0}
         <div class="cluster" style="margin-top: var(--space-sm)">
@@ -72,6 +82,16 @@
         </div>
       {/if}
     </div>
+    {#if member.listed && member.services && member.services.length > 0}
+      <div class="member-detail__services">
+        <span class="member-detail__services-label">Services offered</span>
+        <ul class="member-detail__services-list">
+          {#each member.services as service (service)}
+            <li>{service}</li>
+          {/each}
+        </ul>
+      </div>
+    {/if}
     {#if member.links}
       <div class="member-detail__links" style="margin-top: var(--space-lg)">
         {#each Object.entries(member.links) as [label, url] (label)}
@@ -121,6 +141,53 @@
     font-size: var(--text-lg);
     color: var(--color-text-secondary);
     margin-top: var(--space-xs);
+  }
+
+  .member-detail__organizer-tag {
+    display: inline-block;
+    margin-top: var(--space-xs);
+    padding: 2px var(--space-sm);
+    font-size: var(--text-xs);
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--color-accent);
+    background: var(--color-accent-subtle);
+    border-radius: var(--radius-full);
+  }
+
+  .member-detail__rank {
+    font-size: var(--text-base);
+    color: var(--color-primary);
+    margin-top: var(--space-xs);
+  }
+
+  .member-detail__services {
+    margin-top: var(--space-lg);
+    padding: var(--space-lg);
+    background: var(--color-surface-alt);
+    border-radius: var(--radius-md);
+  }
+
+  .member-detail__services-label {
+    display: block;
+    font-size: var(--text-xs);
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--color-accent);
+    margin-bottom: var(--space-sm);
+  }
+
+  .member-detail__services-list {
+    margin: 0;
+    padding-left: var(--space-md);
+    color: var(--color-text);
+    line-height: var(--leading-relaxed);
+  }
+
+  .member-detail__services-list li {
+    margin-bottom: var(--space-xs);
   }
 
   .member-detail__links {

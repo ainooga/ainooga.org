@@ -110,7 +110,7 @@ export function verifyOutput(): VerifyResult {
 
   checkVersionFile(errors);
 
-  const types = ['posts', 'events', 'members', 'sponsors'];
+  const types = ['posts', 'events', 'members', 'sponsors', 'products'];
   for (const type of types) {
     checkIndexFile(type, errors, warnings);
   }

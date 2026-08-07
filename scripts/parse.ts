@@ -8,6 +8,7 @@ import {
   EventFrontmatter,
   MemberFrontmatter,
   SponsorFrontmatter,
+  ProductFrontmatter,
   SiteConfig,
   type SiteConfigType,
   type ParsedDoc,
@@ -19,6 +20,7 @@ const FRONTMATTER_SCHEMAS: Record<ContentType, z.ZodType> = {
   events: EventFrontmatter,
   members: MemberFrontmatter,
   sponsors: SponsorFrontmatter,
+  products: ProductFrontmatter,
 };
 
 function globContent(type: ContentType): string[] {
@@ -77,7 +79,7 @@ export function parseSiteConfig(): SiteConfigType {
 }
 
 export function parseAll(): { docs: ParsedDoc[]; errors: FieldError[] } {
-  const types: ContentType[] = ['posts', 'events', 'members', 'sponsors'];
+  const types: ContentType[] = ['posts', 'events', 'members', 'sponsors', 'products'];
   const docs: ParsedDoc[] = [];
   const allErrors: FieldError[] = [];
 

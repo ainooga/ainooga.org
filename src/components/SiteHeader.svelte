@@ -2,10 +2,10 @@
   import { onMount } from 'svelte';
 
   const navItems = [
+    { label: 'Membership', path: '/membership' },
+    { label: 'Advertise', path: '/advertise' },
     { label: 'Events', path: '/events' },
-    { label: 'Posts', path: '/posts' },
     { label: 'Members', path: '/members' },
-    { label: 'Sponsor', path: '/sponsor' },
     { label: 'About', path: '/about' },
   ];
 

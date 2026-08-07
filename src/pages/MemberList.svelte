@@ -8,6 +8,9 @@
     title: string;
     tags: string[];
     path: string;
+    listed?: boolean;
+    rank?: string;
+    organizer?: boolean;
   }
 
   interface ContentIndex {
@@ -57,6 +60,12 @@
           </div>
           <div>
             <h3 class="member-card__name">{member.title}</h3>
+            {#if member.listed && member.rank}
+              <p class="member-card__rank">{member.rank}</p>
+            {/if}
+            {#if member.listed && member.organizer}
+              <span class="member-card__organizer-tag">Organizer</span>
+            {/if}
             {#if member.tags && member.tags.length > 0}
               <div class="cluster" style="margin-top: var(--space-xs)">
                 {#each member.tags.slice(0, 3) as tag (tag)}
@@ -106,6 +115,25 @@
     font-family: var(--font-heading);
     font-size: var(--text-base);
     font-weight: 400;
+  }
+
+  .member-card__rank {
+    font-size: var(--text-xs);
+    color: var(--color-text-secondary);
+    margin-top: 2px;
+  }
+
+  .member-card__organizer-tag {
+    display: inline-block;
+    margin-top: var(--space-xs);
+    padding: 2px var(--space-sm);
+    font-size: var(--text-xs);
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--color-accent);
+    background: var(--color-accent-subtle);
+    border-radius: var(--radius-full);
   }
 
   .error-msg {

@@ -152,6 +152,41 @@
   </div>
 </section>
 
+<!-- Membership & products -->
+<section class="section">
+  <div class="container">
+    <p class="section__label">Built to last</p>
+    <h2 class="section__title">Be part of what's growing here</h2>
+    <p class="section__subtitle" style="margin-bottom: var(--space-xl)">
+      A community is only as strong as the people who commit to it. Join as a member, put
+      your message in front of the right audience, or back the club as a sponsor.
+    </p>
+    <div class="grid-3">
+      <a href="#/membership" class="product-link card">
+        <h3 class="product-link__title">Membership</h3>
+        <p class="product-link__desc">
+          Belong, get access, and show up as a real member. From $10/yr for students.
+        </p>
+        <span class="product-link__cta">Explore tiers &rarr;</span>
+      </a>
+      <a href="#/advertise" class="product-link card">
+        <h3 class="product-link__title">Advertise</h3>
+        <p class="product-link__desc">
+          Get your message in front of the right people — by period, not per event.
+        </p>
+        <span class="product-link__cta">Browse products &rarr;</span>
+      </a>
+      <a href="#/sponsor" class="product-link card">
+        <h3 class="product-link__title">Sponsor</h3>
+        <p class="product-link__desc">
+          Invest directly in Chattanooga's AI talent and community programs.
+        </p>
+        <span class="product-link__cta">Become a sponsor &rarr;</span>
+      </a>
+    </div>
+  </div>
+</section>
+
 <!-- Sponsor bar -->
 <section class="section section-alt">
   <div class="container">
@@ -235,6 +270,34 @@
     font-size: var(--text-sm);
     color: var(--color-text-secondary);
     line-height: var(--leading-relaxed);
+  }
+
+  .product-link {
+    display: flex;
+    flex-direction: column;
+    text-decoration: none;
+    color: inherit;
+  }
+
+  .product-link__title {
+    font-family: var(--font-heading);
+    font-size: var(--text-xl);
+    font-weight: 400;
+  }
+
+  .product-link__desc {
+    font-size: var(--text-sm);
+    color: var(--color-text-secondary);
+    line-height: var(--leading-relaxed);
+    margin-top: var(--space-sm);
+    flex: 1;
+  }
+
+  .product-link__cta {
+    margin-top: var(--space-md);
+    font-size: var(--text-sm);
+    font-weight: 500;
+    color: var(--color-accent);
   }
 
   .sponsor-bar {

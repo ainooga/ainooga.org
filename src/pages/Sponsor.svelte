@@ -48,7 +48,7 @@
   let turnstileWidgetId = $state<string | null>(null);
   let turnstileContainer = $state<HTMLDivElement | null>(null);
 
-  let turnstile = $state(getTurnstileService());
+  const turnstile = getTurnstileService();
 
   function renderTurnstile() {
     if (turnstileContainer && turnstileWidgetId === null) {
@@ -142,6 +142,14 @@
     AI Nooga is a volunteer-run club. Sponsorships from local businesses and benevolent
     individuals make our events, workshops, and community programs possible.
   </p>
+
+  <div class="sponsor-page__more">
+    <a href="#/membership" class="sponsor-page__more-link">Membership</a>
+    <a href="#/advertise" class="sponsor-page__more-link">Advertising</a>
+    <span class="sponsor-page__more-hint">
+      Not a sponsor level? These get your team in front of the same audience.
+    </span>
+  </div>
 
   <hr class="divider" />
 
@@ -334,6 +342,24 @@
     font-size: var(--text-5xl);
     font-weight: 400;
     margin: var(--space-sm) 0 var(--space-lg);
+  }
+
+  .sponsor-page__more {
+    display: flex;
+    align-items: center;
+    gap: var(--space-md);
+    flex-wrap: wrap;
+    margin-top: var(--space-lg);
+    font-size: var(--text-sm);
+  }
+
+  .sponsor-page__more-link {
+    font-weight: 500;
+    color: var(--color-accent);
+  }
+
+  .sponsor-page__more-hint {
+    color: var(--color-text-muted);
   }
 
   .sponsor-page {

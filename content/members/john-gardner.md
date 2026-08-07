@@ -3,6 +3,13 @@ name: John Gardner
 role: Lead Director
 joined: 2026-04-14
 tags: [organizer, founder]
+listed: true
+rank: Founder / Lead Organizer
+organizer: true
+services:
+  - AI strategy & architecture consulting
+  - Full-stack engineering leadership
+  - Evolutionary systems research
 links:
   website: https://ardea.io
   linkedin: https://www.linkedin.com/in/johnathangardner/

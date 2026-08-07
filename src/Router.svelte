@@ -8,6 +8,8 @@
   import MemberList from './pages/MemberList.svelte';
   import MemberDetail from './pages/MemberDetail.svelte';
   import Sponsor from './pages/Sponsor.svelte';
+  import Membership from './pages/Membership.svelte';
+  import Advertise from './pages/Advertise.svelte';
   import About from './pages/About.svelte';
   import NotFound from './pages/NotFound.svelte';
 
@@ -68,6 +70,10 @@
     <MemberDetail slug={route.params.slug ?? ''} />
   {:else if route.page === 'sponsor'}
     <Sponsor />
+  {:else if route.page === 'membership'}
+    <Membership />
+  {:else if route.page === 'advertise'}
+    <Advertise />
   {:else if route.page === 'about'}
     <About />
   {:else}

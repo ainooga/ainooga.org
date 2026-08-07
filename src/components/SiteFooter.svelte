@@ -262,6 +262,8 @@
       <span class="site-footer__name">AI Nooga</span>
     </div>
     <nav class="site-footer__nav" aria-label="Footer navigation">
+      <a href="#/membership">Membership</a>
+      <a href="#/advertise">Advertise</a>
       <a href="#/events">Events</a>
       <a href="#/posts">Posts</a>
       <a href="#/members">Members</a>
