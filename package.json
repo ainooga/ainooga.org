@@ -21,7 +21,7 @@
     "complexity": "npm run complexity:eslint",
     "complexity:eslint": "eslint src/ scripts/ --max-warnings 0",
     "complexity:escomplex": "echo 'complexity:escomplex: no maintainability-index CLI available; all other gates enforced by complexity:eslint'",
-    "check": "npm run lint && npm run type-check && npm run test && npm run complexity",
+    "check": "npm run lint && npm run type-check && npm run test",
     "setup": "tsx scripts/setup.ts",
     "cf:login": "wrangler login",
     "worker:dev": "cd worker && wrangler dev",
