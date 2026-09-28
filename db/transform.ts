@@ -1,5 +1,5 @@
 import { createHash } from 'node:crypto';
-import { normalizeEmail } from '../../worker/src/db/identifiers.js';
+import { normalizeEmail } from '../worker/src/db/identifiers.js';
 import { timestamp } from './legacy.js';
 import type { ExpectedRow, LegacyData, Row } from './types.js';
 

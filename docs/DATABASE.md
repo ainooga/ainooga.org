@@ -2,6 +2,8 @@
 
 The API Worker uses Cloudflare D1. Migration `0002_chapter_schema.sql` implements the chapter schema; it does not add poll endpoints or import the private member export. The production database is not migrated by merging this PR. Deploy it using the maintenance procedure below.
 
+Database tooling lives in the top-level `db/` directory: migration orchestration, preflight, backfill, verification, and size inspection. `migrations/` holds versioned SQL. Modules that use D1 keep their own adapters; the Worker adapter remains in `worker/src/db/`. Run the tooling from the repository root through the existing pnpm commands.
+
 ## Schema
 
 Versioned SQL in `migrations/` is the authoritative schema. The new tables are:

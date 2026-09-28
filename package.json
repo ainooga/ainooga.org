@@ -10,16 +10,16 @@
     "build:content": "tsx scripts/build.ts",
     "build:spa": "vite build",
     "preview": "vite preview",
-    "lint": "eslint --max-warnings 0 src/ scripts/ worker/src/",
-    "format": "prettier --check src/ scripts/ worker/src/ content/",
-    "format:write": "prettier --write src/ scripts/ worker/src/ content/",
+    "lint": "eslint --max-warnings 0 src/ scripts/ db/ worker/src/",
+    "format": "prettier --check src/ scripts/ db/ worker/src/ content/",
+    "format:write": "prettier --write src/ scripts/ db/ worker/src/ content/",
     "type-check": "tsc --noEmit && tsc --noEmit -p worker/tsconfig.json",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
     "test:e2e": "playwright test",
     "complexity": "npm run complexity:eslint",
-    "complexity:eslint": "eslint --max-warnings 0 src/ scripts/ worker/src/",
+    "complexity:eslint": "eslint --max-warnings 0 src/ scripts/ db/ worker/src/",
     "complexity:escomplex": "echo 'complexity:escomplex: no maintainability-index CLI available; all other gates enforced by complexity:eslint'",
     "check": "pnpm lint && pnpm type-check && pnpm test",
     "setup": "tsx scripts/setup.ts",
@@ -28,16 +28,16 @@
     "worker:deploy": "cd worker && wrangler deploy",
     "cf:dev": "pnpm worker:dev",
     "cf:dev:pages-old": "wrangler pages dev dist/",
-    "cf:migrate": "tsx scripts/db/cli.ts migrate --remote",
-    "cf:migrate:local": "tsx scripts/db/cli.ts migrate --local",
+    "cf:migrate": "tsx db/cli.ts migrate --remote",
+    "cf:migrate:local": "tsx db/cli.ts migrate --local",
     "cf:deploy": "wrangler pages deploy dist/ --project-name=ainooga-org",
     "cf:backup": "wrangler d1 export ainooga-d1 --remote --output=./backups/$(date +%F-%H%M%S).sql",
     "precommit": "lint-staged",
     "prepush": "npm run check",
-    "db:preflight": "tsx scripts/db/cli.ts preflight",
-    "db:backfill": "tsx scripts/db/cli.ts backfill",
-    "db:verify": "tsx scripts/db/cli.ts verify",
-    "db:size": "tsx scripts/db/cli.ts size",
+    "db:preflight": "tsx db/cli.ts preflight",
+    "db:backfill": "tsx db/cli.ts backfill",
+    "db:verify": "tsx db/cli.ts verify",
+    "db:size": "tsx db/cli.ts size",
     "test:db": "vitest run tests/integration"
   },
   "simple-git-hooks": {
@@ -45,7 +45,7 @@
     "pre-push": ".githooks/pre-push"
   },
   "lint-staged": {
-    "{src,scripts,worker,tests}/**/*.{ts,svelte}": [
+    "{src,scripts,db,worker,tests}/**/*.{ts,svelte}": [
       "eslint --fix",
       "prettier --write"
     ],

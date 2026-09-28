@@ -20,7 +20,7 @@ export default defineConfig({
     ],
     coverage: {
       provider: 'v8',
-      include: ['src/**/*.ts', 'scripts/**/*.ts', 'worker/src/**/*.ts'],
+      include: ['src/**/*.ts', 'scripts/**/*.ts', 'db/**/*.ts', 'worker/src/**/*.ts'],
       thresholds: {
         lines: 80,
         branches: 70,

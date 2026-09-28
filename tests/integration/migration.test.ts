@@ -2,10 +2,10 @@
 import { beforeEach, afterEach, describe, expect, it } from 'vitest';
 import { database, migration } from '../helpers/d1';
 import { seedLegacy } from '../helpers/legacy';
-import { backfill, verify } from '../../scripts/db/backfill';
-import { fingerprint, preflight, readLegacy } from '../../scripts/db/legacy';
-import { transform } from '../../scripts/db/transform';
-import { insertSql, type Manifest } from '../../scripts/db/types';
+import { backfill, verify } from '../../db/backfill';
+import { fingerprint, preflight, readLegacy } from '../../db/legacy';
+import { transform } from '../../db/transform';
+import { insertSql, type Manifest } from '../../db/types';
 import { createDb } from '../../worker/src/db/client';
 
 let context: Awaited<ReturnType<typeof database>>;

@@ -1,8 +1,8 @@
 // @vitest-environment node
 import { describe, expect, it } from 'vitest';
-import { preflight, timestamp } from '../../scripts/db/legacy';
-import { transform } from '../../scripts/db/transform';
-import { literal, type LegacyData } from '../../scripts/db/types';
+import { preflight, timestamp } from '../../db/legacy';
+import { transform } from '../../db/transform';
+import { literal, type LegacyData } from '../../db/types';
 
 function data(): LegacyData {
   return {

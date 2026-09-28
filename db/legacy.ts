@@ -1,5 +1,5 @@
 import { createHash } from 'node:crypto';
-import { normalizeEmail, validEmail } from '../../worker/src/db/identifiers.js';
+import { normalizeEmail, validEmail } from '../worker/src/db/identifiers.js';
 import type { LegacyData, Row, SqlStore } from './types.js';
 
 const legacyColumns = {

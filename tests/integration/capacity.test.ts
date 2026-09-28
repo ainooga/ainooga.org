@@ -1,8 +1,8 @@
 // @vitest-environment node
 import { expect, it } from 'vitest';
 import { database, migration } from '../helpers/d1';
-import { backfill } from '../../scripts/db/backfill';
-import { readLegacy, fingerprint } from '../../scripts/db/legacy';
+import { backfill } from '../../db/backfill';
+import { readLegacy, fingerprint } from '../../db/legacy';
 
 it('measures an empty schema and a representative synthetic chapter', async () => {
   const context = await database();

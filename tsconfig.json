@@ -23,6 +23,6 @@
     },
     "types": ["vitest/globals"]
   },
-  "include": ["src/**/*.ts", "src/**/*.svelte", "scripts/**/*.ts"],
+  "include": ["src/**/*.ts", "src/**/*.svelte", "scripts/**/*.ts", "db/**/*.ts"],
   "exclude": ["node_modules", "dist", "static/data", "static/images"]
 }

@@ -1,4 +1,4 @@
-import type { SqlStore } from '../../scripts/db/types';
+import type { SqlStore } from '../../db/types';
 
 export async function seedLegacy(store: SqlStore): Promise<void> {
   await store.execute([

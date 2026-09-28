@@ -1,6 +1,6 @@
 import { Miniflare } from 'miniflare';
 import { readFile } from 'node:fs/promises';
-import type { Row, SqlStore } from '../../scripts/db/types';
+import type { Row, SqlStore } from '../../db/types';
 
 export class D1Store implements SqlStore {
   constructor(readonly db: D1Database) {}
