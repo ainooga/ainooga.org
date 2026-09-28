@@ -98,17 +98,22 @@ pnpm dev:all
 Vite proxies `/api/*` and `/confirm` to `http://localhost:8787` (configured in
 `vite.config.ts`).
 
-Before first local run, apply D1 migrations to the local database:
+Before first local run, apply and verify the chapter migration using the shared Worker persistence directory:
 
 ```bash
 pnpm cf:migrate:local
+pnpm db:verify
 ```
+
+After verification, set `CHAPTER_SCHEMA_READY=true` in the ignored `worker/.dev.vars`. See [Chapter database](./DATABASE.md) for the schema, SQLite location, size checks, and the required maintenance sequence for production deployment.
 
 ## Deployment
 
 ### 1. Connect Worker to GitHub (Cloudflare Git integration)
 
-Same pattern as Pages — Cloudflare manages the deploy directly via OAuth:
+The settings below describe the original setup proposal. Verify the actual dashboard configuration and production branch before deployment. Chapter-schema releases must follow the [database cutover procedure](./DATABASE.md#production-cutover); an automatic Worker deployment must not bypass it.
+
+Cloudflare can manage deployment directly via OAuth:
 
 **Dashboard → Workers & Pages → ainooga-api → Settings → Git integration →
 Connect to GitHub**

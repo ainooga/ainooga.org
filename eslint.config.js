@@ -51,7 +51,7 @@ export default [
     },
   },
   {
-    files: ['scripts/**/*.ts'],
+    files: ['scripts/**/*.ts', 'db/**/*.ts'],
     languageOptions: {
       parserOptions: {
         project: true,

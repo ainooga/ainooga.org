@@ -1,3 +1,4 @@
+import { normalizeEmail, validEmail } from './db/identifiers.js';
 import type { DbClient, EmailSender, TurnstileVerifier } from './types.js';
 
 export interface SubscribeInput {
@@ -15,7 +16,8 @@ export async function handleSubscribe(
     siteUrl: string;
   },
 ): Promise<Response> {
-  if (!input.email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(input.email)) {
+  const address = typeof input.email === 'string' ? normalizeEmail(input.email) : '';
+  if (!validEmail(address)) {
     return Response.json({ error: 'Valid email required' }, { status: 400 });
   }
 
@@ -24,14 +26,13 @@ export async function handleSubscribe(
     return Response.json({ error: 'Verification failed. Try again.' }, { status: 400 });
   }
 
-  const existing = await deps.db.findSubscriberByEmail(input.email);
-  if (existing) {
+  const token = crypto.randomUUID();
+  const created = await deps.db.insertSubscriber(address, input.name ?? null, token);
+  if (!created) {
     return Response.json({ message: 'Already subscribed!' }, { status: 200 });
   }
 
-  const token = crypto.randomUUID();
-  await deps.db.insertSubscriber(input.email, input.name ?? null, token);
-  await deps.email.sendConfirmation(input.email, input.name ?? null, token, deps.siteUrl);
+  await deps.email.sendConfirmation(address, input.name ?? null, token, deps.siteUrl);
 
   return Response.json({ message: 'Check your email to confirm.' }, { status: 201 });
 }

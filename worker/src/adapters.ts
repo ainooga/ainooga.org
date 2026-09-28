@@ -1,48 +1,5 @@
-import type { DbClient, EmailSender, TurnstileVerifier } from './types.js';
-
-export function createDb(db: D1Database): DbClient {
-  return {
-    async insertSubscriber(email, name, token) {
-      await db
-        .prepare(
-          `INSERT INTO subscribers (email, name, source, confirmation_token)
-           VALUES (?, ?, 'website', ?)`,
-        )
-        .bind(email, name, token)
-        .run();
-    },
-    async findSubscriberByEmail(email) {
-      return (await db
-        .prepare('SELECT id FROM subscribers WHERE email = ?')
-        .bind(email)
-        .first()) as Record<string, unknown> | null;
-    },
-    async confirmSubscription(token) {
-      const result = await db
-        .prepare(
-          `UPDATE subscribers SET confirmed = 1, confirmed_at = datetime('now')
-           WHERE confirmation_token = ? AND confirmed = 0`,
-        )
-        .bind(token)
-        .run();
-      return result.changes;
-    },
-    async insertContactRequest(data) {
-      await db
-        .prepare(
-          `INSERT INTO contact_requests (name, phone, preferred_date, preferred_time, source)
-           VALUES (?, ?, ?, ?, 'sponsor')`,
-        )
-        .bind(
-          data.name,
-          data.phone,
-          data.preferredDate ?? null,
-          data.preferredTime ?? null,
-        )
-        .run();
-    },
-  };
-}
+import type { EmailSender, TurnstileVerifier } from './types.js';
+export { createDb } from './db/client.js';
 
 export function createEmailSender(email: SendEmail | undefined): EmailSender {
   return {

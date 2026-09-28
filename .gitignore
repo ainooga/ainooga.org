@@ -34,3 +34,6 @@ tmp/
 
 # Worker
 worker/.dev.vars
+
+# AI & Planning
+ai/

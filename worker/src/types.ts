@@ -1,5 +1,5 @@
 export interface DbClient {
-  insertSubscriber(email: string, name: string | null, token: string): Promise<void>;
+  insertSubscriber(email: string, name: string | null, token: string): Promise<boolean>;
   findSubscriberByEmail(email: string): Promise<Record<string, unknown> | null>;
   confirmSubscription(token: string): Promise<number>;
   insertContactRequest(data: {
@@ -25,6 +25,7 @@ export interface TurnstileVerifier {
 
 export interface Env {
   DB: D1Database;
+  CHAPTER_SCHEMA_READY?: string;
   EMAIL: SendEmail;
   TURNSTILE_SECRET_KEY: string;
   SITE_URL: string;

@@ -3,7 +3,7 @@ import { svelte } from '@sveltejs/vite-plugin-svelte';
 import { resolve } from 'path';
 
 export default defineConfig({
-  plugins: [svelte({ hot: false })],
+  plugins: [svelte()],
   resolve: {
     alias: {
       $lib: resolve('./src/lib'),
@@ -13,10 +13,14 @@ export default defineConfig({
   test: {
     globals: true,
     environment: 'jsdom',
-    include: ['tests/unit/**/*.test.ts', 'tests/components/**/*.test.ts'],
+    include: [
+      'tests/unit/**/*.test.ts',
+      'tests/components/**/*.test.ts',
+      'tests/integration/**/*.test.ts',
+    ],
     coverage: {
       provider: 'v8',
-      include: ['src/**/*.ts', 'scripts/**/*.ts'],
+      include: ['src/**/*.ts', 'scripts/**/*.ts', 'db/**/*.ts', 'worker/src/**/*.ts'],
       thresholds: {
         lines: 80,
         branches: 70,
