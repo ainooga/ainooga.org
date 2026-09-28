@@ -1,3 +1,4 @@
+import { maintenanceResponse } from './maintenance.js';
 import { handleSubscribe } from './subscribe.js';
 import { handleContactSponsor } from './contact-sponsor.js';
 import { handleConfirm } from './confirm.js';
@@ -90,7 +91,9 @@ export default {
     }
 
     try {
-      const response = await dispatch(request, env);
+      const response =
+        maintenanceResponse(request, env.CHAPTER_SCHEMA_READY) ??
+        (await dispatch(request, env));
       attachCors(response, origin);
       return response;
     } catch (err) {

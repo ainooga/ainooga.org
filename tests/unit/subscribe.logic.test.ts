@@ -13,9 +13,11 @@ class FakeDbClient implements DbClient {
     email: string,
     name: string | null,
     token: string,
-  ): Promise<void> {
+  ): Promise<boolean> {
+    if (this.subscribers.has(email)) return false;
     this.subscribers.set(email, { email, name, token });
     this.confirmations.set(token, false);
+    return true;
   }
 
   async findSubscriberByEmail(email: string): Promise<Record<string, unknown> | null> {

@@ -10,8 +10,8 @@ class FakeDbClient implements DbClient {
     preferredTime?: string;
   }> = [];
 
-  async insertSubscriber(): Promise<void> {
-    // noop for contact-sponsor tests
+  async insertSubscriber(): Promise<boolean> {
+    return true;
   }
 
   async findSubscriberByEmail(): Promise<Record<string, unknown> | null> {

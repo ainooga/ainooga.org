@@ -13,6 +13,7 @@ routes = [
 binding = "DB"
 database_name = "ainooga-d1"
 database_id = "3072a675-8a15-4019-8648-17a17ad1cadd"
+migrations_dir = "../migrations"
 
 # Send Email — supported in Workers wrangler.toml (unlike Pages)
 [[send_email]]
