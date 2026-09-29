@@ -33,6 +33,26 @@ async function prepare(seed = true) {
 }
 
 describe('chapter migration', () => {
+  it('preserves production preference data in the retained legacy table', async () => {
+    await context.store.execute([
+      "ALTER TABLE subscribers ADD COLUMN preferences TEXT NOT NULL DEFAULT '[]'",
+    ]);
+    await seedLegacy(context.store);
+    await context.store.execute([
+      `UPDATE subscribers SET preferences='["validate","updates"]' WHERE id=3`,
+    ]);
+    await prepare(false);
+    await backfill(context.store, manifest);
+    expect(
+      await context.store.query('SELECT preferences FROM subscribers WHERE id=3'),
+    ).toEqual([{ preferences: '["validate","updates"]' }]);
+    expect(await context.store.query('SELECT DISTINCT kind FROM subscriptions')).toEqual([
+      { kind: 'newsletter' },
+    ]);
+    await context.store.execute(["UPDATE subscribers SET preferences='[]' WHERE id=3"]);
+    await expect(verify(context.store, manifest)).rejects.toThrow('Legacy data changed');
+  });
+
   it('installs a fresh schema and verifies an empty backfill', async () => {
     await prepare(false);
     await backfill(context.store, manifest);

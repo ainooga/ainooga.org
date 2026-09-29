@@ -30,21 +30,36 @@ export class WranglerStore implements SqlStore {
   }
 
   private withSql(sql: string): string {
-    mkdirSync('backups', { recursive: true, mode: 0o700 });
-    const directory = mkdtempSync(resolve('backups/db-operation-'));
-    const file = resolve(directory, 'query.sql');
-    try {
-      writeFileSync(file, sql, { mode: 0o600 });
-      const target = this.remote
-        ? ['--remote']
-        : ['--local', '--persist-to', persistence];
+    // Remote --file uses bulk import and returns an import summary, not rows.
+    // Use the query API for remote reads and the small backfill batches.
+    if (this.remote) {
       return this.run([
         'd1',
         'execute',
         'ainooga-d1',
         '--config',
         config,
-        ...target,
+        '--remote',
+        '--command',
+        sql,
+        '--json',
+        '--yes',
+      ]);
+    }
+    mkdirSync('backups', { recursive: true, mode: 0o700 });
+    const directory = mkdtempSync(resolve('backups/db-operation-'));
+    const file = resolve(directory, 'query.sql');
+    try {
+      writeFileSync(file, sql, { mode: 0o600 });
+      return this.run([
+        'd1',
+        'execute',
+        'ainooga-d1',
+        '--config',
+        config,
+        '--local',
+        '--persist-to',
+        persistence,
         '--file',
         file,
         '--json',

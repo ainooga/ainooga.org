@@ -24,7 +24,7 @@ The later APIs must enforce proof of identity, active grants/eligibility, public
 
 ## Existing forms
 
-The public paths and successful responses remain unchanged: `POST /api/subscribe`, `POST /api/contact-sponsor`, and `GET /confirm?token=...`.
+The public paths and successful responses remain unchanged: `POST /api/subscribe`, `POST /api/contact-sponsor`, and `GET /confirm?token=...`. The Cloudflare route must be `ainooga.org/confirm*`: route matching includes query strings, so an exact `/confirm` pattern does not route emailed token links to the Worker.
 
 Signup trims and lowercases email without rewriting dots or plus suffixes. Creating a person, identifier, and newsletter subscription happens in a single D1 batch. Concurrent duplicates return the existing-subscription response and do not send another confirmation. An existing person's profile is not overwritten, and an existing subscription preference is not reactivated.
 
@@ -70,11 +70,15 @@ Add `--remote` to explicitly target production. Remote backfill also checks the 
 
 Preflight rejects unexpected legacy table shapes, unsupported confirmation states (including null), malformed timestamps, normalized-email collisions, duplicate tokens, and unsupported values. Errors identify record IDs and fields without printing personal values. Resolve conflicts explicitly; never merge by name or shared contact details.
 
+Production also has a legacy `subscribers.preferences` column containing JSON arrays of strings. Preflight accepts that known schema variant and includes its values in the source fingerprint. Those values remain in the retained legacy table; they are not interpreted as new subscription categories, consent, or permissions.
+
 The migration leaves `subscribers` intact and renames old inquiries to `legacy_contact_requests`. The new Worker neither reads nor writes these legacy tables. They retain historical data, including old plaintext tokens, until a later reviewed cleanup migration. Keep database exports private.
 
 Subscribers become people, email identifiers, `legacy_subscribers` source records, and newsletter subscriptions. Legacy subscriber IDs are reused for these records in the initially empty target tables. Inquiry IDs are preserved and their person links remain null. No membership, organizer grant, or poll eligibility is created.
 
 Backfill records a source fingerprint and a fixed migration timestamp in `backups/chapter-migration-{local,remote}-ainooga-d1.json`. It inserts missing rows and accepts existing rows only if every field matches. An interrupted run can resume using that manifest; changed source data or mismatched target data stops the run. Private SQL work files are removed after each operation. The backup directory and manifest are created with restricted permissions.
+
+Remote queries and small backfill batches use Wrangler's `--command` query mode. Remote `--file` invokes bulk import and returns an import summary rather than query rows. Local operations continue to use temporary SQL files.
 
 Keep the same manifest until cutover is complete. If source records change between an early preflight and the maintenance window, review the change, archive the stale manifest, and rerun preflight after writes have stopped. Do not replace a manifest simply to bypass a conflict after backfill has started.
 
