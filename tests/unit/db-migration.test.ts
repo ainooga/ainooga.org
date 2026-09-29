@@ -23,6 +23,14 @@ function data(): LegacyData {
 }
 
 describe('legacy migration preflight', () => {
+  it.each(['invalid-json', '{}', '[true]', 'null'])(
+    'rejects unsupported legacy preferences %s',
+    (preferences) => {
+      const input = data();
+      input.subscribers[0]!.preferences = preferences;
+      expect(() => preflight(input)).toThrow('subscribers 1: unsupported preferences');
+    },
+  );
   it.each([
     ['email', 'invalid'],
     ['confirmed', null],

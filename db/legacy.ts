@@ -46,7 +46,10 @@ export async function readLegacy(db: SqlStore): Promise<LegacyData> {
     [contactTable, legacyColumns.contacts],
   ] as const) {
     const info = await db.query(`PRAGMA table_info(${table})`);
-    if (info.map((row) => row.name).join(',') !== columns.join(',')) {
+    const actual = info.map((row) => row.name).join(',');
+    const expected = columns.join(',');
+    const preferences = table === 'subscribers' && actual === `${expected},preferences`;
+    if (actual !== expected && !preferences) {
       throw new Error(`Unexpected legacy schema: ${table}`);
     }
   }
@@ -94,6 +97,17 @@ function validateFields(row: Row, table: string, required: string[]): void {
   timestamp(row.created_at, `${table} ${row.id}: created_at`);
 }
 
+function validatePreferences(row: Row): void {
+  if (!Object.hasOwn(row, 'preferences')) return;
+  try {
+    const value: unknown = JSON.parse(String(row.preferences));
+    if (Array.isArray(value) && value.every((item) => typeof item === 'string')) return;
+  } catch {
+    // Report only the field and record ID, never the private value.
+  }
+  throw new Error(`subscribers ${row.id}: unsupported preferences`);
+}
+
 function validateText(row: Row, table: string): void {
   for (const [key, value] of Object.entries(row)) {
     if (key === 'id' || key === 'confirmed') continue;
@@ -120,6 +134,7 @@ export function preflight(data: LegacyData): void {
   const tokens = new Map<string, number>();
   for (const row of data.subscribers) {
     validateFields(row, 'subscribers', ['email']);
+    validatePreferences(row);
     const email = normalizeEmail(String(row.email));
     if (!validEmail(email)) throw new Error(`subscribers ${row.id}: invalid email`);
     unique(email, emails, Number(row.id), 'normalized email');

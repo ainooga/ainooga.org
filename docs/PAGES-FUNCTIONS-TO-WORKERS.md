@@ -144,7 +144,7 @@ Routes are set in `worker/wrangler.toml` and were applied via `wrangler deploy`:
 ```toml
 routes = [
   { pattern = "ainooga.org/api/*", zone_id = "b973825a865d2deb4c37e6651513a84a" },
-  { pattern = "ainooga.org/confirm", zone_id = "b973825a865d2deb4c37e6651513a84a" },
+  { pattern = "ainooga.org/confirm*", zone_id = "b973825a865d2deb4c37e6651513a84a" },
 ]
 ```
 
