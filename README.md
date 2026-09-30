@@ -18,17 +18,17 @@ pnpm dev
 
 ## Scripts
 
-| Script | What |
-|--------|------|
-| `pnpm dev` | Start dev server with hot reload |
-| `pnpm build` | Build content + SPA for production |
-| `pnpm build:content` | Build markdown content → JSON only |
-| `pnpm check` | Full validation: lint + type-check + test + complexity |
-| `pnpm test` | Run unit + component tests |
-| `pnpm test:e2e` | Run Playwright E2E tests |
-| `pnpm lint` | ESLint check |
-| `pnpm format` | Prettier check |
-| `pnpm format:write` | Format all files |
+| Script               | What                                                   |
+| -------------------- | ------------------------------------------------------ |
+| `pnpm dev`           | Build content, then start dev server with hot reload   |
+| `pnpm build`         | Build content + SPA for production                     |
+| `pnpm build:content` | Build markdown content → JSON only                     |
+| `pnpm check`         | Full validation: lint + type-check + test + complexity |
+| `pnpm test`          | Run unit + component tests                             |
+| `pnpm test:e2e`      | Run Playwright E2E tests                               |
+| `pnpm lint`          | ESLint check                                           |
+| `pnpm format`        | Prettier check                                         |
+| `pnpm format:write`  | Format all files                                       |
 
 ## Content
 

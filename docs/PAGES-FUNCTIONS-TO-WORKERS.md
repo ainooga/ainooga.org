@@ -86,7 +86,7 @@ Two servers needed:
 pnpm worker:dev
 
 # Terminal 2 — SPA dev server (proxies /api → :8787)
-pnpm run build:content && pnpm dev
+pnpm dev
 ```
 
 Or in one terminal (backgrounds the Worker):

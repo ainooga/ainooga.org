@@ -4,6 +4,10 @@ import { handleContactSponsor } from './contact-sponsor.js';
 import { handleConfirm } from './confirm.js';
 import { createDb, createEmailSender, createTurnstileVerifier } from './adapters.js';
 import type { Env } from './types.js';
+import { handleAuth, isAuthRoute } from './auth/router.js';
+import { cleanupAuth } from './auth/store.js';
+import { apiFailure, jsonBody } from './auth/http.js';
+import { subscribeSchema, sponsorSchema } from './form-schemas.js';
 
 function corsHeaders(origin: string | null): HeadersInit {
   const allowed = [
@@ -36,11 +40,7 @@ async function dispatch(request: Request, env: Env): Promise<Response> {
   const url = new URL(request.url);
 
   if (url.pathname === '/api/subscribe' && request.method === 'POST') {
-    const body = (await request.json()) as {
-      email: string;
-      name?: string;
-      turnstileToken: string;
-    };
+    const body = await jsonBody(request, subscribeSchema);
     return await handleSubscribe(
       { email: body.email, name: body.name, turnstileToken: body.turnstileToken },
       {
@@ -53,13 +53,7 @@ async function dispatch(request: Request, env: Env): Promise<Response> {
   }
 
   if (url.pathname === '/api/contact-sponsor' && request.method === 'POST') {
-    const body = (await request.json()) as {
-      name: string;
-      phone: string;
-      preferredDate?: string;
-      preferredTime?: string;
-      turnstileToken: string;
-    };
+    const body = await jsonBody(request, sponsorSchema);
     return await handleContactSponsor(
       {
         name: body.name,
@@ -84,6 +78,7 @@ async function dispatch(request: Request, env: Env): Promise<Response> {
 
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
+    if (isAuthRoute(new URL(request.url).pathname)) return handleAuth(request, env);
     const origin = request.headers.get('Origin');
 
     if (request.method === 'OPTIONS') {
@@ -96,14 +91,13 @@ export default {
         (await dispatch(request, env));
       attachCors(response, origin);
       return response;
-    } catch (err) {
-      console.error('Worker error:', err);
-      const errorResponse = Response.json(
-        { error: 'Something went wrong.' },
-        { status: 500 },
-      );
+    } catch (error) {
+      const errorResponse = apiFailure(error);
       attachCors(errorResponse, origin);
       return errorResponse;
     }
+  },
+  async scheduled(_event: ScheduledController, env: Env): Promise<void> {
+    if (env.AUTH_READY === 'true') await cleanupAuth(env.DB, new Date());
   },
 };

@@ -5,14 +5,9 @@ export function createEmailSender(email: SendEmail | undefined): EmailSender {
   return {
     async sendConfirmation(to, name, confirmToken, siteUrl) {
       if (email == null) {
-        console.warn(
-          `[subscribe] EMAIL binding not configured — confirmation not sent for ${to}`,
-        );
+        console.warn('[subscribe] EMAIL binding not configured');
         return;
       }
-      console.log(
-        `[subscribe] Sending confirmation to ${to}${name ? ` (${name})` : ''}...`,
-      );
       try {
         await email.send({
           from: 'noreply@ainooga.org',
@@ -25,9 +20,8 @@ export function createEmailSender(email: SendEmail | undefined): EmailSender {
         `,
           text: `Thanks for joining the AI Nooga mailing list${name ? `, ${name}` : ''}!\n\nConfirm your subscription at: ${siteUrl}/confirm?token=${confirmToken}\n\nIf you didn't sign up, ignore this email.`,
         });
-        console.log(`[subscribe] Confirmation email sent to ${to}`);
-      } catch (sendErr) {
-        console.error(`[subscribe] Failed to send confirmation to ${to}:`, sendErr);
+      } catch {
+        console.error('[subscribe] Confirmation delivery failed');
       }
     },
   };

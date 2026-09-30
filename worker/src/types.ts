@@ -24,6 +24,12 @@ export interface TurnstileVerifier {
 }
 
 export interface Env {
+  AUTH_READY?: string;
+  AUTH_SECRET?: string;
+  ORGANIZER_API_TOKENS?: string;
+  DISCORD_CLIENT_ID?: string;
+  DISCORD_CLIENT_SECRET?: string;
+  AUTH_RATE_LIMITER?: { limit(input: { key: string }): Promise<{ success: boolean }> };
   DB: D1Database;
   CHAPTER_SCHEMA_READY?: string;
   EMAIL: SendEmail;

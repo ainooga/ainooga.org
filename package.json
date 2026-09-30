@@ -4,8 +4,8 @@
   "packageManager": "pnpm@11.7.0",
   "type": "module",
   "scripts": {
-    "dev": "vite",
-    "dev:all": "pnpm run build:content && (pnpm run worker:dev & sleep 2 && pnpm run dev)",
+    "dev": "pnpm run build:content && vite",
+    "dev:all": "pnpm run build:content && (pnpm run worker:dev & sleep 2 && pnpm exec vite)",
     "build": "npm run build:content && npm run build:spa",
     "build:content": "tsx scripts/build.ts",
     "build:spa": "vite build",
@@ -38,7 +38,9 @@
     "db:backfill": "tsx db/cli.ts backfill",
     "db:verify": "tsx db/cli.ts verify",
     "db:size": "tsx db/cli.ts size",
-    "test:db": "vitest run tests/integration"
+    "test:db": "vitest run tests/integration",
+    "api:whoami": "tsx --env-file=.env scripts/api-whoami.ts",
+    "db:verify:cutover": "tsx db/cli.ts verify-cutover"
   },
   "simple-git-hooks": {
     "pre-commit": ".githooks/pre-commit",
