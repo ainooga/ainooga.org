@@ -1,6 +1,6 @@
 # Chapter database
 
-The API Worker uses Cloudflare D1. Migration `0002_chapter_schema.sql` implements the chapter schema; it does not add poll endpoints or import the private member export. The production database is not migrated by merging this PR. Deploy it using the maintenance procedure below.
+The API Worker uses Cloudflare D1. Migration `0002_chapter_schema.sql` implements the chapter schema; `0003_voter_auth.sql` adds voter sessions and verification challenges. The chapter cutover is complete. Authentication migration and enablement remain separate deployment steps; see [API authentication](./API.md). Merging code does not migrate production D1 or import the private member export.
 
 Database tooling lives in the top-level `db/` directory: migration orchestration, preflight, backfill, verification, and size inspection. `migrations/` holds versioned SQL. Modules that use D1 keep their own adapters; the Worker adapter remains in `worker/src/db/`. Run the tooling from the repository root through the existing pnpm commands.
 
@@ -12,7 +12,7 @@ Versioned SQL in `migrations/` is the authoritative schema. The new tables are:
 | -------------- | -------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | People         | `people`, `person_identifiers`                                                   | A person has one optional, unsplit `name`. Email, Discord, phone, and LinkedIn identifiers live separately. Email/Discord lookup values are globally unique; phone/LinkedIn values can be shared. |
 | Chapter        | `person_sources`, `memberships`, `person_tags`                                   | Membership is separate from identity. `memberships.source` references a source row belonging to that same person. Source namespace/key pairs are unique. Tags carry no permissions.               |
-| Access         | `organizer_permissions`                                                          | Explicit, revocable `polls:manage`, `members:import`, and `ballots:read` grants. Importing a person never grants access. Authentication comes in a later PR.                                      |
+| Access         | `organizer_permissions`                                                          | Reserved permission records. Organizer authentication currently uses configured Worker API tokens with one organizer access level; this table is unchanged and unused by authentication.          |
 | Organizations  | `organizations`, `organization_people`, `sponsorships`                           | Relationships are explicit. A sponsorship belongs to exactly one person or organization. Company text on a person does not create an organization.                                                |
 | Existing forms | `subscriptions`, `contact_requests`                                              | One preference per person/category; delivery email must belong to that person. Inquiry details are retained as submitted snapshots and need no email or person link.                              |
 | Events         | `events`, `event_links`, `event_participation`                                   | Markdown owns public event content; `ainooga_url` links D1 records to pages. Provider/ID identifies imported events. RSVP and attendance are separate.                                            |
@@ -20,7 +20,9 @@ Versioned SQL in `migrations/` is the authoritative schema. The new tables are:
 
 Foreign keys restrict deletion and updates. Timestamp writes use UTC ISO text with milliseconds. Nullable historical fields remain nullable. Integer bounds, boolean/enumerated values, sponsor ownership, poll selection bounds, and time ordering are checked in SQL. No cascading deletion or automatic person merging is provided.
 
-The later APIs must enforce proof of identity, active grants/eligibility, publication and voting windows, selection counts across rows, write-in acceptance, result visibility, and configuration changes after publication. The schema alone is not an authorization system. Phone and LinkedIn identifiers cannot log into polls.
+Authentication tables `voter_sessions` and `auth_challenges` contain only hashed session tokens, HMAC email proofs, hashed OAuth/browser state, expiry, and attempt/consumption records alongside their chapter references. Organizer credentials live in a Worker secret, not D1.
+
+The later APIs must enforce organizer authorization, voter proof and eligibility, publication and voting windows, selection counts across rows, write-in acceptance, result visibility, and configuration changes after publication. The schema alone is not an authorization system. Phone and LinkedIn identifiers cannot log into polls.
 
 ## Existing forms
 
@@ -56,14 +58,18 @@ The file lives under `miniflare-D1DatabaseObject/`. A `-wal` file can contain re
 
 ## Migration behavior
 
-`pnpm cf:migrate:local` runs preflight, applies versioned migrations, backfills, and verifies. A fresh local database is initialized automatically. `pnpm cf:migrate` explicitly targets production and requires the live handlers to report chapter maintenance mode. It does not deploy the Worker, take a backup, or enable readiness; perform those steps below first.
+`pnpm cf:migrate:local` applies pending versioned migrations and verifies the current schema, foreign keys, and integrity. An empty local database is initialized automatically. `pnpm cf:migrate` explicitly targets production. Existing chapter databases are verified before migration; populated legacy databases and empty remote databases are rejected. These commands never rerun legacy backfill or compare live records to a migration manifest. They do not deploy the Worker or enable authentication.
+
+For authentication migration 0003, leave existing forms open, apply the migration, run `pnpm db:verify --remote`, and follow [API deployment](./API.md#configuration-and-deployment). Ordinary verification is safe after application writes.
+
+The following commands are for the historical chapter cutover only. Backfill and cutover verification reject the later authentication schema:
 
 The separate commands default to local D1:
 
 ```sh
 pnpm db:preflight
 pnpm db:backfill
-pnpm db:verify
+pnpm db:verify:cutover
 ```
 
 Add `--remote` to explicitly target production. Remote backfill also checks the maintenance responses before writing.
@@ -82,9 +88,11 @@ Remote queries and small backfill batches use Wrangler's `--command` query mode.
 
 Keep the same manifest until cutover is complete. If source records change between an early preflight and the maintenance window, review the change, archive the stale manifest, and rerun preflight after writes have stopped. Do not replace a manifest simply to bypass a conflict after backfill has started.
 
-Verification checks expected table/index definitions, source fingerprints, transformed row values/counts, empty unrelated tables, foreign keys, and D1's supported `PRAGMA quick_check`. It is a **cutover check**: after forms reopen, new rows and consumed confirmation tokens make exact migration verification fail by design. Never rerun backfill over live application changes.
+Legacy cutover verification checks expected table/index definitions, source fingerprints, transformed row values/counts, empty unrelated tables, foreign keys, and D1's supported `PRAGMA quick_check`. It is a **cutover check**: after forms reopen, new rows and consumed confirmation tokens make exact migration verification fail by design. Never rerun backfill over live application changes.
 
 ## Production cutover
+
+Historical PR 2 procedure, completed before migration 0003. For recovery to a populated legacy database, use the PR 2 tooling and migrations from commit `d7b665f` in an isolated checkout with the matching Worker. The historical commands below refer to that version. Current routine migration intentionally refuses a legacy database; never apply all current migrations before completing legacy backfill.
 
 1. Check the actual Cloudflare Worker Git integration and production branch. The old deployment notes are not evidence of dashboard state. Prevent an automatic Worker deployment from bypassing this sequence. Pages remains available throughout.
 2. Set `CHAPTER_SCHEMA_READY` to `false` as a Worker secret, then deploy the new Worker. Keeping this operator setting as a secret prevents a later ordinary deployment from replacing its value. The old Worker ignores the setting; maintenance starts when the new Worker is deployed.
@@ -131,5 +139,7 @@ Measured locally with Miniflare 4.20260617.0:
 | Empty chapter schema, retaining legacy tables                                      |         307,200 |   0.307200 |
 | 200 synthetic subscribers migrated, retaining legacy copies                        |         475,136 |   0.475136 |
 | Add 200 memberships, 10 events, 734 participation records, and one 200-ballot poll |         577,536 |   0.577536 |
+| Add the empty authentication tables and indexes                                    |         618,496 |   0.618496 |
+| Add 200 voter sessions and 1,000 email challenges                                  |       1,134,592 |   1.134592 |
 
 These are measured fixtures, not a prediction of production growth. The persistent Wrangler database also includes migration bookkeeping; its empty migrated size was 315,392 bytes. Real text lengths, additional indexes, legacy retention, and future poll workloads affect storage.

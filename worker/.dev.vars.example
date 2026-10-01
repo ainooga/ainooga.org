@@ -1,0 +1,10 @@
+# Copy to worker/.dev.vars. This file contains placeholders, not working secrets.
+SITE_URL=http://localhost:5173
+CHAPTER_SCHEMA_READY=false
+AUTH_READY=false
+TURNSTILE_SECRET_KEY=
+AUTH_SECRET=
+DISCORD_CLIENT_ID=
+DISCORD_CLIENT_SECRET=
+# Insert a real local person ID and a token generated with openssl rand -hex 32.
+ORGANIZER_API_TOKENS='[]'

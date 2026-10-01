@@ -23,6 +23,19 @@ name = "EMAIL"
 [vars]
 SITE_URL = "https://ainooga.org"
 
+[[ratelimits]]
+name = "AUTH_RATE_LIMITER"
+namespace_id = "1001"
+simple = { limit = 1000, period = 60 }
+
+[[ratelimits]]
+name = "AUTH_INITIATION_RATE_LIMITER"
+namespace_id = "1002"
+simple = { limit = 250, period = 60 }
+
+[triggers]
+crons = ["0 * * * *"]
+
 [observability]
 enabled = false
 head_sampling_rate = 1
@@ -31,7 +44,7 @@ head_sampling_rate = 1
 enabled = true
 head_sampling_rate = 1
 persist = true
-invocation_logs = true
+invocation_logs = false
 
 [observability.traces]
 enabled = false

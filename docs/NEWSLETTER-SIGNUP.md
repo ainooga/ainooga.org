@@ -13,14 +13,14 @@ The frontend talks to a single backend endpoint. Turnstile siteverify is handled
 server-side, not by a separate Worker call from the frontend.
 
 ```
-User → [Svelte footer form] → POST /api/subscribe → [Cloudflare Pages Function]
+User → [Svelte footer form] → POST /api/subscribe → [Cloudflare Worker]
                                                       ├─ siteverify (Cloudflare API)
                                                       ├─ D1 insert
-                                                      └─ SendGrid email send
+                                                      └─ Cloudflare EMAIL binding
 ```
 
 The deployment Turnstile Worker (`turnstile-siteverify-ainooga-org`) exists but
-is **not** wired into this flow — the Pages Function calls siteverify directly.
+is **not** wired into this flow — the Worker calls siteverify directly.
 This is intentional: verification and subscription are atomic in one request.
 
 ---

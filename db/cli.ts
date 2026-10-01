@@ -2,6 +2,7 @@ import { localSize } from './size.js';
 import { backfill, verify } from './backfill.js';
 import { loadManifest, prepare } from './manifest.js';
 import { WranglerStore } from './wrangler.js';
+import { migrate, verifyLive } from './migrate.js';
 
 async function requireMaintenance(): Promise<void> {
   for (const path of ['/api/subscribe', '/api/contact-sponsor', '/confirm']) {
@@ -33,34 +34,13 @@ async function size(db: WranglerStore): Promise<void> {
   );
 }
 
-async function migrate(db: WranglerStore, target: string): Promise<void> {
-  const tables = await db.query("SELECT name FROM sqlite_master WHERE type='table'");
-  const userTables = tables.filter(
-    (row) =>
-      !String(row.name).startsWith('_cf_') &&
-      !String(row.name).startsWith('sqlite_') &&
-      row.name !== 'd1_migrations',
-  );
-  const hasLegacy = tables.some((row) => row.name === 'subscribers');
-  if (!hasLegacy && (db.remote || userTables.length !== 0)) {
-    throw new Error(
-      'Legacy database missing or unexpected tables present; inspect before initializing',
-    );
-  }
-  if (hasLegacy) await prepare(db, target);
-  db.applyMigrations();
-  const manifest = await prepare(db, target);
-  await backfill(db, manifest);
-}
-
 async function main(): Promise<void> {
   const [command, ...flags] = process.argv.slice(2);
   validateFlags(flags);
   const remote = flags.includes('--remote');
   const target = remote ? 'remote-ainooga-d1' : 'local-ainooga-d1';
   const db = new WranglerStore(remote);
-  if (remote && (command === 'migrate' || command === 'backfill'))
-    await requireMaintenance();
+  if (remote && command === 'backfill') await requireMaintenance();
   await dispatch(command, db, target);
   console.log(`${command} completed (${remote ? 'remote' : 'local'}).`);
 }
@@ -75,19 +55,24 @@ async function dispatch(
       await prepare(db, target);
       break;
     case 'migrate':
-      await migrate(db, target);
+      await migrate(db);
       break;
     case 'backfill':
       await backfill(db, loadManifest(target));
       break;
     case 'verify':
+      await verifyLive(db);
+      break;
+    case 'verify-cutover':
       await verify(db, loadManifest(target));
       break;
     case 'size':
       await size(db);
       break;
     default:
-      throw new Error('Expected preflight, migrate, backfill, verify, or size');
+      throw new Error(
+        'Expected preflight, migrate, backfill, verify, verify-cutover, or size',
+      );
   }
 }
 

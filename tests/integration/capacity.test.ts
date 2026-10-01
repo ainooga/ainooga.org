@@ -46,13 +46,34 @@ it('measures an empty schema and a representative synthetic chapter', async () =
       await context.store.execute(statements);
     }
     const chapterWithPoll = await size();
+    await migration(context.store, '0003_voter_auth.sql');
+    const authEmpty = await size();
+    await context.store.execute([
+      `INSERT INTO voter_sessions (token_hash,person_id,identifier_id,identifier_value,assurance,poll_id,created_at,expires_at)
+       SELECT printf('%064d',id),person_id,id,normalized_value,'verified',NULL,'2026-09-29T00:00:00.000Z','2026-09-30T00:00:00.000Z'
+       FROM person_identifiers WHERE kind='email'`,
+      `WITH RECURSIVE n(x) AS (SELECT 1 UNION ALL SELECT x+1 FROM n WHERE x<1000)
+       INSERT INTO auth_challenges (id,kind,poll_id,identifier_id,identifier_value,browser_hash,proof_hash,created_at,expires_at)
+       SELECT printf('%064d',x),'email',1,i.id,i.normalized_value,printf('%064d',x),printf('%064d',x),
+       '2026-09-29T00:00:00.000Z','2026-09-29T00:10:00.000Z' FROM n JOIN person_identifiers i ON i.id = ((x-1)%200)+1`,
+    ]);
+    const authWithSessions = await size();
     expect(chapterEmpty).toBeGreaterThan(legacyEmpty);
     expect(migrated200).toBeGreaterThan(chapterEmpty);
     expect(chapterWithPoll).toBeGreaterThan(migrated200);
     expect(chapterWithPoll).toBeLessThan(500_000_000);
+    expect(authWithSessions).toBeGreaterThan(authEmpty);
+    expect(authWithSessions).toBeLessThan(500_000_000);
     console.info(
       'Synthetic D1 allocated bytes:',
-      JSON.stringify({ legacyEmpty, chapterEmpty, migrated200, chapterWithPoll }),
+      JSON.stringify({
+        legacyEmpty,
+        chapterEmpty,
+        migrated200,
+        chapterWithPoll,
+        authEmpty,
+        authWithSessions,
+      }),
     );
   } finally {
     await context.dispose();
