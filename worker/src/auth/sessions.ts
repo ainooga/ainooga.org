@@ -94,16 +94,25 @@ export async function logout(
   env: Env,
   deps: AuthDependencies,
 ): Promise<Response> {
-  await removeSession(request, env, deps, 'honor');
-  await removeSession(request, env, deps, 'voter');
-  const browser = cookie(request, env.SITE_URL, 'challenge');
-  if (browser)
-    await deps.db
+  const hashes = await Promise.all(
+    (['honor', 'voter', 'challenge'] as const).map(async (kind) => {
+      const value = cookie(request, env.SITE_URL, kind);
+      return value ? hashToken(value) : null;
+    }),
+  );
+  // Delete associated sessions before replacing the challenge's session hash.
+  // The transaction orders logout against both email and Discord issuance.
+  await deps.db.batch([
+    deps.db
       .prepare(
-        'UPDATE auth_challenges SET consumed_by = ? WHERE browser_hash = ? AND consumed_by IS NULL',
+        `DELETE FROM voter_sessions WHERE token_hash IN (?,?)
+      OR token_hash IN (SELECT consumed_by FROM auth_challenges WHERE browser_hash = ?)`,
       )
-      .bind('logout', await hashToken(browser))
-      .run();
+      .bind(...hashes),
+    deps.db
+      .prepare("UPDATE auth_challenges SET consumed_by = 'logout' WHERE browser_hash = ?")
+      .bind(hashes[2]),
+  ]);
   const response = Response.json({ authenticated: false });
   for (const kind of ['honor', 'voter', 'challenge'] as const)
     setCookie(response, env.SITE_URL, kind, '', 0);

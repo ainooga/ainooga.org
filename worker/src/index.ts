@@ -5,7 +5,8 @@ import { handleConfirm } from './confirm.js';
 import { createDb, createEmailSender, createTurnstileVerifier } from './adapters.js';
 import type { Env } from './types.js';
 import { handleAuth, isAuthRoute } from './auth/router.js';
-import { cleanupAuth } from './auth/store.js';
+import { cleanupAuth } from './auth/cleanup.js';
+import type { AuthContext } from './auth/types.js';
 import { apiFailure, jsonBody } from './auth/http.js';
 import { subscribeSchema, sponsorSchema } from './form-schemas.js';
 
@@ -77,8 +78,9 @@ async function dispatch(request: Request, env: Env): Promise<Response> {
 }
 
 export default {
-  async fetch(request: Request, env: Env): Promise<Response> {
-    if (isAuthRoute(new URL(request.url).pathname)) return handleAuth(request, env);
+  async fetch(request: Request, env: Env, context: AuthContext): Promise<Response> {
+    if (isAuthRoute(new URL(request.url).pathname))
+      return handleAuth(request, env, context);
     const origin = request.headers.get('Origin');
 
     if (request.method === 'OPTIONS') {
@@ -98,6 +100,9 @@ export default {
     }
   },
   async scheduled(_event: ScheduledController, env: Env): Promise<void> {
-    if (env.AUTH_READY === 'true') await cleanupAuth(env.DB, new Date());
+    if (env.AUTH_READY !== 'true') return;
+    const result = await cleanupAuth(env.DB, new Date());
+    if (result.capped)
+      console.warn(JSON.stringify({ event: 'auth_cleanup_capped', ...result }));
   },
 };

@@ -6,7 +6,7 @@ import {
   verifiedLogin,
   responseCookie,
 } from '../helpers/auth';
-import { cleanupAuth } from '../../worker/src/auth/store';
+import { cleanupAuth } from '../../worker/src/auth/cleanup';
 
 let f: Awaited<ReturnType<typeof authFixture>>;
 beforeEach(async () => {
@@ -132,6 +132,7 @@ describe('email verification', () => {
   it('invalidates failed deliveries without exposing provider details', async () => {
     f.deps.sendFails = true;
     const challenge = await emailChallenge(f);
+    await f.deps.drain();
     expect(challenge.response.status).toBe(202);
     expect(
       (

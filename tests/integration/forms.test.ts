@@ -1,4 +1,5 @@
 // @vitest-environment node
+import { BackgroundTasks } from '../helpers/background';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { chapterDatabase } from '../helpers/d1';
 import { createDb } from '../../worker/src/db/client';
@@ -192,7 +193,7 @@ describe('forms against local D1', () => {
         method: path === '/confirm' ? 'GET' : 'POST',
         headers: { Origin: 'https://ainooga.org' },
       });
-      const response = await worker.fetch(request, inaccessible);
+      const response = await worker.fetch(request, inaccessible, new BackgroundTasks());
       expect(response.status).toBe(503);
       expect(response.headers.get('Retry-After')).toBe('60');
       expect(response.headers.get('Cache-Control')).toBe('no-store');
@@ -208,19 +209,30 @@ describe('forms against local D1', () => {
         await worker.fetch(
           new Request('https://example.com/api/subscribe', { method: 'OPTIONS' }),
           env(),
+          new BackgroundTasks(),
         )
       ).status,
     ).toBe(200);
     expect(
       (
-        await worker.fetch(new Request('https://example.com/confirm'), {
-          ...env(),
-          CHAPTER_SCHEMA_READY: 'true',
-        })
+        await worker.fetch(
+          new Request('https://example.com/confirm'),
+          {
+            ...env(),
+            CHAPTER_SCHEMA_READY: 'true',
+          },
+          new BackgroundTasks(),
+        )
       ).status,
     ).toBe(400);
     expect(
-      (await worker.fetch(new Request('https://example.com/unknown'), env())).status,
+      (
+        await worker.fetch(
+          new Request('https://example.com/unknown'),
+          env(),
+          new BackgroundTasks(),
+        )
+      ).status,
     ).toBe(404);
   });
 });

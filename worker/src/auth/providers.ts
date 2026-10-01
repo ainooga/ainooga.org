@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import type { Env } from '../types.js';
-import type { AuthDependencies } from './types.js';
+import type { AuthContext, AuthDependencies } from './types.js';
 import { randomCode, randomToken } from './crypto.js';
 import { callbackUrl } from './discord.js';
 import { reject } from './http.js';
@@ -73,6 +73,7 @@ async function verifyBot(
 
 export function authDependencies(
   env: Env,
+  context: AuthContext,
   fetcher: typeof fetch = fetch,
 ): AuthDependencies {
   return {
@@ -80,6 +81,7 @@ export function authDependencies(
     now: () => new Date(),
     random: randomToken,
     code: randomCode,
+    waitUntil: (task) => context.waitUntil(task),
     async sendCode(address, code) {
       if (!env.EMAIL) throw new Error('Email binding missing');
       await env.EMAIL.send({
@@ -91,6 +93,11 @@ export function authDependencies(
     },
     verifyBot: (token) => verifyBot(env, token, fetcher),
     discordIdentity: (code) => discordIdentity(env, code, fetcher),
+    async limitInitiation(key) {
+      if (!env.AUTH_INITIATION_RATE_LIMITER)
+        return reject(503, 'configuration', 'Authentication is not configured.');
+      return (await env.AUTH_INITIATION_RATE_LIMITER.limit({ key })).success;
+    },
     async limit(key) {
       if (!env.AUTH_RATE_LIMITER)
         return reject(503, 'configuration', 'Authentication is not configured.');

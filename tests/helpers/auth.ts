@@ -1,3 +1,4 @@
+import { BackgroundTasks, deferred } from './background';
 import { chapterDatabase, migration } from './d1';
 import type { Env } from '../../worker/src/types';
 import type { AuthDependencies } from '../../worker/src/auth/types';
@@ -7,16 +8,24 @@ import { handleAuth } from '../../worker/src/auth/router';
 export const ORGANIZER_TOKEN = 'a'.repeat(64);
 export const SITE = 'https://ainooga.test';
 
-export class AuthFakes implements AuthDependencies {
+export class AuthFakes extends BackgroundTasks implements AuthDependencies {
   time = new Date('2026-09-29T12:00:00.000Z');
   sent: { address: string; code: string }[] = [];
   sendFails = false;
   botValid = true;
   allowed = true;
+  initiationAllowed = true;
+  initiationKeys: string[] = [];
+  botChecks = 0;
+  sendGate?: ReturnType<typeof deferred>;
+  discordGate?: ReturnType<typeof deferred>;
+  discordStarted = deferred();
   discordId = '123456789012345678';
   discordFails = false;
   exchanges = 0;
-  constructor(readonly db: D1Database) {}
+  constructor(public db: D1Database) {
+    super();
+  }
   now() {
     return this.time;
   }
@@ -27,15 +36,23 @@ export class AuthFakes implements AuthDependencies {
   async sendCode(address: string, code: string) {
     if (this.sendFails) throw new Error('Private provider error');
     this.sent.push({ address, code });
+    await this.sendGate?.promise;
   }
   async verifyBot() {
+    this.botChecks++;
     return this.botValid;
   }
   async limit() {
     return this.allowed;
   }
+  async limitInitiation(key: string) {
+    this.initiationKeys.push(key);
+    return this.initiationAllowed;
+  }
   async discordIdentity() {
     this.exchanges++;
+    this.discordStarted.resolve();
+    await this.discordGate?.promise;
     if (this.discordFails) throw new Error('Private OAuth error');
     return this.discordId;
   }
@@ -89,9 +106,19 @@ export async function authFixture() {
       }),
       env,
       deps,
+      deps,
     );
   }
-  return { ...context, env, deps, call };
+  return {
+    ...context,
+    env,
+    deps,
+    call,
+    async dispose() {
+      await deps.drain();
+      await context.dispose();
+    },
+  };
 }
 
 export function responseCookie(response: Response): string {

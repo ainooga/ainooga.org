@@ -79,19 +79,3 @@ export async function readSession(
     .bind(hash, now.toISOString(), poll.id)
     .first<Session>();
 }
-
-export async function cleanupAuth(db: D1Database, now: Date): Promise<void> {
-  const cutoff = new Date(now.getTime() - 86400000).toISOString();
-  await db.batch([
-    db
-      .prepare(
-        'DELETE FROM voter_sessions WHERE token_hash IN (SELECT token_hash FROM voter_sessions WHERE expires_at < ? LIMIT 1000)',
-      )
-      .bind(cutoff),
-    db
-      .prepare(
-        'DELETE FROM auth_challenges WHERE id IN (SELECT id FROM auth_challenges WHERE expires_at < ? LIMIT 1000)',
-      )
-      .bind(cutoff),
-  ]);
-}

@@ -1,3 +1,5 @@
+export type AuthContext = Pick<ExecutionContext, 'waitUntil'>;
+
 export interface AuthDependencies {
   db: D1Database;
   now(): Date;
@@ -7,6 +9,8 @@ export interface AuthDependencies {
   verifyBot(token: string): Promise<boolean>;
   discordIdentity(code: string): Promise<string>;
   limit(key: string): Promise<boolean>;
+  limitInitiation(key: string): Promise<boolean>;
+  waitUntil(task: Promise<void>): void;
 }
 
 export interface Poll {

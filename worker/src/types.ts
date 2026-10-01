@@ -30,6 +30,9 @@ export interface Env {
   DISCORD_CLIENT_ID?: string;
   DISCORD_CLIENT_SECRET?: string;
   AUTH_RATE_LIMITER?: { limit(input: { key: string }): Promise<{ success: boolean }> };
+  AUTH_INITIATION_RATE_LIMITER?: {
+    limit(input: { key: string }): Promise<{ success: boolean }>;
+  };
   DB: D1Database;
   CHAPTER_SCHEMA_READY?: string;
   EMAIL: SendEmail;

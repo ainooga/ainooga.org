@@ -100,6 +100,7 @@ describe('request boundaries', () => {
         }),
         f.env,
         f.deps,
+        f.deps,
       );
       expect(response.status).toBe(status);
       expect(response.headers.get('Access-Control-Allow-Origin')).toBeNull();
@@ -108,9 +109,9 @@ describe('request boundaries', () => {
   });
   it('gates new routes before touching dependencies and respects rate limits', async () => {
     f.env.AUTH_READY = undefined;
-    expect((await worker.fetch(new Request(`${SITE}/api/admin/me`), f.env)).status).toBe(
-      503,
-    );
+    expect(
+      (await worker.fetch(new Request(`${SITE}/api/admin/me`), f.env, f.deps)).status,
+    ).toBe(503);
     f.env.AUTH_READY = 'true';
     f.deps.allowed = false;
     const response = await f.call('/api/admin/me', undefined, undefined, auth);

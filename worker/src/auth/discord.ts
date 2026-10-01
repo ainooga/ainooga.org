@@ -5,7 +5,8 @@ import { jsonBody, reject } from './http.js';
 import { cookie, setCookie } from './cookies.js';
 import { hashToken } from './crypto.js';
 import { checkBot, removeSession } from './sessions.js';
-import { eligibleIdentity, findPoll, insertSession } from './store.js';
+import { eligibleIdentity, findPoll } from './store.js';
+import { finishDiscord, type DiscordChallenge } from './discord-store.js';
 
 export function callbackUrl(env: Env): string {
   return new URL('/api/auth/discord/callback', env.SITE_URL).href;
@@ -57,25 +58,27 @@ async function consumeState(
   request: Request,
   env: Env,
   deps: AuthDependencies,
-): Promise<Poll> {
+): Promise<DiscordChallenge> {
   const state = new URL(request.url).searchParams.get('state');
   const browser = cookie(request, env.SITE_URL, 'challenge');
   if (!state || !/^[a-f0-9]{64}$/.test(state) || !browser)
     return reject(400, 'invalid_state', 'Invalid or expired Discord login.');
+  const id = await hashToken(state);
+  const browserHash = await hashToken(browser);
   const record = await deps.db
     .prepare(
       `UPDATE auth_challenges SET consumed_by = 'discord_exchange'
     WHERE id = ? AND browser_hash = ? AND kind = 'discord' AND consumed_by IS NULL AND expires_at > ?
     RETURNING poll_id`,
     )
-    .bind(await hashToken(state), await hashToken(browser), deps.now().toISOString())
+    .bind(id, browserHash, deps.now().toISOString())
     .first<{ poll_id: number }>();
   if (!record) return reject(400, 'invalid_state', 'Invalid or expired Discord login.');
   const row = await deps.db
     .prepare('SELECT slug FROM polls WHERE id = ?')
     .bind(record.poll_id)
     .first<{ slug: string }>();
-  return findPoll(deps.db, row?.slug ?? '');
+  return { id, browserHash, poll: await findPoll(deps.db, row?.slug ?? '') };
 }
 
 export async function completeDiscord(
@@ -83,7 +86,8 @@ export async function completeDiscord(
   env: Env,
   deps: AuthDependencies,
 ): Promise<Response> {
-  const poll = await consumeState(request, env, deps);
+  const challenge = await consumeState(request, env, deps);
+  const { poll } = challenge;
   const url = new URL(request.url);
   const code = url.searchParams.get('code');
   if (url.searchParams.has('error') || !code || code.length > 2048)
@@ -94,15 +98,8 @@ export async function completeDiscord(
     return reject(403, 'ineligible', 'This Discord identity cannot access the poll.');
   const token = deps.random();
   const hash = await hashToken(token);
-  if (!(await insertSession(deps.db, hash, identity, poll, 'verified', deps.now())))
-    return reject(403, 'ineligible', 'This Discord identity cannot access the poll.');
-  await deps.db
-    .prepare(
-      `UPDATE person_identifiers SET verified_at = ? WHERE id = ?
-    AND EXISTS (SELECT 1 FROM voter_sessions WHERE token_hash = ? AND identifier_value = person_identifiers.normalized_value)`,
-    )
-    .bind(deps.now().toISOString(), identity.id, hash)
-    .run();
+  if (!(await finishDiscord(deps, challenge, identity, hash)))
+    return reject(400, 'invalid_state', 'Invalid or expired Discord login.');
   await removeSession(request, env, deps, 'voter');
   const response = new Response(null, {
     status: 303,

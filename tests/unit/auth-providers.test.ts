@@ -1,4 +1,5 @@
 // @vitest-environment node
+import { BackgroundTasks, deferred } from '../helpers/background';
 import { describe, expect, it } from 'vitest';
 import { authDependencies } from '../../worker/src/auth/providers';
 import { randomCode, randomToken, codeHash } from '../../worker/src/auth/crypto';
@@ -35,7 +36,7 @@ describe('identity provider adapters', () => {
       { success: true, hostname: 'ainooga.test', action: 'newsletter' },
       { success: false },
     ].map((body) => Response.json(body));
-    const deps = authDependencies(env(), fake.fetch);
+    const deps = authDependencies(env(), new BackgroundTasks(), fake.fetch);
     expect(await deps.verifyBot('token')).toBe(true);
     expect(await deps.verifyBot('token')).toBe(false);
     expect(await deps.verifyBot('token')).toBe(false);
@@ -54,9 +55,11 @@ describe('identity provider adapters', () => {
         email: 'untrusted@example.com',
       }),
     ];
-    expect(await authDependencies(env(), fake.fetch).discordIdentity('code')).toBe(
-      '123456789012345678',
-    );
+    expect(
+      await authDependencies(env(), new BackgroundTasks(), fake.fetch).discordIdentity(
+        'code',
+      ),
+    ).toBe('123456789012345678');
     expect(fake.calls[0]!.headers.get('Content-Type')).toContain(
       'application/x-www-form-urlencoded',
     );
@@ -70,7 +73,7 @@ describe('identity provider adapters', () => {
   it('fails closed on unavailable providers and missing bindings', async () => {
     const fake = new ProviderFake();
     fake.responses = [new Response('private failure', { status: 503 })];
-    const deps = authDependencies(env(), fake.fetch);
+    const deps = authDependencies(env(), new BackgroundTasks(), fake.fetch);
     await expect(deps.discordIdentity('code')).rejects.toMatchObject({
       status: 503,
       code: 'provider_unavailable',
@@ -79,6 +82,21 @@ describe('identity provider adapters', () => {
       'Email binding missing',
     );
     await expect(deps.limit('key')).rejects.toMatchObject({ status: 503 });
+    await expect(deps.limitInitiation('key')).rejects.toMatchObject({ status: 503 });
+  });
+  it('registers background work on the provided execution context', async () => {
+    const context = new BackgroundTasks();
+    const pending = deferred();
+    authDependencies(env(), context).waitUntil(pending.promise);
+    let completed = false;
+    const draining = context.drain().then(() => {
+      completed = true;
+    });
+    await Promise.resolve();
+    expect(completed).toBe(false);
+    pending.resolve();
+    await draining;
+    expect(completed).toBe(true);
   });
   it('uses unpredictable tokens and keyed, challenge-specific code hashes', async () => {
     const tokens = Array.from({ length: 100 }, randomToken);

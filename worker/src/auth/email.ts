@@ -7,6 +7,7 @@ import { jsonBody, reject } from './http.js';
 import { eligibleIdentity } from './store.js';
 import { checkBot, removeSession } from './sessions.js';
 import { createEmailChallenge, consumeEmail } from './email-store.js';
+import { deliverCode } from './email-delivery.js';
 
 const requestSchema = z
   .object({
@@ -50,7 +51,7 @@ export async function requestEmail(
       await hashToken(browser),
       await codeHash(secret, id, code),
     );
-    if (created) await deliver(deps, address, code, id);
+    if (created) deps.waitUntil(deliverCode(deps, address, code, id));
   }
   const response = Response.json(
     {
@@ -62,23 +63,6 @@ export async function requestEmail(
   );
   setCookie(response, env.SITE_URL, 'challenge', browser, 86400);
   return response;
-}
-
-async function deliver(
-  deps: AuthDependencies,
-  address: string,
-  code: string,
-  id: string,
-): Promise<void> {
-  try {
-    await deps.sendCode(address, code);
-  } catch {
-    await deps.db
-      .prepare('UPDATE auth_challenges SET consumed_by = ? WHERE id = ?')
-      .bind('delivery_failed', id)
-      .run();
-    console.error(JSON.stringify({ event: 'verification_delivery_failed' }));
-  }
 }
 
 export async function verifyEmail(

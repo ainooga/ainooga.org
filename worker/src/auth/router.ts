@@ -1,5 +1,5 @@
 import type { Env } from '../types.js';
-import type { AuthDependencies } from './types.js';
+import type { AuthContext, AuthDependencies } from './types.js';
 import { apiFailure, reject, requireOrigin } from './http.js';
 import { organizer, linkIdentifier } from './organizers.js';
 import { authDependencies } from './providers.js';
@@ -62,13 +62,20 @@ async function voter(
   return pollAction(match[2]!, request, env, deps, poll);
 }
 
-function pollAction(
+async function pollAction(
   action: string,
   request: Request,
   env: Env,
   deps: AuthDependencies,
   poll: Awaited<ReturnType<typeof findPoll>>,
 ): Promise<Response> {
+  if (['auth/honor', 'auth/email/request', 'auth/discord/start'].includes(action)) {
+    const key = await hashToken(
+      `${request.headers.get('CF-Connecting-IP') ?? 'local'}:initiation`,
+    );
+    if (!(await deps.limitInitiation(key)))
+      reject(429, 'rate_limit', 'Too many requests. Try again shortly.');
+  }
   switch (action) {
     case 'auth/honor':
       return honor(request, env, deps, poll);
@@ -86,13 +93,14 @@ function pollAction(
 export async function handleAuth(
   request: Request,
   env: Env,
+  context: AuthContext,
   dependencies?: AuthDependencies,
 ): Promise<Response> {
   let response: Response;
   try {
     if (env.AUTH_READY !== 'true' || env.CHAPTER_SCHEMA_READY !== 'true')
       reject(503, 'not_ready', 'Authentication is not enabled yet.');
-    const deps = dependencies ?? authDependencies(env);
+    const deps = dependencies ?? authDependencies(env, context);
     const key = await hashToken(
       `${request.headers.get('CF-Connecting-IP') ?? 'local'}:auth`,
     );
