@@ -8,3 +8,6 @@ DISCORD_CLIENT_ID=
 DISCORD_CLIENT_SECRET=
 # Insert a real local person ID and a token generated with openssl rand -hex 32.
 ORGANIZER_API_TOKENS='[]'
+
+# Enable only after applying migration 0004 and verifying local D1.
+POLLS_READY=false

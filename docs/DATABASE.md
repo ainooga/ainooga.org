@@ -1,6 +1,6 @@
 # Chapter database
 
-The API Worker uses Cloudflare D1. Migration `0002_chapter_schema.sql` implements the chapter schema; `0003_voter_auth.sql` adds voter sessions and verification challenges. The chapter cutover is complete. Authentication migration and enablement remain separate deployment steps; see [API authentication](./API.md). Merging code does not migrate production D1 or import the private member export.
+The API Worker uses Cloudflare D1. Migration `0002_chapter_schema.sql` implements the chapter schema; `0003_voter_auth.sql` adds voter sessions and verification challenges; `0004_poll_api.sql` adds saved poll eligibility tags and latest ballot submission receipts. The chapter cutover is complete. Authentication migration and enablement remain separate deployment steps; see [API authentication](./API.md). Merging code does not migrate production D1 or import the private member export.
 
 Database tooling lives in the top-level `db/` directory: migration orchestration, preflight, backfill, verification, and size inspection. `migrations/` holds versioned SQL. Modules that use D1 keep their own adapters; the Worker adapter remains in `worker/src/db/`. Run the tooling from the repository root through the existing pnpm commands.
 
@@ -19,6 +19,8 @@ Versioned SQL in `migrations/` is the authoritative schema. The new tables are:
 | Polls          | `polls`, `poll_options`, `poll_allowlist`, `poll_ballots`, `poll_ballot_choices` | Each poll has its own eligibility list. One ballot per person/poll; composite foreign keys prevent cross-poll choices. Both honor and verified identity modes are represented.                    |
 
 Foreign keys restrict deletion and updates. Timestamp writes use UTC ISO text with milliseconds. Nullable historical fields remain nullable. Integer bounds, boolean/enumerated values, sponsor ownership, poll selection bounds, and time ordering are checked in SQL. No cascading deletion or automatic person merging is provided.
+
+Polling API tables `poll_eligible_tags` and `poll_submission_receipts` store saved tag criteria and one latest idempotency receipt per person/poll. Tag criteria are resolved once into the allowlist at publication; a receipt references that allowlist and coordinates atomic ballot writes. See [poll rules and rollout](./POLLS.md).
 
 Authentication tables `voter_sessions` and `auth_challenges` contain only hashed session tokens, HMAC email proofs, hashed OAuth/browser state, expiry, and attempt/consumption records alongside their chapter references. Organizer credentials live in a Worker secret, not D1.
 
@@ -59,6 +61,8 @@ The file lives under `miniflare-D1DatabaseObject/`. A `-wal` file can contain re
 ## Migration behavior
 
 `pnpm cf:migrate:local` applies pending versioned migrations and verifies the current schema, foreign keys, and integrity. An empty local database is initialized automatically. `pnpm cf:migrate` explicitly targets production. Existing chapter databases are verified before migration; populated legacy databases and empty remote databases are rejected. These commands never rerun legacy backfill or compare live records to a migration manifest. They do not deploy the Worker or enable authentication.
+
+For poll migration 0004, keep `POLLS_READY` absent/false, apply the migration, verify, then deploy and enable the new routes using the [poll rollout steps](./POLLS.md#production-rollout). The two additive tables leave chapter/authentication definitions and existing forms unchanged. Ordinary `db:verify` now checks all definitions through 0004.
 
 For authentication migration 0003, leave existing forms open, apply the migration, run `pnpm db:verify --remote`, and follow [API deployment](./API.md#configuration-and-deployment). Ordinary verification is safe after application writes.
 

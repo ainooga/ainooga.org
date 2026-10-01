@@ -78,3 +78,7 @@ Premium editorial aesthetic. Typography-first with Playfair Display (headings) a
 ## License
 
 MIT
+
+## Poll administration
+
+Organizers author polls in Markdown/YAML and manage them with `pnpm poll`. See the [examples and instructions](examples/polls/README.md) and [API/deployment guide](docs/POLLS.md). Poll files are not part of the static content build.
