@@ -65,6 +65,11 @@
   --shadow-md: 0 2px 8px rgba(26, 22, 20, 0.06);
   --shadow-lg: 0 4px 24px rgba(26, 22, 20, 0.08);
 
+  --border-width-thin: 1px;
+  --border-width-strong: 2px;
+  --font-weight-semibold: 600;
+  --opacity-disabled: 0.6;
+
   /* ---- Layout ---- */
   --content-max: 1200px;
   --content-narrow: 720px;

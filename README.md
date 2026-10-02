@@ -81,4 +81,4 @@ MIT
 
 ## Poll administration
 
-Organizers author polls in Markdown/YAML and manage them with `pnpm poll`. See the [examples and instructions](examples/polls/README.md) and [API/deployment guide](docs/POLLS.md). Poll files are not part of the static content build.
+Organizers author polls in Markdown/YAML and manage them with `pnpm poll`. See the [poll guide](docs/polls/POLLS.md) and its [complete example](docs/polls/topic-vote.md). Poll files are not part of the static content build.

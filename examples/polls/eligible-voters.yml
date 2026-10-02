@@ -1,8 +1,0 @@
-# Synthetic identities only. Each item identifies one person by email or Discord ID.
-# Linked identifiers for the same person count once. This does not link identities.
-- kind: email
-  value: alice@example.com
-- kind: email
-  value: bob@example.com
-- kind: discord
-  value: '123456789012345678'

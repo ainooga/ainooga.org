@@ -44,9 +44,11 @@ All POST bodies below are strict JSON objects. Unknown fields are rejected. Orga
 | `GET /api/polls/{slug}/session`                 | Session cookies                                          | `{ authenticated: false }` or `{ authenticated: true, personId, assurance, expiresAt }`  |
 | `POST /api/auth/logout`                         | Session/challenge cookies                                | Revokes presented and browser-challenge sessions, cancels pending logins; clears cookies |
 
+The unverified `/auth/honor` endpoint also accepts `{ identifier: { kind: "discord_username", value }, turnstileToken }`. Usernames must be nonempty and at most 32 characters after trimming. They match the Discord identifier's `display_label`, ignoring case and surrounding whitespace. A single matching person must be actively eligible; ambiguous and missing names return the same `403 ineligible` response. The lookup and eligibility check occur in the session INSERT. The session records the numeric Discord identity, preserving one ballot across linked email and Discord entry. This request-only kind is not a new database identifier kind and is not accepted by organizer linking or allowlist endpoints. Import account usernames alongside Discord IDs later; do not put display/server nicknames in this field for voter lookup.
+
 Successful honor and code-verification responses contain `{ authenticated: true, assurance }`. Email identifiers are trimmed and lowercased without rewriting dots or plus suffixes. Discord identifiers are numeric strings of 17–20 digits, never display names. Linking never merges people or marks an identifier verified, and authentication never creates membership, consent, eligibility, or organizer access.
 
-Poll management, ballots, results, Markdown authoring, and the organizer CLI are documented in [Poll API and workflow](./POLLS.md). The Svelte voter UI arrives in PR 5; the Discord redirect path is reserved for it.
+Poll management, ballots, results, Markdown authoring, and the organizer CLI are documented in [poll guide](./polls/POLLS.md). The Svelte voter UI now supports unverified guest-list entry. Verified email/Discord endpoints remain available through the API; their UI is deferred.
 
 ## Verification and sessions
 
@@ -71,7 +73,7 @@ Hourly cleanup drains records that expired more than 24 hours ago, oldest first,
 1. Apply migration 0003 with `pnpm cf:migrate`, then run `pnpm db:verify --remote` and `pnpm db:size --remote`. Routine migration never reruns the legacy backfill. Existing forms can remain open for this migration.
 2. Deploy the Worker and both rate-limit bindings from `worker/wrangler.toml` together, with `AUTH_READY` absent or false. New routes return `503`; existing form readiness remains controlled by `CHAPTER_SCHEMA_READY`.
 3. Configure `ORGANIZER_API_TOKENS` and an independently generated `AUTH_SECRET` using Worker secrets. Configure `DISCORD_CLIENT_ID` and `DISCORD_CLIENT_SECRET`. Register the exact Discord callback `https://ainooga.org/api/auth/discord/callback`. These values stay out of the SPA.
-4. Retain the existing Cloudflare `EMAIL` binding and verified sender domain for `noreply@ainooga.org`. The account is already on Workers Paid. Verify the production Turnstile hostname; the later poll widget must use action `poll-auth`.
+4. Retain the existing Cloudflare `EMAIL` binding and verified sender domain for `noreply@ainooga.org`. The account is already on Workers Paid. Verify the production Turnstile hostname; the poll widget uses action `poll-auth`.
 5. Set the `AUTH_READY` Worker secret to `true`, retain `CHAPTER_SCHEMA_READY=true`, and run `pnpm api:whoami`. Removing/replacing organizer entries takes effect with the updated secret deployment. Set `AUTH_READY=false` to disable new authentication without disabling forms.
 
 The review fixes use the existing migration 0003 schema. They require no additional migration, secret rotation, or organizer setup; an existing deployment needs the updated Worker and its additional rate-limit binding.
@@ -80,4 +82,70 @@ Only deployment maintainers need Cloudflare access for these setup steps. Ordina
 
 For local development, copy `worker/.dev.vars.example` to the ignored `worker/.dev.vars`, run `pnpm cf:migrate:local`, and supply local configuration before setting both readiness flags true. Use `SITE_URL=http://localhost:5173` through the existing Vite proxy; register that site's callback separately for manual Discord testing. `AINOOGA_API_URL=http://localhost:8787` is suitable for the local organizer command. Automated tests use isolated D1 databases and fake email, Discord, Turnstile, clock, and rate-limiter services; they send no real email.
 
-Run `pnpm check` and `pnpm test:coverage`. A Worker `wrangler deploy --dry-run` validates bundling/bindings without deploying. Live email delivery and Discord browser consent still need a controlled smoke check with organizer-owned identities and an allowlisted test poll before the voting UI is released. This PR does not import real members, create production polls, or implement the later comprehensive security review.
+Run `pnpm check` and `pnpm test:coverage`. A Worker `wrangler deploy --dry-run` validates bundling/bindings without deploying. Live email delivery and Discord browser consent remain checks for a future verified-entry UI. The current unverified guest-list UI needs a real Turnstile smoke check; it does not require those providers. This PR does not import real members, create production polls, or implement the later comprehensive security review.
+
+## Poll API
+
+For authoring examples, CLI commands, guest-list behavior, and deployment, see the [poll guide](./polls/POLLS.md). The endpoint contracts below are for API clients.
+
+### Organizer endpoints
+
+All paths below start with `/api/admin/polls`. Send `Authorization: Bearer <organizer token>`. No Cloudflare credentials are needed for these requests. Browser requests with an Origin must match `SITE_URL`; command-line requests may omit it.
+
+| Method | Path suffix         | Input / response                                                                                                           |
+| ------ | ------------------- | -------------------------------------------------------------------------------------------------------------------------- |
+| GET    | (none)              | List slugs, titles, statuses, and start/end times.                                                                         |
+| POST   | (none)              | Full poll definition; creates a draft, returns 201 with saved detail.                                                      |
+| GET    | `/{slug}`           | Saved definition, status, option records with IDs, and eligibility preview.                                                |
+| PUT    | `/{slug}`           | Full definition; replaces draft configuration/options/tags. Published polls permit only title/description changes.         |
+| POST   | `/{slug}/publish`   | `{}`. Snapshot tag eligibility and publish; repeat calls do not refresh the snapshot.                                      |
+| POST   | `/{slug}/archive`   | `{}`. Terminal archive, repeatable.                                                                                        |
+| GET    | `/{slug}/allowlist` | People IDs/names, added and revoked timestamps.                                                                            |
+| POST   | `/{slug}/allowlist` | `{ action: "add" or "revoke", identifiers: [{ kind: "email" or "discord", value }] }`, at most 50 entries.                 |
+| GET    | `/{slug}/results`   | Aggregate counts over active eligibility only.                                                                             |
+| GET    | `/{slug}/ballots`   | Current identifiable ballots, identifiers, choices, revision, timestamps, and revocation status. Includes revoked ballots. |
+
+The definition fields match [topic-vote.md](./polls/topic-vote.md), plus a `description` string containing the Markdown body. All fields are required, including explicit `null` values and `eligibleTags: []` when no tags are configured. The API and CLI share strict validation. Drafts allow up to 100 predefined options, 50 tags, a 200-character title, and an 8,000-character description; the entire JSON payload must fit 16 KiB. Dates must be UTC timestamps ending in `Z` and are stored in canonical millisecond precision.
+
+The eligibility preview reports `eligibleCount`, `missingTags`, and `snapshot`. Drafts combine current tag matches and explicit active entries, excluding explicitly revoked people. Published/archived polls report the stored snapshot, so subsequent tag changes do not change their eligibility. Missing tags are informational after publication. Publication rejects missing configured tags, no active eligible people, an expired schedule, or too few initial choices to meet the minimum (counting at most one new write-in).
+
+Publication freezes identity mode, selection limits, predefined options, write-in rules, result visibility, start/end/edit dates, and tags. Title and Markdown description can still change. Explicit eligibility remains editable until archive. Adding restores a revoked person. Unknown add identifiers create minimal unverified people; revoking an unknown identifier fails. The whole API batch is atomic. The CLI validates a whole file before sending repeatable batches of 50 and reports confirmed progress if interrupted. Different identifiers are only deduplicated when already linked to the same person; this workflow never guesses or merges identities.
+
+### Voter endpoints
+
+There is no public poll listing. Anonymous callers can retrieve login requirements only. Drafts and archives return 404. Existing authentication endpoints and session cookies are unchanged.
+
+| Method | Path                        | Response / input                                                                                                                                                                       |
+| ------ | --------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| GET    | `/api/polls/{slug}/access`  | Only `{ identityMode, methods }`. Honor mode offers `honor`; verified mode offers `email`, plus `discord` when configured.                                                             |
+| GET    | `/api/polls/{slug}`         | Eligible session required. Poll text/configuration, options with IDs/labels/origin/position, and own ballot. No eligibility tags, roster, write-in authors, or other people's ballots. |
+| GET    | `/api/polls/{slug}/ballot`  | Own current ballot or `null`.                                                                                                                                                          |
+| PUT    | `/api/polls/{slug}/ballot`  | Strict submission body below; returns the accepted current ballot.                                                                                                                     |
+| GET    | `/api/polls/{slug}/results` | Eligible session required; aggregate counts subject to result visibility.                                                                                                              |
+
+```json
+{
+  "requestId": "06ec5d6c-e86e-4961-aa1c-0f9179d1a53c",
+  "expectedRevision": 0,
+  "optionIds": [12, 13],
+  "writeIn": null
+}
+```
+
+Use a fresh UUID for each logical submission. First submission requires revision 0; an edit requires the revision returned by the last ballot read. `optionIds` accepts IDs from this poll within the 16 KiB JSON body limit. There is no separate 100-ID ceiling: with `maxSelections: null`, a voter can select every available option. IDs are deduplicated before database processing. `writeIn` is required and is either `null` or one trimmed, nonempty label of at most 200 characters. Repeated IDs and equivalent write-ins count once toward selection limits. Write-in matching trims/collapses whitespace and lowercases; a duplicate selects the existing option. New write-ins are created only with an accepted ballot and become immediately visible to eligible voters. Each person can create one new write-in per poll, and a poll can contain at most 500 total options, including predefined options. Both creation limits are enforced atomically. Reusing any existing label, selecting existing options, and replaying an accepted request do not consume the allowance. Editing a ballot or revoking/restoring eligibility does not reset it. Attempts to exceed a creation limit return `409` with code `write_in_limit` and leave the ballot, receipt, and options unchanged. Older options already exceeding these limits remain available; the limits block further creation rather than deleting records. They remain available if their author's choices change. Display labels retain their submitted internal spacing. Render labels as text.
+
+The response is `{ revision, submittedAt, updatedAt, optionIds }`; both predefined and write-in selections are option IDs. A latest request retried with the same canonical payload returns the same accepted ballot without writing again, including after voting or editing closes. A changed payload under the same UUID, stale revision, invalid selection set, or competing edit returns 409. Refetch the ballot and options before making a new submission. Do not silently turn a conflicting retry into a new vote. Only the latest receipt is retained; retrying a superseded submission conflicts. Invalid fields return 400; validation happens before database writes.
+
+Voting is open at `startsAt` and closed at `endsAt`: `[startsAt, endsAt)`. D1 evaluates its own UTC clock when executing the ballot claim, rather than using the time the Worker received the request. A request queued across a deadline or session expiry cannot claim a ballot. Existing ballots can change only with `allowEdits: true` and before `editDeadline ?? endsAt`. Login is allowed outside that window so voters can see permitted results. `before_vote` allows aggregate results before submitting, `after_vote` requires an existing ballot, and `never` denies voter results even after closing. Results contain `eligibleCount`, `ballotCount`, and `options: [{ id, label, votes }]`; selection totals may exceed ballot count. Revoked voters cannot read or change the poll, and their ballots stop contributing to both participation and option totals. Restoration counts their retained ballots again.
+
+The Worker derives person identity from the session, never from a submitted person ID. Ballot writes use one D1 batch: recheck session/identifier/eligibility/publication/window/rules/revision, claim the latest receipt with a fresh internal nonce, then condition all option/ballot/choice writes on that nonce. A losing request writes nothing; a later SQL failure rolls back the whole batch. D1 also generates ballot/write-in timestamps. A winning claim proves authorization at that point, so later session expiry during response processing does not turn an accepted ballot into an apparent failure. Retries still require a currently valid eligible session. Eligible session checks on protected poll reads use D1 time and share a transaction with the returned data. Own-ballot and detail reads do not compute aggregate totals; denied results requests also avoid aggregate queries. The database stores one current ballot and latest receipt per person/poll, not a selection or request history.
+
+All routes inherit the existing rate limit, error redaction, `no-store`, origin checks, and 16 KiB JSON limit. JSON mutations reject unknown fields. Details/descriptions are returned as Markdown source, never rendered HTML; the voter page sanitizes rendered descriptions and displays write-in labels as text.
+
+### Poll setup and deployment
+
+For local setup, follow [authentication configuration](#configuration-and-deployment), apply `pnpm cf:migrate:local`, and run `pnpm db:verify`. Set `CHAPTER_SCHEMA_READY`, `AUTH_READY`, and `POLLS_READY` to `true` in ignored `worker/.dev.vars` after migration. Configure the existing Turnstile keys for action `poll-auth`, then run `pnpm dev:all` and create a poll with current dates.
+
+Production needs migration `0004_poll_api.sql` before enabling `POLLS_READY`. Apply pending migrations with `pnpm cf:migrate`, verify with `pnpm db:verify --remote`, and inspect size with `pnpm db:size --remote`. Keep readiness flags as Worker secrets; `POLLS_READY=false` disables poll routes without disabling existing forms. The current voter UI adds no migration or secret. Deploy the compatible Worker before the SPA, then check entry, voting, retries, results, and logout on a controlled poll with real Turnstile. Archive it afterward. Email delivery and Discord OAuth are not required for unverified entry.
+
+Run `pnpm check`, `pnpm build:spa`, and `pnpm test:e2e:polls`. The browser suite uses disposable local D1 and fake external services, with no production changes. Install Chromium once with `pnpm exec playwright install chromium`.

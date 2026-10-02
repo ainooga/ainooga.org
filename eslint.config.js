@@ -93,6 +93,10 @@ export default [
     },
   },
   {
+    files: ['src/**/*.svelte.ts'],
+    languageOptions: { parser: tseslint.parser },
+  },
+  {
     ignores: [
       'node_modules/',
       'dist/',

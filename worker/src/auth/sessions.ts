@@ -2,14 +2,14 @@ import type { Env } from '../types.js';
 import type { AuthDependencies, Poll } from './types.js';
 import { cookie, setCookie } from './cookies.js';
 import { hashToken } from './crypto.js';
-import { eligibleIdentity, insertSession, readSession } from './store.js';
-import { identifierSchema } from './organizers.js';
+import { readSession } from './store.js';
+import { honorIdentifier, identifyGuest } from './honor-identity.js';
 import { jsonBody, reject } from './http.js';
 import { z } from 'zod';
 
 const honorSchema = z
   .object({
-    identifier: identifierSchema,
+    identifier: honorIdentifier,
     turnstileToken: z.string().min(1).max(2048),
   })
   .strict();
@@ -29,24 +29,8 @@ export async function honor(
     return reject(403, 'proof_required', 'This poll requires verified identity.');
   const input = await jsonBody(request, honorSchema);
   await checkBot(input.turnstileToken, deps);
-  const value =
-    input.identifier.kind === 'email'
-      ? input.identifier.value.toLowerCase()
-      : input.identifier.value;
-  const identity = await eligibleIdentity(deps.db, poll.id, input.identifier.kind, value);
-  if (!identity)
-    return reject(403, 'ineligible', 'This identity cannot access the poll.');
   const token = deps.random();
-  if (
-    !(await insertSession(
-      deps.db,
-      await hashToken(token),
-      identity,
-      poll,
-      'honor',
-      deps.now(),
-    ))
-  )
+  if (!(await identifyGuest(deps, poll, input.identifier, await hashToken(token))))
     return reject(403, 'ineligible', 'This identity cannot access the poll.');
   await removeSession(request, env, deps, 'honor');
   const response = Response.json({ authenticated: true, assurance: 'honor' });

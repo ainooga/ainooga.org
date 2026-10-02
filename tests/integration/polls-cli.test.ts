@@ -8,8 +8,9 @@ import { tmpdir } from 'node:os';
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 import { pollFixture, submission } from '../helpers/polls';
-import { ORGANIZER_TOKEN } from '../helpers/auth';
+import { ORGANIZER_TOKEN, SITE } from '../helpers/auth';
 import { PollClient } from '../../scripts/polls/client';
+import { handleAuth } from '../../worker/src/auth/router';
 let f: Awaited<ReturnType<typeof pollFixture>>;
 let dispose: (() => Promise<void>) | undefined;
 let directory: string | undefined;
@@ -30,12 +31,20 @@ it('runs the real CLI with an env file through HTTP and D1 from authoring to res
   server = createServer(async (req, res) => {
     const chunks: Buffer[] = [];
     for await (const chunk of req) chunks.push(Buffer.from(chunk));
-    const text = Buffer.concat(chunks).toString();
-    const response = await f.request(
-      req.url!,
-      req.method,
-      text === '' ? undefined : JSON.parse(text),
-      { Authorization: req.headers.authorization ?? '' },
+    // Preserve the HTTP body and headers. Cloudflare can expose an empty POST
+    // as a non-null body; rebuilding parsed JSON hid production HTTP 415 errors.
+    const headers = new Headers({ Authorization: req.headers.authorization ?? '' });
+    if (req.headers['content-type'])
+      headers.set('Content-Type', req.headers['content-type']);
+    const response = await handleAuth(
+      new Request(`${SITE}${req.url!}`, {
+        method: req.method,
+        headers,
+        body: req.method === 'GET' ? undefined : new Uint8Array(Buffer.concat(chunks)),
+      }),
+      f.env,
+      f.deps,
+      f.deps,
     );
     res.writeHead(response.status, Object.fromEntries(response.headers));
     res.end(await response.text());
@@ -50,7 +59,7 @@ it('runs the real CLI with an env file through HTTP and D1 from authoring to res
     { mode: 0o600 },
   );
   const pollFile = join(directory, 'poll.md');
-  const source = (await readFile('examples/polls/topic-vote.md', 'utf8')).replace(
+  const source = (await readFile('docs/polls/topic-vote.md', 'utf8')).replace(
     '2026-10-01T00:00:00.000Z',
     '2026-09-01T00:00:00.000Z',
   );
