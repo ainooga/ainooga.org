@@ -1,0 +1,102 @@
+.poll-page {
+  max-width: var(--content-narrow);
+  margin: var(--space-3xl) auto;
+  padding: var(--space-xl);
+  overflow-wrap: anywhere;
+}
+.poll-page h1,
+.poll-page h2 {
+  margin-bottom: var(--space-lg);
+}
+.poll-entry form,
+.poll-options {
+  display: grid;
+  gap: var(--space-md);
+}
+.poll-entry input,
+.poll-options > input {
+  width: 100%;
+  padding: var(--space-md);
+  border: var(--border-width-thin) solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface);
+  color: var(--color-text);
+  font: inherit;
+}
+.poll-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-md);
+  margin-top: var(--space-md);
+}
+.poll-options {
+  border: var(--border-width-thin) solid var(--color-border);
+  padding: var(--space-lg);
+  margin-bottom: var(--space-lg);
+}
+.poll-options legend {
+  padding: var(--space-sm);
+  font-weight: var(--font-weight-semibold);
+}
+.poll-option {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-md);
+  padding: var(--space-sm);
+  cursor: pointer;
+}
+.poll-option input {
+  accent-color: var(--color-primary);
+}
+.poll-note {
+  color: var(--color-text-secondary);
+  font-size: var(--text-sm);
+}
+.poll-feedback {
+  margin: var(--space-md) 0;
+}
+.poll-ballot,
+.poll-results {
+  margin: var(--space-xl) 0;
+  padding: var(--space-xl) 0;
+  border-top: var(--border-width-thin) solid var(--color-border);
+}
+.poll-page ul,
+.poll-page ol {
+  padding-left: var(--space-xl);
+  margin-bottom: var(--space-lg);
+}
+.poll-refresh {
+  margin-top: var(--space-lg);
+}
+.poll-results table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+}
+.poll-results th,
+.poll-results td {
+  padding: var(--space-sm);
+  border-bottom: var(--border-width-thin) solid var(--color-border);
+}
+.poll-results caption {
+  text-align: left;
+  margin-bottom: var(--space-md);
+  color: var(--color-text-secondary);
+}
+.poll-description {
+  margin-bottom: var(--space-xl);
+}
+.poll-description pre {
+  overflow-x: auto;
+  padding: var(--space-md);
+  background: var(--color-surface-alt);
+}
+.poll-description blockquote {
+  border-left: var(--border-width-strong) solid var(--color-accent);
+  padding-left: var(--space-md);
+}
+.poll-page button:disabled {
+  cursor: wait;
+  opacity: var(--opacity-disabled);
+}

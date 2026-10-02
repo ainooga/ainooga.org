@@ -44,7 +44,11 @@ export interface TurnstileWidgetCallbacks {
 }
 
 export interface TurnstileService {
-  render(element: HTMLElement, callbacks?: TurnstileWidgetCallbacks): string | null;
+  render(
+    element: HTMLElement,
+    callbacks?: TurnstileWidgetCallbacks,
+    action?: string,
+  ): string | null;
   getResponse(widgetId: string): string;
   reset(widgetId: string): void;
   remove(widgetId: string): void;
@@ -76,12 +80,16 @@ export function whenTurnstileReady(): Promise<void> {
 export class BrowserTurnstile implements TurnstileService {
   constructor(private siteKey: string) {}
 
-  render(element: HTMLElement, callbacks?: TurnstileWidgetCallbacks): string | null {
+  render(
+    element: HTMLElement,
+    callbacks?: TurnstileWidgetCallbacks,
+    action?: string,
+  ): string | null {
     const ts = getTurnstile();
     if (ts == null) return null;
     const options: TurnstileRenderOptions = {
       sitekey: this.siteKey,
-      action: 'turnstile-spin-v1',
+      action: action ?? 'turnstile-spin-v1',
       callback: callbacks?.onToken,
       'error-callback': callbacks?.onError,
       'timeout-callback': callbacks?.onTimeout,
@@ -113,12 +121,18 @@ export class BrowserTurnstile implements TurnstileService {
 export class FakeTurnstile implements TurnstileService {
   private counter = 0;
   callbacks = new Map<string, TurnstileWidgetCallbacks>();
+  actions = new Map<string, string>();
 
   constructor(private siteKey = 'fake-key') {}
 
-  render(_element: HTMLElement, callbacks?: TurnstileWidgetCallbacks): string {
+  render(
+    _element: HTMLElement,
+    callbacks?: TurnstileWidgetCallbacks,
+    action?: string,
+  ): string {
     const id = `fake-widget-${++this.counter}`;
     if (callbacks) this.callbacks.set(id, callbacks);
+    this.actions.set(id, action ?? 'turnstile-spin-v1');
     return id;
   }
 

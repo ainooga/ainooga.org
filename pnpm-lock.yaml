@@ -7,6 +7,9 @@ settings:
 importers:
   .:
     dependencies:
+      dompurify:
+        specifier: ^3.4.16
+        version: 3.4.16
       marked:
         specifier: ^15.0.0
         version: 15.0.12
@@ -2118,6 +2121,12 @@ packages:
     resolution:
       {
         integrity: sha512-X7BJ2yElsnOJ30pZF4uIIDfBEVgF4XEBxL9Bxhy6dnrm5hkzqmsWHGTiHqRiITNhMyFLyAiWndIJP7Z1NTteDg==,
+      }
+
+  dompurify@3.4.16:
+    resolution:
+      {
+        integrity: sha512-sqo+pNp3qRhCIpbgRi1y8Tgk27Bo2Ry7w0dC1NBeNTdZChWjz9Xb/KOoZbRP/R6pQZ80Qw8YhXw13hWWBbMRnQ==,
       }
 
   eastasianwidth@0.2.0:
@@ -4966,6 +4975,10 @@ snapshots:
   devalue@5.8.1: {}
 
   dom-accessibility-api@0.5.16: {}
+
+  dompurify@3.4.16:
+    optionalDependencies:
+      '@types/trusted-types': 2.0.7
 
   eastasianwidth@0.2.0: {}
 

@@ -41,7 +41,8 @@
     "test:db": "vitest run tests/integration",
     "api:whoami": "tsx --env-file=.env scripts/api-whoami.ts",
     "db:verify:cutover": "tsx db/cli.ts verify-cutover",
-    "poll": "tsx scripts/poll.ts"
+    "poll": "tsx scripts/poll.ts",
+    "test:e2e:polls": "playwright test --config playwright.polls.config.ts"
   },
   "simple-git-hooks": {
     "pre-commit": ".githooks/pre-commit",
@@ -58,6 +59,7 @@
     "*.{jpg,jpeg,png,gif}": []
   },
   "dependencies": {
+    "dompurify": "^3.4.16",
     "marked": "^15.0.0",
     "svelte": "^5.56.0"
   },

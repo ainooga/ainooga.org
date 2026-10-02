@@ -44,9 +44,11 @@ All POST bodies below are strict JSON objects. Unknown fields are rejected. Orga
 | `GET /api/polls/{slug}/session`                 | Session cookies                                          | `{ authenticated: false }` or `{ authenticated: true, personId, assurance, expiresAt }`  |
 | `POST /api/auth/logout`                         | Session/challenge cookies                                | Revokes presented and browser-challenge sessions, cancels pending logins; clears cookies |
 
+The unverified `/auth/honor` endpoint also accepts `{ identifier: { kind: "discord_username", value }, turnstileToken }`. Usernames must be nonempty and at most 32 characters after trimming. They match the Discord identifier's `display_label`, ignoring case and surrounding whitespace. A single matching person must be actively eligible; ambiguous and missing names return the same `403 ineligible` response. The lookup and eligibility check occur in the session INSERT. The session records the numeric Discord identity, preserving one ballot across linked email and Discord entry. This request-only kind is not a new database identifier kind and is not accepted by organizer linking or allowlist endpoints. Import account usernames alongside Discord IDs later; do not put display/server nicknames in this field for voter lookup.
+
 Successful honor and code-verification responses contain `{ authenticated: true, assurance }`. Email identifiers are trimmed and lowercased without rewriting dots or plus suffixes. Discord identifiers are numeric strings of 17–20 digits, never display names. Linking never merges people or marks an identifier verified, and authentication never creates membership, consent, eligibility, or organizer access.
 
-Poll management, ballots, results, Markdown authoring, and the organizer CLI are documented in [Poll API and workflow](./POLLS.md). The Svelte voter UI arrives in PR 5; the Discord redirect path is reserved for it.
+Poll management, ballots, results, Markdown authoring, and the organizer CLI are documented in [Poll API and workflow](./POLLS.md). The Svelte voter UI now supports unverified guest-list entry. Verified email/Discord endpoints remain available through the API; their UI is deferred.
 
 ## Verification and sessions
 
@@ -71,7 +73,7 @@ Hourly cleanup drains records that expired more than 24 hours ago, oldest first,
 1. Apply migration 0003 with `pnpm cf:migrate`, then run `pnpm db:verify --remote` and `pnpm db:size --remote`. Routine migration never reruns the legacy backfill. Existing forms can remain open for this migration.
 2. Deploy the Worker and both rate-limit bindings from `worker/wrangler.toml` together, with `AUTH_READY` absent or false. New routes return `503`; existing form readiness remains controlled by `CHAPTER_SCHEMA_READY`.
 3. Configure `ORGANIZER_API_TOKENS` and an independently generated `AUTH_SECRET` using Worker secrets. Configure `DISCORD_CLIENT_ID` and `DISCORD_CLIENT_SECRET`. Register the exact Discord callback `https://ainooga.org/api/auth/discord/callback`. These values stay out of the SPA.
-4. Retain the existing Cloudflare `EMAIL` binding and verified sender domain for `noreply@ainooga.org`. The account is already on Workers Paid. Verify the production Turnstile hostname; the later poll widget must use action `poll-auth`.
+4. Retain the existing Cloudflare `EMAIL` binding and verified sender domain for `noreply@ainooga.org`. The account is already on Workers Paid. Verify the production Turnstile hostname; the poll widget uses action `poll-auth`.
 5. Set the `AUTH_READY` Worker secret to `true`, retain `CHAPTER_SCHEMA_READY=true`, and run `pnpm api:whoami`. Removing/replacing organizer entries takes effect with the updated secret deployment. Set `AUTH_READY=false` to disable new authentication without disabling forms.
 
 The review fixes use the existing migration 0003 schema. They require no additional migration, secret rotation, or organizer setup; an existing deployment needs the updated Worker and its additional rate-limit binding.
@@ -80,4 +82,4 @@ Only deployment maintainers need Cloudflare access for these setup steps. Ordina
 
 For local development, copy `worker/.dev.vars.example` to the ignored `worker/.dev.vars`, run `pnpm cf:migrate:local`, and supply local configuration before setting both readiness flags true. Use `SITE_URL=http://localhost:5173` through the existing Vite proxy; register that site's callback separately for manual Discord testing. `AINOOGA_API_URL=http://localhost:8787` is suitable for the local organizer command. Automated tests use isolated D1 databases and fake email, Discord, Turnstile, clock, and rate-limiter services; they send no real email.
 
-Run `pnpm check` and `pnpm test:coverage`. A Worker `wrangler deploy --dry-run` validates bundling/bindings without deploying. Live email delivery and Discord browser consent still need a controlled smoke check with organizer-owned identities and an allowlisted test poll before the voting UI is released. This PR does not import real members, create production polls, or implement the later comprehensive security review.
+Run `pnpm check` and `pnpm test:coverage`. A Worker `wrangler deploy --dry-run` validates bundling/bindings without deploying. Live email delivery and Discord browser consent remain checks for a future verified-entry UI. The current unverified guest-list UI needs a real Turnstile smoke check; it does not require those providers. This PR does not import real members, create production polls, or implement the later comprehensive security review.

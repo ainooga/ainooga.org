@@ -1,6 +1,18 @@
 # Poll API and organizer workflow
 
-PR 4 implements the backend and local organizer CLI. The Svelte voter interface is PR 5. Use [the authoring examples](../examples/polls/README.md) for Markdown/YAML files and commands, and [API authentication](./API.md) for tokens, login, cookies, and provider setup. All organizer tokens have the same access, including identifiable ballots.
+The backend and local organizer CLI configure polls; the Svelte voter page serves guest-list polls at `/#/polls/{slug}`. Use [the authoring examples](../examples/polls/README.md) for Markdown/YAML files and commands, and [API authentication](./API.md) for tokens, login, cookies, and provider setup. All organizer tokens have the same access, including identifiable ballots.
+
+## Voter page
+
+Share `https://ainooga.org/#/polls/{slug}` after publishing a poll with `identityMode: honor`. There is no public poll directory. The page asks for an email, then offers a Discord account username if the email is not on the guest list. If neither matches, it points to `contact@ainooga.org`. No account creation, email code, or Discord authorization is required. An existing eligible session skips the entry form.
+
+`honor` is the API/configuration name for this unverified entry flow. Knowing another eligible person's identifier allows entry as that person; this is the chosen chapter workflow. The API still checks the poll's own guest list on every protected request. `eligibleTags` selects people at publication; later tag changes do not automatically change that snapshot. Explicit additions and revocations still apply.
+
+Discord usernames are read from `person_identifiers.display_label` on existing `kind: discord` records. The numeric Discord ID remains the stored identity. Username lookup ignores case and surrounding whitespace, rejects matches belonging to multiple people, and never creates or links a person. The later import must populate account usernames alongside IDs; the current member export has no Discord fields. The organizer identifier-linking endpoint still accepts email or numeric Discord ID only. Until usernames are populated, voters can enter by email.
+
+The page supports selection limits, write-ins, scheduled voting, saved ballots, permitted edits, and all three results policies. Times include the viewer's local timezone. **Refresh poll** reloads the saved ballot and clears unsaved selections. A connection failure during submission offers **Retry same vote**, retaining the exact request ID and payload even if the voting window has since closed. A conflict reloads the saved ballot and requires another explicit submission. Reloading the browser discards unsaved input and reads the saved ballot again.
+
+Descriptions support basic sanitized Markdown and links; embedded images and active content are removed. Option labels are plain text. Poll data stays in memory, requests use same-origin cookies and `no-store`, and organizer tokens never enter the SPA. **Use another email** signs out and clears the displayed poll. Polls configured with `identityMode: verified` show a help message; their existing API verification requirements are not bypassed.
 
 ## Organizer endpoints
 
@@ -54,7 +66,7 @@ Voting is open at `startsAt` and closed at `endsAt`: `[startsAt, endsAt)`. D1 ev
 
 The Worker derives person identity from the session, never from a submitted person ID. Ballot writes use one D1 batch: recheck session/identifier/eligibility/publication/window/rules/revision, claim the latest receipt with a fresh internal nonce, then condition all option/ballot/choice writes on that nonce. A losing request writes nothing; a later SQL failure rolls back the whole batch. D1 also generates ballot/write-in timestamps. A winning claim proves authorization at that point, so later session expiry during response processing does not turn an accepted ballot into an apparent failure. Retries still require a currently valid eligible session. Eligible session checks on protected poll reads use D1 time and share a transaction with the returned data. Own-ballot and detail reads do not compute aggregate totals; denied results requests also avoid aggregate queries. The database stores one current ballot and latest receipt per person/poll, not a selection or request history.
 
-All routes inherit the existing rate limit, error redaction, `no-store`, origin checks, and 16 KiB JSON limit. JSON mutations reject unknown fields. Details/descriptions are returned as Markdown source, never rendered HTML; the later UI must safely render descriptions and must not insert write-in labels as HTML.
+All routes inherit the existing rate limit, error redaction, `no-store`, origin checks, and 16 KiB JSON limit. JSON mutations reject unknown fields. Details/descriptions are returned as Markdown source, never rendered HTML; the voter page sanitizes rendered descriptions and displays write-in labels as text.
 
 ## Local setup and testing
 
@@ -81,4 +93,14 @@ Existing forms and authentication can stay enabled. The new routes return 503 un
 3. Run `pnpm exec wrangler secret put POLLS_READY --config worker/wrangler.toml` and enter `true`. Keep `AUTH_READY` and `CHAPTER_SCHEMA_READY` enabled, with the existing organizer tokens, auth secret, provider settings, and rate-limit bindings.
 4. Use `pnpm poll --env-file .env.prod.local list` to verify organizer access. Create a controlled poll with organizer-owned identities and current dates; test login, vote/retry, and results, then archive it. Confirm unauthenticated details remain private and existing forms/auth still respond correctly. This smoke check is an explicit production operation, not part of the test suite.
 
-To disable the new routes, set `POLLS_READY=false`. An older Worker can ignore these additive tables; do not drop tables or restore an old database just to roll back application code, since that would risk discarding accepted records. Merging this PR does not import members or release a voter UI. Real email delivery, Turnstile `poll-auth`, and Discord configuration/consent still require the PR 3 provider checks before the voter UI release.
+To disable the new routes, set `POLLS_READY=false`. An older Worker can ignore these additive tables; do not drop tables or restore an old database just to roll back application code, since that would risk discarding accepted records. The backend rollout did not import members. For the current voter UI release, follow the checks below; email delivery and Discord OAuth configuration are deferred with the verified-entry UI.
+
+## Voter UI validation and release
+
+Run `pnpm check`, `pnpm build:spa`, and `pnpm test:e2e:polls`. Install the local browser once with `pnpm exec playwright install chromium`. The poll browser suite starts a loopback-only test server, uses the real API handlers and disposable D1, and substitutes functional Turnstile/provider fakes. It sends no email, uses no production credentials, and does not change `worker/.wrangler/state`. Browser artifacts go to ignored `tmp/poll-test-results/`. CI runs this suite separately from the existing production newsletter smoke tests.
+
+For manual local testing, run the local migration/setup above, set the existing readiness flags, configure `VITE_TURNSTILE_SITE_KEY` for the SPA and `TURNSTILE_SECRET_KEY` for the Worker, then run `pnpm dev:all`. Create a poll with current dates using the CLI, add a test email, publish it, and open `http://localhost:5173/#/polls/{slug}`. The widget uses action `poll-auth`. Verified email/Discord provider configuration is not needed for this entry flow.
+
+This UI release needs no new migration or secret. Deploy the Worker extension accepting `discord_username` before releasing the SPA; when both deploy automatically after merge, confirm both builds have completed before sharing poll links. Keep the existing readiness flags enabled. Check email entry, an imported/test Discord username, voting, retry, permitted results, and logout on a controlled production poll with real Turnstile, then archive it. That live check is a separate post-merge operation. No real member import is part of this PR.
+
+Email delivery and Discord OAuth checks remain pending for a future verified-entry UI. They do not block this unverified guest-list release. Comprehensive security/capacity review and member import remain the next roadmap phases.
