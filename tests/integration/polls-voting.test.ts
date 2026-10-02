@@ -42,7 +42,7 @@ it.each([
 ])('checks voting boundary %s', async (now, status) => {
   f = await pollFixture();
   await f.ready();
-  f.deps.time = new Date(now);
+  await f.setTime(now);
   // Refresh the session at this time so the test isolates the poll window, not session expiry.
   const login = await f.request('/api/polls/topics/auth/honor', 'POST', {
     identifier: { kind: 'email', value: 'voter@example.com' },
@@ -74,14 +74,14 @@ it.each([
         })
       ).status,
     ).toBe(200);
-    f.deps.time = new Date(now);
+    await f.setTime(now);
     const login = await f.request('/api/polls/topics/auth/honor', 'POST', {
       identifier: { kind: 'email', value: 'voter@example.com' },
       turnstileToken: 'bot',
     });
     expect(
       (
-        await f.request('/api/polls/topics/ballot', 'PUT', submission([], 1, 'Edit'), {
+        await f.request('/api/polls/topics/ballot', 'PUT', submission([], 1, 'First'), {
           Cookie: responseCookie(login),
         })
       ).status,
@@ -100,7 +100,7 @@ it.each(['before_vote', 'after_vote', 'never'] as const)(
       Cookie: cookie,
     });
     expect((await results()).status).toBe(visibility === 'never' ? 403 : 200);
-    f.deps.time = new Date('2026-10-30T12:00:00.000Z');
+    await f.setTime('2026-10-30T12:00:00.000Z');
     cookie = responseCookie(
       await f.request('/api/polls/topics/auth/honor', 'POST', {
         identifier: { kind: 'email', value: 'voter@example.com' },

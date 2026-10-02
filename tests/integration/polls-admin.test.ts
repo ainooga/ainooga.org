@@ -90,7 +90,7 @@ it('rejects invalid publication and preserves drafts on duplicate create', async
   await f.admin('/topics', 'PUT', pollInput());
   expect((await f.admin('/topics/publish', 'POST')).status).toBe(409);
   await f.admin('/topics/allowlist', 'POST', ids('add', 'voter@example.com'));
-  f.deps.time = new Date('2026-11-01T00:00:00Z');
+  await f.setTime('2026-11-01T00:00:00Z');
   expect((await f.admin('/topics/publish', 'POST')).status).toBe(409);
 });
 it('freezes published rules, permits text edits, and archives terminally', async () => {

@@ -84,7 +84,7 @@ export const ballotSchema = z
   .object({
     requestId: z.string().uuid(),
     expectedRevision: z.number().int().min(0).max(2147483646),
-    optionIds: z.array(z.number().int().positive().safe()).max(100),
+    optionIds: z.array(z.number().int().positive().safe()),
     writeIn: label.nullable(),
   })
   .strict();

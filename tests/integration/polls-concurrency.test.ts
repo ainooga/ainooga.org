@@ -18,15 +18,19 @@ it('accepts one concurrent first submission and one concurrent edit, with no los
   expect(
     (await Promise.all([send('A', 0), send('B', 0)])).map((r) => r.status).sort(),
   ).toEqual([200, 409]);
+  const options = ((await (await f.admin('/topics')).json()) as { options: string[] })
+    .options;
   expect(
-    (await Promise.all([send('C', 1), send('D', 1)])).map((r) => r.status).sort(),
+    (await Promise.all([send(options[0]!, 1), send(options[1]!, 1)]))
+      .map((r) => r.status)
+      .sort(),
   ).toEqual([200, 409]);
   expect(await f.store.query('SELECT revision FROM poll_ballots')).toEqual([
     { revision: 2 },
   ]);
   expect(
     await f.store.query("SELECT count(*) AS n FROM poll_options WHERE origin='write_in'"),
-  ).toEqual([{ n: 2 }]);
+  ).toEqual([{ n: 1 }]);
   expect(await f.store.query('SELECT count(*) AS n FROM poll_ballot_choices')).toEqual([
     { n: 1 },
   ]);
@@ -43,7 +47,7 @@ it('makes simultaneous identical retries idempotent and rejects changed payloads
   const replies = await Promise.all([send(), send()]);
   expect(await replies[0]!.json()).toEqual(await replies[1]!.json());
   expect((await send({ ...input, writeIn: 'Changed' })).status).toBe(409);
-  f.deps.time = new Date('2026-10-30T12:00:00Z');
+  await f.setTime('2026-10-30T12:00:00Z');
   const login = await f.request('/api/polls/topics/auth/honor', 'POST', {
     identifier: { kind: 'email', value: 'voter@example.com' },
     turnstileToken: 'bot',

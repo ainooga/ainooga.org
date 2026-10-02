@@ -1,11 +1,12 @@
 import { sessionFrom, sessionWhere } from './access.js';
+import { DATABASE_NOW } from './clock.js';
+import { writeInAllowed } from './limits.js';
 import type { BallotInput } from './schemas.js';
 
 export interface Submission {
   pollId: number;
   personId: number;
   sessionHash: string;
-  now: string;
   nonce: string;
   payloadHash: string;
   input: BallotInput;
@@ -16,10 +17,10 @@ const projectedSelections = `SELECT normalized_label AS label FROM poll_options 
 const claimSQL = `INSERT INTO poll_submission_receipts (poll_id,person_id,request_id,payload_hash,attempt_nonce)
   SELECT p.id,s.person_id,?,?,? ${sessionFrom}
   LEFT JOIN poll_ballots b ON b.poll_id=p.id AND b.person_id=s.person_id
-  WHERE ${sessionWhere} AND s.person_id=? AND p.starts_at<=? AND p.ends_at>?
-    AND (b.id IS NULL OR (p.allow_edits=1 AND coalesce(p.edit_deadline,p.ends_at)>?))
+  WHERE ${sessionWhere} AND s.person_id=? AND p.starts_at<=${DATABASE_NOW} AND p.ends_at>${DATABASE_NOW}
+    AND (b.id IS NULL OR (p.allow_edits=1 AND coalesce(p.edit_deadline,p.ends_at)>${DATABASE_NOW}))
     AND coalesce(b.revision,0)=?
-    AND (? IS NULL OR p.allow_write_ins=1)
+    AND (? IS NULL OR p.allow_write_ins=1) AND ${writeInAllowed}
     AND NOT EXISTS (SELECT 1 FROM json_each(?) j WHERE NOT EXISTS (SELECT 1 FROM poll_options o WHERE o.id=j.value AND o.poll_id=p.id))
     AND (SELECT count(*) FROM (${projectedSelections}))>=p.min_selections
     AND (p.max_selections IS NULL OR (SELECT count(*) FROM (${projectedSelections}))<=p.max_selections)
@@ -35,13 +36,11 @@ export function claim(db: D1Database, s: Submission) {
       s.payloadHash,
       s.nonce,
       s.sessionHash,
-      s.now,
       s.pollId,
       s.personId,
-      s.now,
-      s.now,
-      s.now,
       s.input.expectedRevision,
+      s.normalized,
+      s.normalized,
       s.normalized,
       ids,
       ...selectionArgs,
@@ -54,7 +53,7 @@ export function mutateBallot(db: D1Database, s: Submission): D1PreparedStatement
     db
       .prepare(
         `INSERT INTO poll_options (poll_id,label,normalized_label,position,origin,created_by_person_id,created_at)
-      SELECT ?,?,?,coalesce((SELECT max(position)+1 FROM poll_options WHERE poll_id=?),0),'write_in',?,?
+      SELECT ?,?,?,coalesce((SELECT max(position)+1 FROM poll_options WHERE poll_id=?),0),'write_in',?,${DATABASE_NOW}
       WHERE ? IS NOT NULL AND ${receiptGuard} ON CONFLICT (poll_id,normalized_label) DO NOTHING`,
       )
       .bind(
@@ -63,17 +62,16 @@ export function mutateBallot(db: D1Database, s: Submission): D1PreparedStatement
         s.normalized,
         s.pollId,
         s.personId,
-        s.now,
         s.normalized,
         ...guard,
       ),
     db
       .prepare(
         `INSERT INTO poll_ballots (poll_id,person_id,submitted_at,updated_at,revision)
-      SELECT ?,?,?,?,1 WHERE ${receiptGuard}
+      SELECT ?,?,${DATABASE_NOW},${DATABASE_NOW},1 WHERE ${receiptGuard}
       ON CONFLICT (poll_id,person_id) DO UPDATE SET updated_at=excluded.updated_at,revision=poll_ballots.revision+1`,
       )
-      .bind(s.pollId, s.personId, s.now, s.now, ...guard),
+      .bind(s.pollId, s.personId, ...guard),
     db
       .prepare(
         `DELETE FROM poll_ballot_choices WHERE ballot_id IN (SELECT id FROM poll_ballots WHERE poll_id=? AND person_id=?) AND ${receiptGuard}`,

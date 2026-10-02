@@ -1,4 +1,5 @@
 import { authFixture, ORGANIZER_TOKEN, SITE, responseCookie } from './auth';
+import { pollClock } from './poll-clock';
 import { migration } from './d1';
 import { handleAuth } from '../../worker/src/auth/router';
 import type { PollInput } from '../../worker/src/polls/schemas';
@@ -26,6 +27,8 @@ export async function pollFixture() {
   const f = await authFixture();
   await migration(f.store, '0004_poll_api.sql');
   f.env.POLLS_READY = 'true';
+  const clock = await pollClock(f.db, f.deps.time);
+  f.deps.db = clock.db;
   function request(
     path: string,
     method = 'GET',
@@ -70,7 +73,21 @@ export async function pollFixture() {
     });
     return responseCookie(login);
   }
-  return { ...f, request, admin, create, ready };
+  return {
+    ...f,
+    db: clock.db,
+    rawDb: f.db,
+    prepared: clock.prepared,
+    request,
+    admin,
+    create,
+    ready,
+    async setTime(value: string) {
+      f.deps.time = new Date(value);
+      await clock.set(f.deps.time);
+    },
+    setDatabaseTime: (value: string) => clock.set(new Date(value)),
+  };
 }
 export function submission(
   optionIds: number[],
