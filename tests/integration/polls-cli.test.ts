@@ -59,7 +59,7 @@ it('runs the real CLI with an env file through HTTP and D1 from authoring to res
     { mode: 0o600 },
   );
   const pollFile = join(directory, 'poll.md');
-  const source = (await readFile('examples/polls/topic-vote.md', 'utf8')).replace(
+  const source = (await readFile('docs/polls/topic-vote.md', 'utf8')).replace(
     '2026-10-01T00:00:00.000Z',
     '2026-09-01T00:00:00.000Z',
   );

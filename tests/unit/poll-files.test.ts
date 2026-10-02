@@ -19,13 +19,13 @@ async function file(text: string) {
   return path;
 }
 it('parses committed examples and validates without API access', async () => {
-  const input = await readPoll('examples/polls/topic-vote.md');
+  const input = await readPoll('docs/polls/topic-vote.md');
   expect(input).toMatchObject({
     eligibleTags: [],
     description: expect.stringContaining('**up to two**'),
   });
-  expect(await readEligibility('examples/polls/eligible-voters.yml')).toHaveLength(3);
-  const result = await runPollCommand(['validate', 'examples/polls/topic-vote.md'], {
+  expect(await readEligibility('docs/polls/eligible-voters.yml')).toHaveLength(3);
+  const result = await runPollCommand(['validate', 'docs/polls/topic-vote.md'], {
     async request() {
       throw new Error('Must be offline');
     },
@@ -44,7 +44,7 @@ it.each([
 });
 it('reports filename and field, rejects unquoted dates and unknown fields', async () => {
   directory = undefined;
-  const example = await readFile('examples/polls/topic-vote.md', 'utf8');
+  const example = await readFile('docs/polls/topic-vote.md', 'utf8');
   for (const text of [
     example.replace('minSelections: 1', 'minSelections: 0'),
     example.replace('title:', 'unrecognized:'),
