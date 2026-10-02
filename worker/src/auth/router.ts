@@ -1,3 +1,5 @@
+import { adminPolls, pollsReady } from '../polls/router.js';
+import { voterPoll } from '../polls/voter.js';
 import type { Env } from '../types.js';
 import type { AuthContext, AuthDependencies } from './types.js';
 import { apiFailure, reject, requireOrigin } from './http.js';
@@ -31,6 +33,10 @@ async function admin(
   if (!exists) return reject(503, 'configuration', 'Organizer person record is missing.');
   const path = new URL(request.url).pathname;
   if (path === '/api/admin/me' && request.method === 'GET') return Response.json(actor);
+  if (path === '/api/admin/polls' || path.startsWith('/api/admin/polls/')) {
+    pollsReady(env);
+    return adminPolls(request, deps, actor.personId);
+  }
   const match = /^\/api\/admin\/people\/([1-9]\d*)\/identifiers$/.exec(path);
   if (match && request.method === 'POST') {
     const id = Number(match[1]);
@@ -51,6 +57,21 @@ async function voter(
     return logout(request, env, deps);
   if (path === '/api/auth/discord/callback' && request.method === 'GET')
     return completeDiscord(request, env, deps);
+  const pollMatch =
+    /^\/api\/polls\/([a-zA-Z0-9_-]{1,160})(?:\/(access|ballot|results))?$/.exec(path);
+  if (pollMatch) {
+    pollsReady(env);
+    return voterPoll(request, env, deps, pollMatch[1]!, pollMatch[2] ?? '');
+  }
+  return voterAuth(request, env, deps, path);
+}
+
+async function voterAuth(
+  request: Request,
+  env: Env,
+  deps: AuthDependencies,
+  path: string,
+): Promise<Response> {
   const match = /^\/api\/polls\/([a-zA-Z0-9_-]{1,160})\/(session|auth\/[a-z/]+)$/.exec(
     path,
   );

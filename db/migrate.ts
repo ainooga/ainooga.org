@@ -9,7 +9,13 @@ interface MigrationStore extends SqlStore {
 
 export async function verifyLive(db: SqlStore): Promise<void> {
   await verifyChapterDefinitions(db);
-  const sql = await readFile('migrations/0003_voter_auth.sql', 'utf8');
+  const sql = (
+    await Promise.all(
+      ['0003_voter_auth.sql', '0004_poll_api.sql'].map((name) =>
+        readFile(`migrations/${name}`, 'utf8'),
+      ),
+    )
+  ).join('\n');
   const definitions = await db.query(
     "SELECT name,sql FROM sqlite_master WHERE type IN ('table','index')",
   );
@@ -17,7 +23,7 @@ export async function verifyLive(db: SqlStore): Promise<void> {
   for (const statement of migrationStatements(sql)) {
     const name = /^CREATE (?:UNIQUE )?(?:TABLE|INDEX) (\w+)/.exec(statement)?.[1];
     if (name !== undefined && normalize(actual.get(name) ?? '') !== normalize(statement))
-      throw new Error(`Unexpected authentication schema definition: ${name}`);
+      throw new Error(`Unexpected API schema definition: ${name}`);
   }
   if ((await db.query('PRAGMA foreign_key_check')).length > 0)
     throw new Error('Foreign-key check failed');

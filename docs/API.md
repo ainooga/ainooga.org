@@ -28,7 +28,7 @@ The command loads `.env`, sends `Authorization: Bearer <token>`, and prints the 
 
 ## Endpoints
 
-Poll slugs use 1–160 ASCII letters, digits, underscores, or hyphens. Authentication requires a published poll and its active allowlist. The voting window is enforced by the future ballot endpoints, not by login. This allows login after voting closes to view permitted results later.
+Poll slugs use 1–160 ASCII letters, digits, underscores, or hyphens. Authentication requires a published poll and its active allowlist. The voting window is enforced by the ballot endpoints, not by login. This allows login after voting closes to view permitted results later.
 
 All POST bodies below are strict JSON objects. Unknown fields are rejected. Organizer requests use the bearer header; voter requests use cookies. Browser mutations must send the exact `SITE_URL` origin. Production authentication is same-origin at `https://ainooga.org`; preview sites cannot use production authentication. Local tools may omit `Origin` when using an organizer bearer token.
 
@@ -46,7 +46,7 @@ All POST bodies below are strict JSON objects. Unknown fields are rejected. Orga
 
 Successful honor and code-verification responses contain `{ authenticated: true, assurance }`. Email identifiers are trimmed and lowercased without rewriting dots or plus suffixes. Discord identifiers are numeric strings of 17–20 digits, never display names. Linking never merges people or marks an identifier verified, and authentication never creates membership, consent, eligibility, or organizer access.
 
-The poll UI and ballot/results endpoints arrive in later PRs. The Discord redirect path is reserved for that UI; this PR can be exercised through API tests with synthetic polls.
+Poll management, ballots, results, Markdown authoring, and the organizer CLI are documented in [Poll API and workflow](./POLLS.md). The Svelte voter UI arrives in PR 5; the Discord redirect path is reserved for it.
 
 ## Verification and sessions
 
@@ -56,7 +56,7 @@ Codes are stored as challenge-specific HMACs using `AUTH_SECRET`. Successful con
 
 Discord uses the authorization-code flow with the `identify` scope. State is browser-bound, single-use, and expires after ten minutes. The returned stable ID must already be linked to an eligible person; provider emails and names never establish links. Provider tokens are discarded after lookup. After the exchange, one atomic D1 batch rechecks the challenge, browser binding, expiration, identifier ownership, and current eligibility before associating the challenge with a session and marking the identifier verified. A failed/cancelled exchange requires a new start request.
 
-Verified sessions have a fixed 24-hour lifetime, reusable across eligible polls. Honor sessions also last 24 hours but belong to one poll. A browser has one current honor session and one verified session; a new honor login replaces the previous honor session without replacing verified proof. A matching honor session takes precedence on its honor poll. Verified polls reject honor sessions. Expiry, current identifier ownership/value, publication, and allowlist revocation are checked on each session lookup. Future protected poll handlers must reuse these checks before accessing ballots or results.
+Verified sessions have a fixed 24-hour lifetime, reusable across eligible polls. Honor sessions also last 24 hours but belong to one poll. A browser has one current honor session and one verified session; a new honor login replaces the previous honor session without replacing verified proof. A matching honor session takes precedence on its honor poll. Verified polls reject honor sessions. Expiry, current identifier ownership/value, publication, and allowlist revocation are checked on each session lookup. Protected poll handlers reuse these checks before accessing ballots or results and recheck them inside ballot transactions.
 
 Session tokens are random and stored hashed in D1. Production cookies use `__Host-` names, `Secure`, `HttpOnly`, and `SameSite=Lax`. Explicit HTTP localhost configuration uses separate `dev-` cookie names without `Secure`. Historical `verified_at` alone never authenticates a new session. Logout atomically revokes presented sessions and sessions associated with the browser challenge cookie, then cancels that browser's challenges, including exchanges in progress. If logout wins the transaction race, finalization cannot issue a session; if finalization wins, logout removes that session even when its cookie has not arrived yet. A late response can therefore set a cookie that no longer authenticates. Other browsers used by the same person remain signed in.
 

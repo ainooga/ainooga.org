@@ -37,3 +37,6 @@ worker/.dev.vars
 
 # AI & Planning
 ai/
+
+# Private organizer poll files
+.local/polls/

@@ -23,6 +23,7 @@ describe('authentication migration', () => {
           '0001_create_subscribers.sql',
           '0002_chapter_schema.sql',
           '0003_voter_auth.sql',
+          '0004_poll_api.sql',
         ])
           await migration(db, name);
       },
@@ -41,7 +42,10 @@ describe('authentication migration', () => {
       remote: true,
       query: (sql) => db.query(sql),
       execute: (sql) => db.execute(sql),
-      applyMigrations: () => migration(db, '0003_voter_auth.sql'),
+      async applyMigrations() {
+        await migration(db, '0003_voter_auth.sql');
+        await migration(db, '0004_poll_api.sql');
+      },
     });
     await expect(verifyLive(db)).resolves.toBeUndefined();
     expect(await context.store.query('SELECT * FROM subscriptions')).toEqual(before);

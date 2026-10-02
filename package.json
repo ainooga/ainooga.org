@@ -40,7 +40,8 @@
     "db:size": "tsx db/cli.ts size",
     "test:db": "vitest run tests/integration",
     "api:whoami": "tsx --env-file=.env scripts/api-whoami.ts",
-    "db:verify:cutover": "tsx db/cli.ts verify-cutover"
+    "db:verify:cutover": "tsx db/cli.ts verify-cutover",
+    "poll": "tsx scripts/poll.ts"
   },
   "simple-git-hooks": {
     "pre-commit": ".githooks/pre-commit",

@@ -25,6 +25,7 @@ export interface TurnstileVerifier {
 
 export interface Env {
   AUTH_READY?: string;
+  POLLS_READY?: string;
   AUTH_SECRET?: string;
   ORGANIZER_API_TOKENS?: string;
   DISCORD_CLIENT_ID?: string;
