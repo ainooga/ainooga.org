@@ -65,7 +65,7 @@ async function simpleCommand(command: string | undefined, path: string, api: Pol
       return api.request(path);
     case 'publish':
     case 'archive':
-      return api.request(`${path}/${command}`, 'POST');
+      return api.request(`${path}/${command}`, 'POST', {});
     case 'results':
     case 'ballots':
       return api.request(`${path}/${command}`);
