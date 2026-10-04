@@ -50,10 +50,14 @@ Guest-list files accept emails and **numeric Discord IDs**, not usernames. Alrea
 - `pnpm poll results <slug>` shows totals; `pnpm poll ballots <slug>` exposes individual ballots to organizers. Keep that output private.
 - `pnpm poll archive <slug>` permanently hides the poll. Run `pnpm poll --help` for all commands.
 
+If another tab changes the voter identity, submitting opens a confirmation dialog. Yes submits the preserved choices as the displayed email or Discord account; No asks for an eligible email in the same dialog. Cancelling keeps the draft. Replacing an existing vote still follows the poll's edit rules.
+
+If a vote saves but its choices cannot reload, **Reload saved vote** retries loading them. Editing stays unavailable until that succeeds; the saved vote is not resubmitted.
+
 The voter page supports edits when permitted. **Refresh poll** clears unsaved selections. **Retry same vote** safely checks an uncertain submission; conflicts reload the saved ballot before another explicit submission.
 
 ## Development and deployment
 
-Follow [poll setup and deployment](../API.md#poll-setup-and-deployment) for migrations, readiness flags, and local Turnstile configuration. Use `pnpm dev:all` locally. The current UI adds no migration or secret; production still needs the existing poll schema and enabled API. Deploy the compatible Worker before the SPA and check a controlled poll with real Turnstile.
+Follow [poll setup and deployment](../API.md#poll-setup-and-deployment) for migrations, readiness flags, and local Turnstile configuration. Use `pnpm dev:all` locally. The current UI adds no migration or secret; production still needs the existing poll schema and enabled API. Deploy the compatible Worker before the SPA, refresh any already-open poll pages, and check a controlled poll with real Turnstile. Older pages cannot submit without the new session marker.
 
 Validate changes with `pnpm check`, `pnpm build:spa`, and `pnpm test:e2e:polls`. The browser suite uses disposable local D1 and fake external services. Detailed request formats and limits live in the [API reference](../API.md#poll-api).

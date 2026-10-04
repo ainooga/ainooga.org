@@ -1,5 +1,6 @@
+import { IdentityConfirmation } from './identity.svelte';
 import { PollError } from './types';
-import type { PollDetail, Submission } from './types';
+import type { Ballot, PollDetail, Submission } from './types';
 import type { PollRuntime } from './runtime';
 import { canEdit, selectedCount, votingState } from './display';
 import { messageFor, type PollPage } from './page.svelte';
@@ -11,6 +12,9 @@ export class BallotForm {
   busy = $state(false);
   message = $state('');
   pending = $state<Submission | null>(null);
+  needsReload = $state(false);
+  readonly identity = new IdentityConfirmation(this);
+  private context = '';
   private revision = 0;
   private alive = true;
   constructor(
@@ -21,8 +25,12 @@ export class BallotForm {
   }
   dispose() {
     this.alive = false;
+    this.identity.dispose();
   }
   accept(detail: PollDetail) {
+    this.context = detail.sessionContext;
+    this.needsReload = false;
+    this.identity.open = false;
     this.selected = [...(detail.ballot?.optionIds ?? [])];
     this.revision = detail.ballot?.revision ?? 0;
     this.writeIn = '';
@@ -37,6 +45,7 @@ export class BallotForm {
     if (single) this.writeIn = '';
   }
   startEdit() {
+    if (this.needsReload) return;
     this.editing = true;
     this.message = '';
   }
@@ -48,7 +57,10 @@ export class BallotForm {
     if (this.busy || this.pending !== null) return;
     this.busy = true;
     const detail = await this.page.refresh();
-    if (detail !== null && this.alive) this.accept(detail);
+    if (detail !== null && this.alive) {
+      this.accept(detail);
+      this.message = '';
+    }
     this.busy = false;
   }
   private prepare(): Submission | null {
@@ -71,13 +83,14 @@ export class BallotForm {
     }
     return {
       requestId: this.runtime.uuid(),
+      sessionContext: this.context,
       expectedRevision: this.revision,
       optionIds: [...this.selected],
       writeIn: this.writeIn.trim() || null,
     };
   }
   async submit() {
-    if (this.busy) return;
+    if (this.busy || this.needsReload) return;
     const input = this.pending ?? this.prepare();
     if (input === null) return;
     this.pending = input;
@@ -85,18 +98,43 @@ export class BallotForm {
     this.message = '';
     try {
       const ballot = await this.page.api.submit(this.page.slug, input);
-      if (!this.alive || this.page.detail === null) return;
-      this.accept({ ...this.page.detail, ballot });
-      this.page.detail = { ...this.page.detail, ballot };
-      this.message = 'Your vote is saved.';
-      await this.page.refresh();
+      await this.saved(ballot);
     } catch (error) {
       if (this.alive) await this.failed(error);
     } finally {
       this.busy = false;
     }
   }
+  private async saved(ballot: Ballot) {
+    if (!this.alive || this.page.detail === null) return;
+    this.accept({ ...this.page.detail, ballot });
+    this.page.detail = { ...this.page.detail, ballot };
+    this.needsReload = true;
+    this.message = 'Your vote is saved.';
+    this.page.results = null;
+    const detail = await this.page.refresh();
+    if (!this.alive) return;
+    if (detail !== null) this.accept(detail);
+    else this.message = 'Your vote is saved, but its choices could not be loaded.';
+  }
+  async submitAs(detail: PollDetail) {
+    if (this.busy || this.pending === null) return;
+    this.pending = {
+      ...this.pending,
+      requestId: this.runtime.uuid(),
+      sessionContext: detail.sessionContext,
+      expectedRevision: detail.ballot?.revision ?? 0,
+    };
+    this.context = detail.sessionContext;
+    this.revision = detail.ballot?.revision ?? 0;
+    this.page.useVoter(detail);
+    await this.submit();
+  }
   private async failed(error: unknown) {
+    if (error instanceof PollError && error.code === 'session_changed') {
+      await this.identity.load();
+      return;
+    }
     if (!(error instanceof PollError) || error.status === 0 || error.status >= 500) {
       this.message =
         'We could not confirm whether your vote was saved. Retry the same vote to check safely.';
@@ -107,21 +145,25 @@ export class BallotForm {
       return;
     }
     if ([401, 404, 409].includes(error.status)) {
-      const detail = await this.page.refresh();
-      if (!this.alive) return;
-      if (detail !== null) this.accept(detail);
-      if (detail === null) {
-        this.message =
-          'Could not reload your saved ballot. Retry to check it before making another submission.';
-        return;
-      }
-      this.message =
-        error.status === 409
-          ? `${messageFor(error)} Your saved ballot has been reloaded. Review it before submitting again.`
-          : messageFor(error);
+      await this.reloadAfterFailure(error);
     } else {
       this.pending = null;
+      this.identity.open = false;
       this.message = messageFor(error);
     }
+  }
+  private async reloadAfterFailure(error: PollError) {
+    const detail = await this.page.refresh();
+    if (!this.alive) return;
+    if (detail !== null) this.accept(detail);
+    if (detail === null) {
+      this.message =
+        'Could not reload your saved ballot. Retry to check it before making another submission.';
+      return;
+    }
+    this.message =
+      error.status === 409
+        ? `${messageFor(error)} Your saved ballot has been reloaded. Review it before submitting again.`
+        : messageFor(error);
   }
 }

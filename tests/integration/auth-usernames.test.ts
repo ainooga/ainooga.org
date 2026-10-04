@@ -1,6 +1,6 @@
 // @vitest-environment node
 import { afterEach, beforeEach, expect, it } from 'vitest';
-import { pollFixture, pollInput, submission } from '../helpers/polls';
+import { pollFixture, pollInput } from '../helpers/polls';
 import { responseCookie, ORGANIZER_TOKEN } from '../helpers/auth';
 
 let f: Awaited<ReturnType<typeof pollFixture>>;
@@ -23,6 +23,7 @@ it('matches a normalized username and shares the existing email ballot', async (
     identifier: { kind: 'email', value: 'voter@example.com' },
     turnstileToken: 'bot',
   });
+  const submission = await f.ballotFor(responseCookie(email));
   const details = (await (
     await f.request('/api/polls/topics', 'GET', undefined, {
       Cookie: responseCookie(email),

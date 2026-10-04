@@ -72,6 +72,7 @@ it('preserves submission UUID/revision and rejects malformed successful response
   const api = new BrowserPollService();
   const input = {
     requestId: 'same-id',
+    sessionContext: 'a'.repeat(64),
     expectedRevision: 0,
     optionIds: [1],
     writeIn: null,

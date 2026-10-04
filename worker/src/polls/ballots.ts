@@ -1,3 +1,4 @@
+import { requireContext } from './session-context.js';
 import type { AuthDependencies } from '../auth/types.js';
 import { hashToken } from '../auth/crypto.js';
 import type { Voter } from './access.js';
@@ -15,6 +16,7 @@ export async function submitBallot(
   voter: Voter,
   input: BallotInput,
 ) {
+  await requireContext(input.sessionContext, voter, p.id);
   input = { ...input, optionIds: [...new Set(input.optionIds)].sort((a, b) => a - b) };
   const normalized = input.writeIn === null ? null : normalizeLabel(input.writeIn);
   const payloadHash = await hashToken(

@@ -16,6 +16,10 @@ export const accessSchema = z
   .strict();
 export const detailSchema = z
   .object({
+    sessionContext: z.string().regex(/^[a-f0-9]{64}$/),
+    voter: z
+      .object({ kind: z.enum(['email', 'discord']), value: z.string().min(1) })
+      .strict(),
     slug: z.string(),
     title: z.string(),
     description: z.string(),
@@ -62,6 +66,7 @@ export type Ballot = z.infer<typeof ballotSchema>;
 export type PollResults = z.infer<typeof resultsSchema>;
 export interface Submission {
   requestId: string;
+  sessionContext: string;
   expectedRevision: number;
   optionIds: number[];
   writeIn: string | null;

@@ -7,7 +7,7 @@ import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
-import { pollFixture, submission } from '../helpers/polls';
+import { pollFixture } from '../helpers/polls';
 import { ORGANIZER_TOKEN, SITE } from '../helpers/auth';
 import { PollClient } from '../../scripts/polls/client';
 import { handleAuth } from '../../worker/src/auth/router';
@@ -90,6 +90,7 @@ it('runs the real CLI with an env file through HTTP and D1 from authoring to res
     turnstileToken: 'bot',
   });
   const cookie = login.headers.get('set-cookie')!.split(';')[0]!;
+  const submission = await f.ballotFor(cookie, 'topic-vote');
   expect(
     (
       await f.request(

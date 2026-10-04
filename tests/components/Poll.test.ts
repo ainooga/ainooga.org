@@ -94,7 +94,7 @@ describe('ballots', () => {
     await fireEvent.click(screen.getByRole('button', { name: 'Submit vote' }));
     await screen.findByText('Your vote is saved.');
     expect(screen.getAllByText('AI gardens').length).toBeGreaterThan(0);
-    await fireEvent.click(screen.getByRole('button', { name: 'Edit vote' }));
+    await fireEvent.click(await screen.findByRole('button', { name: 'Edit vote' }));
     await fireEvent.click(screen.getByRole('radio', { name: 'Robotics' }));
     await fireEvent.click(screen.getByRole('button', { name: 'Save changes' }));
     await waitFor(() => expect(f.api.submissions).toHaveLength(2));

@@ -83,6 +83,7 @@ export const eligibilityFileSchema = z.array(identifier).min(1).max(10000);
 export const ballotSchema = z
   .object({
     requestId: z.string().uuid(),
+    sessionContext: z.string().regex(/^[a-f0-9]{64}$/),
     expectedRevision: z.number().int().min(0).max(2147483646),
     optionIds: z.array(z.number().int().positive().safe()),
     writeIn: label.nullable(),

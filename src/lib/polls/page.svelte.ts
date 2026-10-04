@@ -67,6 +67,11 @@ export class PollPage {
       this.message = messageFor(error);
     }
   }
+  handleAccessError(error: unknown): boolean {
+    if (!(error instanceof PollError) || ![401, 404].includes(error.status)) return false;
+    this.failure(error);
+    return true;
+  }
   async identify(identifier: GuestIdentifier, token: string) {
     if (this.busy) return;
     const generation = this.generation;
@@ -102,6 +107,12 @@ export class PollPage {
       this.busy = false;
     }
   }
+  useVoter(detail: PollDetail) {
+    ++this.generation;
+    this.clear();
+    this.detail = detail;
+    this.message = '';
+  }
   async refresh(): Promise<PollDetail | null> {
     const generation = this.generation;
     try {
@@ -113,9 +124,7 @@ export class PollPage {
       return generation === this.generation ? detail : null;
     } catch (error) {
       if (generation === this.generation) {
-        if (error instanceof PollError && [401, 404].includes(error.status))
-          this.failure(error);
-        else this.message = messageFor(error);
+        if (!this.handleAccessError(error)) this.message = messageFor(error);
       }
       return null;
     }

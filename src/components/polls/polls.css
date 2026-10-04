@@ -100,3 +100,25 @@
   cursor: wait;
   opacity: var(--opacity-disabled);
 }
+
+.poll-identity-dialog {
+  margin: auto;
+  max-width: var(--content-narrow);
+  padding: var(--space-xl);
+  color: var(--color-text);
+  background: var(--color-surface);
+  border: var(--border-width-thin) solid var(--color-border);
+  border-radius: var(--radius-sm);
+}
+.poll-identity-dialog form {
+  display: grid;
+  gap: var(--space-md);
+}
+.poll-identity-dialog input {
+  padding: var(--space-md);
+  font: inherit;
+  color: var(--color-text);
+  background: var(--color-surface);
+  border: var(--border-width-thin) solid var(--color-border);
+  border-radius: var(--radius-sm);
+}

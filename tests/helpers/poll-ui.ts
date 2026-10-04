@@ -1,4 +1,5 @@
 import type {
+  Ballot,
   Access,
   GuestIdentifier,
   PollDetail,
@@ -12,6 +13,8 @@ import type { PollRuntime } from '../../src/lib/polls/runtime';
 export const UI_TIME = Date.parse('2026-10-02T12:00:00Z');
 export function uiPoll(overrides: Partial<PollDetail> = {}): PollDetail {
   return {
+    sessionContext: 'a'.repeat(64),
+    voter: { kind: 'email', value: 'voter@example.com' },
     slug: 'topics',
     title: 'Choose a topic',
     description: 'Pick **your favorite**.',
@@ -33,6 +36,23 @@ export function uiPoll(overrides: Partial<PollDetail> = {}): PollDetail {
   };
 }
 export class FakePollRuntime implements PollRuntime {
+  openDialog(element: HTMLDialogElement) {
+    const previous = document.activeElement;
+    const parent = element.parentElement;
+    element.setAttribute('open', '');
+    return () => {
+      element.removeAttribute('open');
+      queueMicrotask(() => {
+        const target =
+          previous instanceof HTMLElement &&
+          previous !== document.body &&
+          previous.isConnected
+            ? previous
+            : parent?.querySelector<HTMLElement>('button:not(:disabled)');
+        target?.focus();
+      });
+    };
+  }
   focus(element: HTMLElement) {
     element.focus();
   }
@@ -58,6 +78,17 @@ export class FakePollRuntime implements PollRuntime {
 }
 export class FakePollService implements PollService {
   authenticated = false;
+  private sequence = 0;
+  private ballots = new Map<string, Ballot | null>();
+  switchVoter(email: string) {
+    this.ballots.set(this.poll.voter.value, this.poll.ballot);
+    this.poll = {
+      ...this.poll,
+      voter: { kind: 'email', value: email },
+      sessionContext: (++this.sequence).toString(16).padStart(64, '0'),
+      ballot: this.ballots.get(email) ?? null,
+    };
+  }
   poll = uiPoll();
   submissions: Submission[] = [];
   identifiers: GuestIdentifier[] = [];
@@ -78,8 +109,9 @@ export class FakePollService implements PollService {
     this.identifiers.push(identifier);
     if (this.failIdentify !== null) throw this.failIdentify;
     const value = identifier.value.trim().toLowerCase();
-    if (!['voter@example.com', 'chapter.user'].includes(value))
+    if (!['voter@example.com', 'other@example.com', 'chapter.user'].includes(value))
       throw new PollError(403, 'ineligible', 'Not eligible');
+    this.switchVoter(value === 'chapter.user' ? 'voter@example.com' : value);
     this.authenticated = true;
   }
   async results(): Promise<PollResults> {
@@ -103,6 +135,8 @@ export class FakePollService implements PollService {
       this.failSubmit = null;
       throw error;
     }
+    if (input.sessionContext !== this.poll.sessionContext)
+      throw new PollError(409, 'session_changed', 'Your voter identity changed.');
     const ids = [...input.optionIds];
     if (input.writeIn !== null) {
       const id = this.poll.options.length + 1;

@@ -82,6 +82,17 @@ export async function pollFixture() {
     admin,
     create,
     ready,
+    async ballotFor(cookie: string, slug = 'topics') {
+      const response = await request(`/api/polls/${slug}`, 'GET', undefined, {
+        Cookie: cookie,
+      });
+      if (response.status !== 200) throw new Error('Cannot load voter context');
+      const { sessionContext } = (await response.json()) as { sessionContext: string };
+      if (!/^[a-f0-9]{64}$/.test(sessionContext))
+        throw new Error('Missing voter context');
+      return (optionIds: number[], expectedRevision = 0, writeIn: string | null = null) =>
+        submission(sessionContext, optionIds, expectedRevision, writeIn);
+    },
     async setTime(value: string) {
       f.deps.time = new Date(value);
       await clock.set(f.deps.time);
@@ -90,9 +101,16 @@ export async function pollFixture() {
   };
 }
 export function submission(
+  sessionContext: string,
   optionIds: number[],
   expectedRevision = 0,
   writeIn: string | null = null,
 ) {
-  return { requestId: crypto.randomUUID(), expectedRevision, optionIds, writeIn };
+  return {
+    requestId: crypto.randomUUID(),
+    sessionContext,
+    expectedRevision,
+    optionIds,
+    writeIn,
+  };
 }

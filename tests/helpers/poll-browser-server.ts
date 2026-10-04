@@ -18,6 +18,12 @@ for (const slug of [
   'browser-username',
   'browser-retry',
   'browser-multi',
+  'browser-confirm',
+  'browser-email',
+  'browser-context-retry',
+  'browser-write-in-reload',
+  'browser-repeat-switch',
+  'browser-existing-vote',
 ]) {
   await f.ready(
     pollInput({

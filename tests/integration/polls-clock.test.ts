@@ -1,6 +1,6 @@
 // @vitest-environment node
 import { afterEach, expect, it } from 'vitest';
-import { pollFixture, pollInput, submission } from '../helpers/polls';
+import { pollFixture, pollInput } from '../helpers/polls';
 import { pauseBatch } from '../helpers/background';
 import { DATABASE_NOW } from '../../worker/src/polls/clock';
 let f: Awaited<ReturnType<typeof pollFixture>>;
@@ -18,6 +18,7 @@ it.each(['close', 'edit', 'session'] as const)(
         editDeadline: '2026-09-29T12:01:00.000Z',
       }),
     );
+    const submission = await f.ballotFor(cookie);
     let revision = 0;
     if (boundary === 'edit') {
       expect(
@@ -76,6 +77,7 @@ it.each(['close', 'edit', 'session'] as const)(
 it('returns an accepted ballot even if session expiry passes later in its transaction', async () => {
   f = await pollFixture();
   const cookie = await f.ready();
+  const submission = await f.ballotFor(cookie);
   await f.store.execute([
     "UPDATE voter_sessions SET expires_at='2026-09-29T12:00:01.000Z'",
   ]);
@@ -113,6 +115,7 @@ it('returns an accepted ballot even if session expiry passes later in its transa
 it('rejects an expired-session retry after close but allows the same retry after login', async () => {
   f = await pollFixture();
   const cookie = await f.ready(pollInput({ endsAt: '2026-09-29T12:01:00.000Z' }));
+  const submission = await f.ballotFor(cookie);
   const input = submission([], 0, 'Accepted');
   expect(
     (await f.request('/api/polls/topics/ballot', 'PUT', input, { Cookie: cookie }))
@@ -129,15 +132,22 @@ it('rejects an expired-session retry after close but allows the same retry after
     turnstileToken: 'bot',
   });
   const fresh = login.headers.get('set-cookie')!.split(';')[0]!;
+  const renewed = await f.ballotFor(fresh);
   expect(
     await (
-      await f.request('/api/polls/topics/ballot', 'PUT', input, { Cookie: fresh })
+      await f.request(
+        '/api/polls/topics/ballot',
+        'PUT',
+        { ...input, sessionContext: renewed([]).sessionContext },
+        { Cookie: fresh },
+      )
     ).json(),
   ).toMatchObject({ revision: 1 });
 });
 it('uses the production SQLite clock for authentication and stored timestamps', async () => {
   f = await pollFixture();
   const cookie = await f.ready();
+  const submission = await f.ballotFor(cookie);
   await f.store.execute([
     "UPDATE polls SET starts_at='1970-01-01T00:00:00.000Z',ends_at='9999-01-01T00:00:00.000Z' WHERE slug='topics'",
     "UPDATE voter_sessions SET expires_at='9999-01-01T00:00:00.000Z'",

@@ -1,77 +1,21 @@
 <script lang="ts">
-  import { onMount } from 'svelte';
-  import { getTurnstileService } from '$lib/context';
+  import Verification from './Verification.svelte';
   import { getPollServices } from '$lib/polls/context';
   import type { PollPage } from '$lib/polls/page.svelte';
   let { page }: { page: PollPage } = $props();
-  const turnstile = getTurnstileService();
   const { runtime } = getPollServices();
   let value = $state('');
   let token = $state('');
-  let problem = $state('');
-  let container: HTMLDivElement;
-  let widget: string | null = null;
-  let disposed = false;
+  let verification = $state<{ reset(): void }>();
   const username = $derived(page.phase === 'discord');
-  function mountWidget() {
-    try {
-      widget = turnstile.render(
-        container,
-        {
-          onToken: (next) => {
-            if (!disposed) {
-              token = next;
-              problem = '';
-            }
-          },
-          onExpired: () => {
-            token = '';
-          },
-          onError: () => {
-            token = '';
-            problem = 'Verification could not load. Please retry.';
-          },
-          onTimeout: () => {
-            token = '';
-            problem = 'Verification timed out. Please retry.';
-          },
-        },
-        'poll-auth',
-      );
-    } catch {
-      problem = 'Verification could not load. Please retry.';
-    }
-  }
-  function reset() {
-    token = '';
-    problem = '';
-    if (widget !== null) turnstile.reset(widget);
-    else mountWidget();
-  }
   const focus = (element: HTMLElement) => runtime.focus(element);
-  onMount(() => {
-    mountWidget();
-    const started = runtime.now();
-    const stop = runtime.everySecond(() => {
-      if (widget !== null) return;
-      if (runtime.now() - started >= 10000) {
-        problem = 'Verification could not load. Please retry.';
-        stop();
-      } else mountWidget();
-    });
-    return () => {
-      disposed = true;
-      stop();
-      if (widget !== null) turnstile.remove(widget);
-    };
-  });
   async function submit(event: SubmitEvent) {
     event.preventDefault();
     if (token === '' || page.busy) return;
     const proof = token;
     token = '';
     await page.identify({ kind: username ? 'discord_username' : 'email', value }, proof);
-    if (!disposed) reset();
+    verification?.reset();
   }
 </script>
 
@@ -96,11 +40,7 @@
     {#if username}<p class="poll-note">
         Use your account username, not your display name or server nickname.
       </p>{/if}
-    <div bind:this={container}></div>
-    {#if problem}<p role="alert">{problem}</p>
-      <button type="button" class="btn btn-outline" onclick={reset}
-        >Retry verification</button
-      >{/if}
+    <Verification bind:this={verification} bind:token />
     {#if page.message}<p role="alert">{page.message}</p>{/if}
     <div class="poll-actions">
       <button type="submit" class="btn btn-primary" disabled={page.busy || token === ''}
