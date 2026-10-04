@@ -20,7 +20,7 @@ Versioned SQL in `migrations/` is the authoritative schema. The new tables are:
 
 Foreign keys restrict deletion and updates. Timestamp writes use UTC ISO text with milliseconds. Nullable historical fields remain nullable. Integer bounds, boolean/enumerated values, sponsor ownership, poll selection bounds, and time ordering are checked in SQL. No cascading deletion or automatic person merging is provided.
 
-Polling API tables `poll_eligible_tags` and `poll_submission_receipts` store saved tag criteria and one latest idempotency receipt per person/poll. Tag criteria are resolved once into the allowlist at publication; a receipt references that allowlist and coordinates atomic ballot writes. See [poll rules and rollout](./POLLS.md).
+Polling API tables `poll_eligible_tags` and `poll_submission_receipts` store saved tag criteria and one latest idempotency receipt per person/poll. Tag criteria are resolved once into the allowlist at publication; a receipt references that allowlist and coordinates atomic ballot writes. See [poll rules and rollout](./polls/POLLS.md).
 
 Authentication tables `voter_sessions` and `auth_challenges` contain only hashed session tokens, HMAC email proofs, hashed OAuth/browser state, expiry, and attempt/consumption records alongside their chapter references. Organizer credentials live in a Worker secret, not D1.
 
@@ -62,7 +62,7 @@ The file lives under `miniflare-D1DatabaseObject/`. A `-wal` file can contain re
 
 `pnpm cf:migrate:local` applies pending versioned migrations and verifies the current schema, foreign keys, and integrity. An empty local database is initialized automatically. `pnpm cf:migrate` explicitly targets production. Existing chapter databases are verified before migration; populated legacy databases and empty remote databases are rejected. These commands never rerun legacy backfill or compare live records to a migration manifest. They do not deploy the Worker or enable authentication.
 
-For poll migration 0004, keep `POLLS_READY` absent/false, apply the migration, verify, then deploy and enable the new routes using the [poll rollout steps](./POLLS.md#production-rollout). The two additive tables leave chapter/authentication definitions and existing forms unchanged. Ordinary `db:verify` now checks all definitions through 0004.
+For poll migration 0004, keep `POLLS_READY` absent/false, apply the migration, verify, then deploy and enable the new routes using the [poll rollout steps](./polls/POLLS.md#development-and-deployment). The two additive tables leave chapter/authentication definitions and existing forms unchanged. Ordinary `db:verify` now checks all definitions through 0004.
 
 For authentication migration 0003, leave existing forms open, apply the migration, run `pnpm db:verify --remote`, and follow [API deployment](./API.md#configuration-and-deployment). Ordinary verification is safe after application writes.
 

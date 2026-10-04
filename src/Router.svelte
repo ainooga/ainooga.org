@@ -1,6 +1,7 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import Home from './pages/Home.svelte';
+  import Poll from './pages/Poll.svelte';
   import EventList from './pages/EventList.svelte';
   import EventDetail from './pages/EventDetail.svelte';
   import PostList from './pages/PostList.svelte';
@@ -31,6 +32,14 @@
     }
     if (parts[0] === 'members' && parts[1]) {
       return { page: 'members/:slug', params: { slug: parts[1] } };
+    }
+
+    if (
+      parts[0] === 'polls' &&
+      parts.length === 2 &&
+      /^[a-zA-Z0-9_-]{1,160}$/.test(parts[1] ?? '')
+    ) {
+      return { page: 'polls/:slug', params: { slug: parts[1]! } };
     }
 
     const page = parts[0] || 'home';
@@ -66,6 +75,8 @@
     <MemberList />
   {:else if route.page === 'members/:slug'}
     <MemberDetail slug={route.params.slug ?? ''} />
+  {:else if route.page === 'polls/:slug'}
+    <Poll slug={route.params.slug ?? ''} />
   {:else if route.page === 'sponsor'}
     <Sponsor />
   {:else if route.page === 'about'}

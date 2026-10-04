@@ -1,6 +1,6 @@
 // @vitest-environment node
 import { afterEach, expect, it } from 'vitest';
-import { pollFixture, pollInput, submission } from '../helpers/polls';
+import { pollFixture, pollInput } from '../helpers/polls';
 import { responseCookie } from '../helpers/auth';
 let f: Awaited<ReturnType<typeof pollFixture>>;
 afterEach(async () => {
@@ -20,6 +20,7 @@ it.each([
 ] as const)('enforces min=%s max=%s selections=%s', async (min, max, indexes, status) => {
   f = await pollFixture();
   const cookie = await f.ready(pollInput({ minSelections: min, maxSelections: max }));
+  const submission = await f.ballotFor(cookie);
   const options = (
     (await (await f.admin('/topics')).json()) as { optionRecords: { id: number }[] }
   ).optionRecords;
@@ -48,6 +49,7 @@ it.each([
     identifier: { kind: 'email', value: 'voter@example.com' },
     turnstileToken: 'bot',
   });
+  const submission = await f.ballotFor(responseCookie(login));
   expect(
     (
       await f.request('/api/polls/topics/ballot', 'PUT', submission([], 0, 'Boundary'), {
@@ -67,6 +69,7 @@ it.each([
   async (allowEdits, editDeadline, now, status) => {
     f = await pollFixture();
     const cookie = await f.ready(pollInput({ allowEdits, editDeadline }));
+    const submission = await f.ballotFor(cookie);
     expect(
       (
         await f.request('/api/polls/topics/ballot', 'PUT', submission([], 0, 'First'), {
@@ -79,9 +82,10 @@ it.each([
       identifier: { kind: 'email', value: 'voter@example.com' },
       turnstileToken: 'bot',
     });
+    const renewed = await f.ballotFor(responseCookie(login));
     expect(
       (
-        await f.request('/api/polls/topics/ballot', 'PUT', submission([], 1, 'First'), {
+        await f.request('/api/polls/topics/ballot', 'PUT', renewed([], 1, 'First'), {
           Cookie: responseCookie(login),
         })
       ).status,
@@ -93,6 +97,7 @@ it.each(['before_vote', 'after_vote', 'never'] as const)(
   async (visibility) => {
     f = await pollFixture();
     let cookie = await f.ready(pollInput({ resultsVisibility: visibility }));
+    const submission = await f.ballotFor(cookie);
     const results = () =>
       f.request('/api/polls/topics/results', 'GET', undefined, { Cookie: cookie });
     expect((await results()).status).toBe(visibility === 'before_vote' ? 200 : 403);
@@ -114,6 +119,7 @@ it.each(['before_vote', 'after_vote', 'never'] as const)(
 it('deduplicates normalized write-ins, retains them on edits, and excludes revoked ballots until restoration', async () => {
   f = await pollFixture();
   const cookie = await f.ready();
+  const submission = await f.ballotFor(cookie);
   const options = (
     (await (await f.admin('/topics')).json()) as { optionRecords: { id: number }[] }
   ).optionRecords;
@@ -180,6 +186,7 @@ it('deduplicates normalized write-ins, retains them on edits, and excludes revok
 it('rejects foreign options, disabled write-ins and invalid write-in lengths without writes', async () => {
   f = await pollFixture();
   const cookie = await f.ready(pollInput({ allowWriteIns: false }));
+  const submission = await f.ballotFor(cookie);
   await f.create(pollInput({ slug: 'foreign' }));
   const foreign = (
     (await (await f.admin('/foreign')).json()) as { optionRecords: { id: number }[] }

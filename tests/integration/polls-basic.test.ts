@@ -1,6 +1,6 @@
 // @vitest-environment node
 import { afterEach, expect, it } from 'vitest';
-import { pollFixture, submission } from '../helpers/polls';
+import { pollFixture } from '../helpers/polls';
 let f: Awaited<ReturnType<typeof pollFixture>>;
 afterEach(async () => {
   await f?.dispose();
@@ -8,6 +8,7 @@ afterEach(async () => {
 it('creates, publishes, authenticates, votes, retries, edits and returns aggregate results', async () => {
   f = await pollFixture();
   const cookie = await f.ready();
+  const submission = await f.ballotFor(cookie);
   const details = await f.request('/api/polls/topics', 'GET', undefined, {
     Cookie: cookie,
   });

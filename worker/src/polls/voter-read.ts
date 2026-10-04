@@ -1,3 +1,4 @@
+import { sessionContext, voterLabel } from './session-context.js';
 import { reject } from '../auth/http.js';
 import type { Voter } from './access.js';
 import { sessionStatement, requireSession } from './access.js';
@@ -28,6 +29,8 @@ export async function readDetails(db: D1Database, p: PollRow, voter: Voter) {
   requireSession(data[0]!);
   return {
     ...config(data[2]!.results[0] as unknown as PollRow),
+    sessionContext: await sessionContext(voter, p.id),
+    voter: voterLabel(data[0]!.results[0]!),
     options: data[3]!.results,
     ballot: ballotResult(data[1]!),
   };

@@ -41,7 +41,9 @@ export async function voterIdentity(
 }
 export function sessionStatement(db: D1Database, voter: Voter, pollId: number) {
   return db
-    .prepare(`SELECT s.person_id ${sessionFrom} WHERE ${sessionWhere}`)
+    .prepare(
+      `SELECT s.person_id,i.kind,i.normalized_value,i.display_label ${sessionFrom} WHERE ${sessionWhere}`,
+    )
     .bind(voter.hash, pollId);
 }
 export function requireSession(result: D1Result<Record<string, unknown>>): void {

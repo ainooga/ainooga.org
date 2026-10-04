@@ -1,0 +1,10 @@
+# Synthetic guest list for topic-vote.md. Replace these in your private copy.
+# These are three separate voters unless the identifiers are already linked.
+- kind: email
+  value: alice@example.com
+- kind: email
+  value: bob@example.com
+# Use a quoted numeric Discord ID here, not an account username or display name.
+# Username entry also needs the account username stored on this Discord record.
+- kind: discord
+  value: '123456789012345678'

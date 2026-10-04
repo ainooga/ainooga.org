@@ -1,6 +1,6 @@
 // @vitest-environment node
 import { afterEach, expect, it } from 'vitest';
-import { pollFixture, pollInput, submission } from '../helpers/polls';
+import { pollFixture, pollInput } from '../helpers/polls';
 import { ORGANIZER_TOKEN, SITE } from '../helpers/auth';
 import { handleAuth } from '../../worker/src/auth/router';
 let f: Awaited<ReturnType<typeof pollFixture>>;
@@ -62,6 +62,7 @@ it('gates new routes only, rejects foreign origins and limits requests', async (
 it('exposes only login requirements anonymously and never another voter identity', async () => {
   f = await pollFixture();
   const cookie = await f.ready();
+  const submission = await f.ballotFor(cookie);
   expect(await (await f.request('/api/polls/topics/access')).json()).toEqual({
     identityMode: 'honor',
     methods: ['honor'],
@@ -75,10 +76,12 @@ it('exposes only login requirements anonymously and never another voter identity
   const detail = await (
     await f.request('/api/polls/topics', 'GET', undefined, { Cookie: cookie })
   ).text();
+  expect(JSON.parse(detail).voter).toEqual({ kind: 'email', value: 'voter@example.com' });
+  expect(Object.keys(JSON.parse(detail).voter).sort()).toEqual(['kind', 'value']);
   for (const secret of [
     'personId',
     'person_id',
-    'voter@example.com',
+    'other@example.com',
     'created_by',
     'eligibleTags',
     'eligibleCount',

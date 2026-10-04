@@ -1,6 +1,6 @@
 // @vitest-environment node
 import { afterEach, expect, it } from 'vitest';
-import { pollFixture, submission, pollInput } from '../helpers/polls';
+import { pollFixture, pollInput } from '../helpers/polls';
 import { pauseBatch } from '../helpers/background';
 import { responseCookie, verifiedLogin } from '../helpers/auth';
 let f: Awaited<ReturnType<typeof pollFixture>>;
@@ -11,6 +11,7 @@ afterEach(async () => {
 it('accepts one concurrent first submission and one concurrent edit, with no losing write-ins', async () => {
   f = await pollFixture();
   const cookie = await f.ready();
+  const submission = await f.ballotFor(cookie);
   const send = (name: string, revision: number) =>
     f.request('/api/polls/topics/ballot', 'PUT', submission([], revision, name), {
       Cookie: cookie,
@@ -41,6 +42,7 @@ it('accepts one concurrent first submission and one concurrent edit, with no los
 it('makes simultaneous identical retries idempotent and rejects changed payloads', async () => {
   f = await pollFixture();
   const cookie = await f.ready();
+  const submission = await f.ballotFor(cookie);
   const input = submission([], 0, 'First');
   const send = (body = input) =>
     f.request('/api/polls/topics/ballot', 'PUT', body, { Cookie: cookie });
@@ -52,11 +54,17 @@ it('makes simultaneous identical retries idempotent and rejects changed payloads
     identifier: { kind: 'email', value: 'voter@example.com' },
     turnstileToken: 'bot',
   });
+  const renewed = await f.ballotFor(responseCookie(login));
   expect(
     await (
-      await f.request('/api/polls/topics/ballot', 'PUT', input, {
-        Cookie: responseCookie(login),
-      })
+      await f.request(
+        '/api/polls/topics/ballot',
+        'PUT',
+        { ...input, sessionContext: renewed([]).sessionContext },
+        {
+          Cookie: responseCookie(login),
+        },
+      )
     ).json(),
   ).toMatchObject({ revision: 1 });
   expect(await f.store.query('SELECT count(*) AS n FROM poll_ballots')).toEqual([
@@ -66,6 +74,7 @@ it('makes simultaneous identical retries idempotent and rejects changed payloads
 it('uses one ballot across linked verified and honor sessions', async () => {
   f = await pollFixture();
   const honor = await f.ready();
+  const submission = await f.ballotFor(honor);
   const verified = responseCookie(await verifiedLogin(f));
   const discord = responseCookie(
     await f.request('/api/polls/topics/auth/honor', 'POST', {
@@ -73,14 +82,16 @@ it('uses one ballot across linked verified and honor sessions', async () => {
       turnstileToken: 'bot',
     }),
   );
+  const discordSubmission = await f.ballotFor(discord);
+  const verifiedSubmission = await f.ballotFor(verified);
   const responses = await Promise.all([
-    f.request('/api/polls/topics/ballot', 'PUT', submission([], 0, 'Discord'), {
+    f.request('/api/polls/topics/ballot', 'PUT', discordSubmission([], 0, 'Discord'), {
       Cookie: discord,
     }),
     f.request('/api/polls/topics/ballot', 'PUT', submission([], 0, 'Honor'), {
       Cookie: honor,
     }),
-    f.request('/api/polls/topics/ballot', 'PUT', submission([], 0, 'Verified'), {
+    f.request('/api/polls/topics/ballot', 'PUT', verifiedSubmission([], 0, 'Verified'), {
       Cookie: verified,
     }),
   ]);
@@ -92,6 +103,7 @@ it('uses one ballot across linked verified and honor sessions', async () => {
 it('collapses simultaneous equivalent write-ins from different voters into one option', async () => {
   f = await pollFixture();
   const first = await f.ready();
+  const submission = await f.ballotFor(first);
   await f.admin('/topics/allowlist', 'POST', {
     action: 'add',
     identifiers: [{ kind: 'email', value: 'other@example.com' }],
@@ -102,13 +114,19 @@ it('collapses simultaneous equivalent write-ins from different voters into one o
       turnstileToken: 'bot',
     }),
   );
+  const secondSubmission = await f.ballotFor(second);
   const responses = await Promise.all([
     f.request('/api/polls/topics/ballot', 'PUT', submission([], 0, 'Space  Robots'), {
       Cookie: first,
     }),
-    f.request('/api/polls/topics/ballot', 'PUT', submission([], 0, ' space robots '), {
-      Cookie: second,
-    }),
+    f.request(
+      '/api/polls/topics/ballot',
+      'PUT',
+      secondSubmission([], 0, ' space robots '),
+      {
+        Cookie: second,
+      },
+    ),
   ]);
   expect(responses.map((r) => r.status)).toEqual([200, 200]);
   expect(
@@ -124,6 +142,7 @@ it.each(['logout', 'revoke', 'archive', 'identifier'] as const)(
   async (action) => {
     f = await pollFixture();
     const cookie = await f.ready();
+    const submission = await f.ballotFor(cookie);
     const gate = pauseBatch(f.db, 'before');
     f.deps.db = gate.db;
     const pending = f.request(
@@ -168,6 +187,7 @@ it.each(['logout', 'revoke', 'archive', 'identifier'] as const)(
 it('rolls back the receipt and option on a later statement failure', async () => {
   f = await pollFixture();
   const cookie = await f.ready();
+  const submission = await f.ballotFor(cookie);
   const real = f.db;
   f.deps.db = new Proxy(real, {
     get(target, property) {

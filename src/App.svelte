@@ -3,25 +3,23 @@
   import SiteHeader from './components/SiteHeader.svelte';
   import SiteFooter from './components/SiteFooter.svelte';
   import Router from './Router.svelte';
-  import { onMount } from 'svelte';
   import { BrowserTurnstile, type TurnstileService } from '$lib/turnstile.js';
   import { setTurnstileService } from '$lib/context.js';
 
-  let mounted = $state(false);
+  import { BrowserPollService } from '$lib/polls/api';
+  import { BrowserPollRuntime } from '$lib/polls/runtime';
+  import { setPollServices } from '$lib/polls/context';
 
-  onMount(() => {
-    const siteKey = import.meta.env.VITE_TURNSTILE_SITE_KEY ?? '';
-    const turnstile: TurnstileService = new BrowserTurnstile(siteKey);
-    setTurnstileService(turnstile);
-    mounted = true;
-  });
+  const turnstile: TurnstileService = new BrowserTurnstile(
+    import.meta.env.VITE_TURNSTILE_SITE_KEY ?? '',
+  );
+  setTurnstileService(turnstile);
+  setPollServices({ api: new BrowserPollService(), runtime: new BrowserPollRuntime() });
 </script>
 
-{#if mounted}
-  <a href="#main" class="skip-link">Skip to main content</a>
-  <SiteHeader />
-  <main id="main">
-    <Router />
-  </main>
-  <SiteFooter />
-{/if}
+<a href="#main" class="skip-link">Skip to main content</a>
+<SiteHeader />
+<main id="main">
+  <Router />
+</main>
+<SiteFooter />
