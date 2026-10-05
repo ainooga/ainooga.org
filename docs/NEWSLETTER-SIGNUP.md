@@ -101,14 +101,14 @@ Content-Type: application/json
 
 **Response contract:**
 
-| HTTP status     | `body.success` / pattern                       | Meaning                                           | Transition to               |
-| --------------- | ---------------------------------------------- | ------------------------------------------------- | --------------------------- |
-| 201             | `{ message: "Check your email to confirm." }`  | Email sent. New subscriber.                       | SUCCESS                     |
-| 200             | `{ message: "Already subscribed!" }`           | Email already in DB.                              | SUCCESS (different message) |
-| 400             | `{ error: "Verification failed. Try again." }` | Turnstile token rejected (stale, invalid, spent). | ERROR_VERIFICATION          |
-| 400             | `{ error: "Valid email required" }`            | Email format rejected.                            | ERROR_VALIDATION            |
-| 4xx/5xx         | any other                                      | Unhandled server error.                           | ERROR_SERVER                |
-| Network failure | (no response)                                  | `fetch` threw, or DNS/timeout/CORS.               | ERROR_NETWORK               |
+| HTTP status     | `body.success` / pattern                                                 | Meaning                                           | Transition to               |
+| --------------- | ------------------------------------------------------------------------ | ------------------------------------------------- | --------------------------- |
+| 201             | `{ message: "Check your email to confirm." }`                            | Email sent. New subscriber.                       | SUCCESS                     |
+| 200             | `{ message: "A subscription request already exists for this address." }` | Email already in DB.                              | SUCCESS (different message) |
+| 400             | `{ error: "Verification failed. Try again." }`                           | Turnstile token rejected (stale, invalid, spent). | ERROR_VERIFICATION          |
+| 400             | `{ error: "Valid email required" }`                                      | Email format rejected.                            | ERROR_VALIDATION            |
+| 4xx/5xx         | any other                                                                | Unhandled server error.                           | ERROR_SERVER                |
+| Network failure | (no response)                                                            | `fetch` threw, or DNS/timeout/CORS.               | ERROR_NETWORK               |
 
 **Atom city guarantee:** The backend verifies the Turnstile token **and** inserts
 the subscriber in a single request handler. There is no partial-failure window
@@ -290,7 +290,7 @@ No browser automation required.
 | REVEALING → ERROR_TIMEOUT       | `timeout-callback()` fires                                            | Timeout message appears. Timer was cancelled.                                                                       |
 | REVEALING → ERROR_LOAD          | `window.turnstile` undefined after timeout                            | Fallback message appears. Retry button exists.                                                                      |
 | SUBMITTING → SUCCESS            | `fetch` resolves with 201 `{ message }`                               | Success message shown. Email cleared. Turnstile removed. Form returns to IDLE.                                      |
-| SUBMITTING → SUCCESS (existing) | `fetch` resolves with 200 `{ message }`                               | Same as above but with "Already subscribed!" message.                                                               |
+| SUBMITTING → SUCCESS (existing) | `fetch` resolves with 200 `{ message }`                               | Same as above but with "A subscription request already exists for this address." message.                           |
 | SUBMITTING → ERROR_VERIFICATION | `fetch` resolves with 400 `{ error: "Verification failed..." }`       | Error message shown. `turnstile.reset()` called. Widget preserved.                                                  |
 | SUBMITTING → ERROR_VALIDATION   | `fetch` resolves with 400 `{ error: "Valid email required" }`         | Error message shown. Email input remains editable.                                                                  |
 | SUBMITTING → ERROR_SERVER       | `fetch` resolves with 500                                             | Error message shown. `turnstile.remove()` called. Widget destroyed.                                                 |
@@ -351,9 +351,10 @@ It returns:
 
 ```
 201 { "message": "Check your email to confirm." }           // new subscriber
-200 { "message": "Already subscribed!" }                     // existing subscriber
+200 { "message": "A subscription request already exists for this address." }                     // existing subscriber
 400 { "error": "Verification failed. Try again." }           // Turnstile rejected
 400 { "error": "Valid email required" }                      // email format
+503 { "error": "Confirmation email could not be sent. Please try again.", "code": "delivery_unavailable", "requestId": "..." }
 500 { "error": "Something went wrong." }                     // unhandled
 ```
 

@@ -1,6 +1,7 @@
 export interface DbClient {
   insertSubscriber(email: string, name: string | null, token: string): Promise<boolean>;
   findSubscriberByEmail(email: string): Promise<Record<string, unknown> | null>;
+  invalidateConfirmation(token: string): Promise<void>;
   confirmSubscription(token: string): Promise<number>;
   insertContactRequest(data: {
     name: string;

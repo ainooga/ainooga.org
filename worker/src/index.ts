@@ -9,30 +9,10 @@ import { cleanupAuth } from './auth/cleanup.js';
 import type { AuthContext } from './auth/types.js';
 import { apiFailure, jsonBody } from './auth/http.js';
 import { subscribeSchema, sponsorSchema } from './form-schemas.js';
-
-function corsHeaders(origin: string | null): HeadersInit {
-  const allowed = [
-    'https://ainooga.org',
-    'https://www.ainooga.org',
-    /^https:\/\/[a-z0-9-]+\.ainooga-org\.pages\.dev$/,
-    /^http:\/\/localhost:\d+$/,
-  ];
-
-  const match =
-    origin &&
-    allowed.some((a) => (typeof a === 'string' ? a === origin : a.test(origin)));
-
-  return {
-    'Access-Control-Allow-Origin': match ? origin : 'https://ainooga.org',
-    'Access-Control-Allow-Methods': 'POST, GET, OPTIONS',
-    'Access-Control-Allow-Headers': 'Content-Type',
-    'X-Robots-Tag': 'noindex',
-    Vary: 'Origin',
-  };
-}
+import { formHeaders, formHostname } from './form-http.js';
 
 function attachCors(response: Response, origin: string | null): void {
-  for (const [key, value] of Object.entries(corsHeaders(origin))) {
+  for (const [key, value] of Object.entries(formHeaders(origin))) {
     response.headers.set(key, value);
   }
 }
@@ -47,7 +27,10 @@ async function dispatch(request: Request, env: Env): Promise<Response> {
       {
         db: createDb(env.DB),
         email: createEmailSender(env.EMAIL),
-        turnstile: createTurnstileVerifier(env.TURNSTILE_SECRET_KEY),
+        turnstile: createTurnstileVerifier(
+          env.TURNSTILE_SECRET_KEY,
+          formHostname(request, env.SITE_URL),
+        ),
         siteUrl: env.SITE_URL,
       },
     );
@@ -65,7 +48,10 @@ async function dispatch(request: Request, env: Env): Promise<Response> {
       },
       {
         db: createDb(env.DB),
-        turnstile: createTurnstileVerifier(env.TURNSTILE_SECRET_KEY),
+        turnstile: createTurnstileVerifier(
+          env.TURNSTILE_SECRET_KEY,
+          formHostname(request, env.SITE_URL),
+        ),
       },
     );
   }
@@ -84,7 +70,7 @@ export default {
     const origin = request.headers.get('Origin');
 
     if (request.method === 'OPTIONS') {
-      return new Response(null, { headers: corsHeaders(origin) });
+      return new Response(null, { headers: formHeaders(origin) });
     }
 
     try {

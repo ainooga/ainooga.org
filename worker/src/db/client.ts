@@ -1,5 +1,9 @@
 import type { DbClient } from '../types.js';
-import { confirmSubscription, insertSubscriber } from './newsletter.js';
+import {
+  confirmSubscription,
+  insertSubscriber,
+  invalidateConfirmation,
+} from './newsletter.js';
 import { normalizeEmail } from './identifiers.js';
 
 export function createDb(db: D1Database): DbClient {
@@ -15,6 +19,7 @@ export function createDb(db: D1Database): DbClient {
         .bind(normalizeEmail(email))
         .first<{ id: number }>();
     },
+    invalidateConfirmation: (token) => invalidateConfirmation(db, token),
     confirmSubscription: (token) => confirmSubscription(db, token),
     async insertContactRequest(data) {
       await db

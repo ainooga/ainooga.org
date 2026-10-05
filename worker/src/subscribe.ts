@@ -1,3 +1,4 @@
+import { reject } from './auth/http.js';
 import { normalizeEmail, validEmail } from './db/identifiers.js';
 import type { DbClient, EmailSender, TurnstileVerifier } from './types.js';
 
@@ -29,10 +30,22 @@ export async function handleSubscribe(
   const token = crypto.randomUUID();
   const created = await deps.db.insertSubscriber(address, input.name ?? null, token);
   if (!created) {
-    return Response.json({ message: 'Already subscribed!' }, { status: 200 });
+    return Response.json(
+      { message: 'A subscription request already exists for this address.' },
+      { status: 200 },
+    );
   }
 
-  await deps.email.sendConfirmation(address, input.name ?? null, token, deps.siteUrl);
+  try {
+    await deps.email.sendConfirmation(address, input.name ?? null, token, deps.siteUrl);
+  } catch {
+    await deps.db.invalidateConfirmation(token);
+    reject(
+      503,
+      'delivery_unavailable',
+      'Confirmation email could not be sent. Please try again.',
+    );
+  }
 
   return Response.json({ message: 'Check your email to confirm.' }, { status: 201 });
 }
