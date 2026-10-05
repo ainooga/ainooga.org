@@ -30,7 +30,16 @@ async function size(db: WranglerStore): Promise<void> {
   }
   const bytes = await localSize();
   console.log(
-    JSON.stringify({ bytes, mb: bytes / 1e6, percentOf500MB: bytes / 5e6 }, null, 2),
+    JSON.stringify(
+      {
+        bytes,
+        mb: bytes / 1e6,
+        paidDatabaseLimitBytes: 10_000_000_000,
+        percentOfPaidDatabaseLimit: bytes / 1e8,
+      },
+      null,
+      2,
+    ),
   );
 }
 

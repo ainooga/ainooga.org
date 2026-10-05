@@ -18,6 +18,10 @@ class FakeDbClient implements DbClient {
     return null;
   }
 
+  async invalidateConfirmation(): Promise<void> {
+    throw new Error('Sponsor submissions must not invalidate newsletter tokens');
+  }
+
   async confirmSubscription(): Promise<number> {
     return 0;
   }

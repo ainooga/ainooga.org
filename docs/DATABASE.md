@@ -28,11 +28,15 @@ The later APIs must enforce organizer authorization, voter proof and eligibility
 
 ## Existing forms
 
-The public paths and successful responses remain unchanged: `POST /api/subscribe`, `POST /api/contact-sponsor`, and `GET /confirm?token=...`. The Cloudflare route must be `ainooga.org/confirm*`: route matching includes query strings, so an exact `/confirm` pattern does not route emailed token links to the Worker.
+The public paths remain unchanged: `POST /api/subscribe`, `POST /api/contact-sponsor`, and `GET /confirm?token=...`. The Cloudflare route must be `ainooga.org/confirm*`: route matching includes query strings, so an exact `/confirm` pattern does not route emailed token links to the Worker.
 
-Signup trims and lowercases email without rewriting dots or plus suffixes. Creating a person, identifier, and newsletter subscription happens in a single D1 batch. Concurrent duplicates return the existing-subscription response and do not send another confirmation. An existing person's profile is not overwritten, and an existing subscription preference is not reactivated.
+Signup trims and lowercases email without rewriting dots or plus suffixes. Creating a person, identifier, and newsletter subscription happens in a single D1 batch. Concurrent duplicates return 200 with "A subscription request already exists for this address." and do not send another confirmation. An existing person's profile is not overwritten, and an existing subscription preference is not reactivated.
 
 Confirmation tokens are stored as SHA-256 hashes in the new subscription table. A successful confirmation clears the hash. Expired, consumed, invalid, or non-pending tokens cannot confirm a subscription. Migrated pending links continue working, and no new expiry is invented for them. New confirmations retain the existing no-expiry policy until that policy is explicitly revised. Confirmation does not mark an identifier as verified for polling.
+
+Confirmation emails escape user-provided names. Missing email configuration, rejected delivery, and a ten-second delivery timeout return a redacted 503. Failure clears only that attempt's still-pending website confirmation token. A later signup can atomically claim a replacement for the same email identifier; concurrent requests send at most one replacement. Confirmed/unsubscribed preferences, imported/legacy pending records, newer tokens, and successful confirmations remain unchanged. A late provider completion can deliver an invalidated link; the replacement link is authoritative. If token invalidation itself fails, the request fails with 500 and requires operator investigation; it never claims success.
+
+Forms validate the server-side Turnstile response, require action `turnstile-spin-v1`, and match the permitted request Origin's hostname (or `SITE_URL` when Origin is absent). Existing canonical, www, Pages-preview and localhost origins remain supported. Foreign origins return 403; rejected proof returns 400; unavailable verification returns 503. Production and preview widget hostnames must also be allowed by Cloudflare. Poll authentication continues using `poll-auth`. Form and confirmation responses set no-store, no-referrer and nosniff headers in the Worker, including errors.
 
 All three handlers require `CHAPTER_SCHEMA_READY=true`. Missing or other values return 503 before parsing input, accessing D1, verifying Turnstile, or sending email. Maintenance responses include CORS, `Retry-After: 60`, and `Cache-Control: no-store`. OPTIONS and other routes retain their normal behavior.
 
@@ -56,7 +60,7 @@ rg --files --hidden --no-ignore worker/.wrangler/state/v3/d1 -g '*.sqlite'
 
 The file lives under `miniflare-D1DatabaseObject/`. A `-wal` file can contain recent changes while the database is open. Use `pnpm db:size` for allocated database size including indexes, rather than the main file's byte count alone. It opens the same D1 binding through Miniflare and reads its size metadata. Wrangler's local JSON output omits that metadata, and D1 rejects the page-count pragmas through its SQL API.
 
-`pnpm db:size --remote` runs Wrangler's production database information command. The Free per-database cap is 500 MB; the command's local percentage uses 500,000,000 bytes. See [D1 limits](https://developers.cloudflare.com/d1/platform/limits/).
+`pnpm db:size --remote` runs Wrangler's production database information command. This deployment uses Workers Paid: the per-database limit is 10 GB, and the account includes 5 GB of total D1 storage before storage charges. The local output reports `bytes`, decimal `mb`, `paidDatabaseLimitBytes`, and `percentOfPaidDatabaseLimit`; it replaces `percentOf500MB`. Remote output remains Wrangler's database information. See [D1 limits](https://developers.cloudflare.com/d1/platform/limits/) and [pricing](https://developers.cloudflare.com/d1/platform/pricing/).
 
 ## Migration behavior
 
@@ -129,21 +133,49 @@ After reopening, restoring the old snapshot would discard accepted signups, conf
 
 Run `pnpm check` for lint, both TypeScript targets, handler/component tests, and local D1 integration tests. `pnpm test:db` runs the D1 suite alone. Tests cover fresh and populated migrations, interrupted/repeated backfills, conflict rejection, legacy recovery, concurrent signup, confirmation lifecycle, ownership constraints, and poll isolation.
 
-Repeat the synthetic storage rehearsal with:
+## Capacity review: 2026-10-04
+
+Run the current-schema rehearsal on a disposable local database:
 
 ```sh
-pnpm test --run tests/integration/capacity.test.ts
+pnpm exec vitest run tests/integration/capacity.test.ts
+# Optional table/index breakdown; requires /usr/bin/sqlite3 with dbstat support:
+AINOOGA_CAPACITY_INDEXES=1 pnpm exec vitest run tests/integration/capacity.test.ts
 ```
 
-Measured locally with Miniflare 4.20260617.0:
+All four migrations are applied. The fixture contains 200 synthetic members with email, phone, LinkedIn-style identifiers, profiles, provenance, memberships, two invitation opt-outs and 198 unknown invitation preferences. It adds 10 events, provider links, and 734 participation records. Membership creates no newsletter consent or organizer grant. Legacy tables remain present but empty; existing production legacy rows are additional storage.
 
-| Dataset                                                                            | Allocated bytes | Decimal MB |
-| ---------------------------------------------------------------------------------- | --------------: | ---------: |
-| Empty legacy schema                                                                |          36,864 |   0.036864 |
-| Empty chapter schema, retaining legacy tables                                      |         307,200 |   0.307200 |
-| 200 synthetic subscribers migrated, retaining legacy copies                        |         475,136 |   0.475136 |
-| Add 200 memberships, 10 events, 734 participation records, and one 200-ballot poll |         577,536 |   0.577536 |
-| Add the empty authentication tables and indexes                                    |         618,496 |   0.618496 |
-| Add 200 voter sessions and 1,000 email challenges                                  |       1,134,592 |   1.134592 |
+The five-year model retains 24 polls per year. Each poll has 200 eligible members, 200 ballots with two choices each, 10 predefined options, 20 write-ins, and 200 current submission receipts with UUID-length request IDs. This yields 24,000 ballots, 48,000 choices, 3,600 options, and 24,000 receipts. A real ballot edit and identical retry exercise the current query implementation on that dataset. The fixtures seed rows directly for storage measurement; they do not implement or validate the future importer.
 
-These are measured fixtures, not a prediction of production growth. The persistent Wrangler database also includes migration bookkeeping; its empty migrated size was 315,392 bytes. Real text lengths, additional indexes, legacy retention, and future poll workloads affect storage.
+Measured with Miniflare 4.20260617.0, using D1 `meta.size_after` (tables and indexes included):
+
+| Stage                                     | Allocated bytes | Decimal MB |
+| ----------------------------------------- | --------------: | ---------: |
+| Empty current schema                      |         364,544 |   0.364544 |
+| Synthetic chapter                         |         647,168 |   0.647168 |
+| One poll                                  |         724,992 |   0.724992 |
+| 24 polls                                  |       2,842,624 |   2.842624 |
+| 120 polls                                 |      11,694,080 |  11.694080 |
+| Ballot edit and accepted retry            |      11,694,080 |  11.694080 |
+| Add 200 sessions and 1,000 challenges     |      12,120,064 |  12.120064 |
+| Expired authentication cleanup            |      11,694,080 |  11.694080 |
+| Reinsert the same authentication workload |      12,120,064 |  12.120064 |
+
+After closing Miniflare, SQLite `dbstat` reports 8,376,320 bytes of table pages, 3,719,168 bytes of index pages (including automatic indexes), and 24,576 bytes of internal pages. These sum to the final allocated size. Cleanup/reinsertion does not accumulate storage. Production SQLite allocation need not shrink immediately after deletes; this test does not promise file-size reclamation on every host.
+
+The maximum measured stage is about 0.1212% of the Paid 10 GB database limit. The two aggregate-result queries read 2,288 and 400 rows for one 200-voter poll in this fixture. Voter detail, results, identifiable organizer ballots, an edit and an accepted retry pass; the options query uses `idx_options_order`. These are local fixture measurements, not production latency or distributed load guarantees. Text lengths, retained legacy data, event growth, traffic and abuse can change storage and cost.
+
+Check `pnpm db:size --remote` before and after imports and periodically during operation. Review capacity at 8 GB for this database or 4 GB combined account D1 storage, before the 10 GB limit or 5 GB included storage respectively. Account usage must include other databases; this database's size alone cannot establish available included storage. These are manual review thresholds, not new enforced quotas. On 2026-10-04 production reported approximately 381 kB, with no pending migrations and successful schema, foreign-key and integrity verification.
+
+## Current recovery diagnostics
+
+Read-only checks use the Worker configuration:
+
+```sh
+pnpm db:verify --remote
+pnpm db:size --remote
+pnpm exec wrangler d1 migrations list ainooga-d1 --remote --config worker/wrangler.toml
+pnpm exec wrangler d1 time-travel info ainooga-d1 --config worker/wrangler.toml
+```
+
+Time Travel information was successfully retrieved during this review. Workers Paid retains 30 days of recovery history; see [Time Travel](https://developers.cloudflare.com/d1/reference/time-travel/). No export or restore was performed, so restore execution remains untested. If recovery becomes necessary, pause form and auth/poll writes with the existing readiness secrets, allow in-flight requests to finish, record the current bookmark and Worker version, and reconcile any writes that an older snapshot would discard. Restore only with a matching schema/Worker version, run verification, then reopen writes. The historical PR 2 backfill procedure above is not a routine recovery command for the current schema.

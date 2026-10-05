@@ -13,13 +13,14 @@ export class D1Store implements SqlStore {
   }
 }
 
-export async function database() {
+export async function database(persistence?: string) {
   const mf = new Miniflare({
     host: '127.0.0.1',
     modules: true,
     script: 'export default { fetch() { return new Response("test"); } };',
     compatibilityDate: '2026-06-22',
     d1Databases: { DB: 'chapter-test' },
+    d1Persist: persistence,
   });
   const db = (await mf.getD1Database('DB')) as unknown as D1Database;
   return { db, store: new D1Store(db), dispose: () => mf.dispose() };

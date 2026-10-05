@@ -14,8 +14,9 @@ class FakeDbClient implements DbClient {
     name: string | null,
     token: string,
   ): Promise<boolean> {
-    if (this.subscribers.has(email)) return false;
-    this.subscribers.set(email, { email, name, token });
+    const existing = this.subscribers.get(email);
+    if (existing?.token) return false;
+    this.subscribers.set(email, { email, name: existing?.name ?? name, token });
     this.confirmations.set(token, false);
     return true;
   }
@@ -23,6 +24,14 @@ class FakeDbClient implements DbClient {
   async findSubscriberByEmail(email: string): Promise<Record<string, unknown> | null> {
     const sub = this.subscribers.get(email);
     return sub ? { id: 1, email: sub.email } : null;
+  }
+
+  async invalidateConfirmation(token: string): Promise<void> {
+    if (this.confirmations.get(token) !== false) return;
+    this.confirmations.delete(token);
+    for (const subscriber of this.subscribers.values()) {
+      if (subscriber.token === token) subscriber.token = '';
+    }
   }
 
   async confirmSubscription(token: string): Promise<number> {
@@ -117,7 +126,7 @@ describe('handleSubscribe', () => {
     );
     expect(res.status).toBe(200);
     const body = await res.json();
-    expect(body.message).toBe('Already subscribed!');
+    expect(body.message).toBe('A subscription request already exists for this address.');
     expect(email.sent.length).toBe(0);
   });
 
