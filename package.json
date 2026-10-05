@@ -42,6 +42,7 @@
     "api:whoami": "tsx --env-file=.env scripts/api-whoami.ts",
     "db:verify:cutover": "tsx db/cli.ts verify-cutover",
     "poll": "tsx scripts/poll.ts",
+    "members": "tsx scripts/members.ts",
     "test:e2e:polls": "playwright test --config playwright.polls.config.ts"
   },
   "simple-git-hooks": {

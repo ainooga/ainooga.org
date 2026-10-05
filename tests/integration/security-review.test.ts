@@ -13,6 +13,8 @@ it('rejects voter cookies and malformed credentials on every organizer operation
   const cookie = await f.ready();
   const paths = [
     ['GET', '/api/admin/me'],
+    ['POST', '/api/admin/members/import'],
+    ['POST', '/api/admin/members/import/preview'],
     ['POST', '/api/admin/people/2/identifiers'],
     ['GET', '/api/admin/polls'],
     ['POST', '/api/admin/polls'],

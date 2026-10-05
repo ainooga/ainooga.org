@@ -157,6 +157,8 @@ Run `pnpm check`, `pnpm build:spa`, and `pnpm test:e2e:polls`. The browser suite
 
 ## Security review and member-import gate
 
+The member import API and uploader are documented in [Member imports](./members/IMPORT.md), with a synthetic input example. Both `/api/admin/members/import/preview` and `/api/admin/members/import` require the existing organizer bearer token. They use the current schema and add no secret or readiness flag. Real member files and export-specific tooling belong in ignored `ai/`.
+
 The October 2026 review retains one organizer access level through configured API tokens. Passing the application token check authorizes Worker D1 operations; organizers do not need Cloudflare credentials. Honor-mode identity remains deliberately unverified. The review adds form-provider hardening and authorization/error regressions without changing poll request contracts, adding secrets, or migrating the schema.
 
 The importer may be developed once the scoped application review has no unresolved unauthorized-access, unauthorized-modification, private-data disclosure, or identity/consent corruption finding. Repeat those checks against the new importer before uploading real members. The reviewed branch meets that application gate after its fixes; deployment and real upload remain separate steps. The production Turnstile voting check is still pending. Global coverage now passes the unchanged thresholds at 80.54% lines/statements. Existing dependency advisories in development/build tooling remain open; passing coverage does not constitute a clean dependency audit or full production acceptance.

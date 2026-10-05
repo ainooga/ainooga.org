@@ -10,6 +10,7 @@ import { findPoll } from './store.js';
 import { honor, session, logout } from './sessions.js';
 import { requestEmail, verifyEmail } from './email.js';
 import { startDiscord, completeDiscord } from './discord.js';
+import { importMember } from '../members/router.js';
 
 export function isAuthRoute(path: string): boolean {
   return (
@@ -33,15 +34,28 @@ async function admin(
   if (!exists) return reject(503, 'configuration', 'Organizer person record is missing.');
   const path = new URL(request.url).pathname;
   if (path === '/api/admin/me' && request.method === 'GET') return Response.json(actor);
+  if (
+    path === '/api/admin/members/import' ||
+    path === '/api/admin/members/import/preview'
+  )
+    return importMember(request, deps.db);
   if (path === '/api/admin/polls' || path.startsWith('/api/admin/polls/')) {
     pollsReady(env);
     return adminPolls(request, deps, actor.personId);
   }
+  return adminPerson(request, deps.db, path);
+}
+
+async function adminPerson(
+  request: Request,
+  db: D1Database,
+  path: string,
+): Promise<Response> {
   const match = /^\/api\/admin\/people\/([1-9]\d*)\/identifiers$/.exec(path);
   if (match && request.method === 'POST') {
     const id = Number(match[1]);
     if (!Number.isSafeInteger(id)) return reject(400, 'invalid_id', 'Invalid person ID.');
-    return linkIdentifier(request, deps.db, id);
+    return linkIdentifier(request, db, id);
   }
   return reject(404, 'not_found', 'Endpoint not found.');
 }
