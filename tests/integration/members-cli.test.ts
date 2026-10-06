@@ -86,7 +86,8 @@ it('runs the real CLI through preview, a lost committed response, and safe recov
   });
   expect(requests).toBe(0);
   const preview = JSON.parse((await run('preview')).stdout);
-  expect(preview.changes.create).toBe(19);
+  // Company is now a separate action for each member; the shared event counts once.
+  expect(preview.changes).toEqual({ create: 21, fill: 0, preserve: 0, unchanged: 0 });
   expect(await f.store.query("SELECT * FROM person_tags WHERE tag='member'")).toEqual([]);
   await expect(run('import')).rejects.toMatchObject({
     stderr: expect.stringContaining('after 1 confirmed members'),
@@ -104,6 +105,12 @@ it('runs the real CLI through preview, a lost committed response, and safe recov
     expect(retried.stdout + retried.stderr).not.toContain(privateValue);
   expect(await f.store.query('SELECT count(*) AS n FROM people')).toEqual([{ n: 5 }]);
   expect(await f.store.query('SELECT count(*) AS n FROM events')).toEqual([{ n: 1 }]);
+  expect(await f.store.query('SELECT count(*) AS n FROM organizations')).toEqual([
+    { n: 1 },
+  ]);
+  expect(await f.store.query('SELECT count(*) AS n FROM organization_people')).toEqual([
+    { n: 2 },
+  ]);
   const invalid = join(directory, 'invalid.json');
   await writeFile(
     invalid,
