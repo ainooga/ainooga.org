@@ -37,6 +37,7 @@ export const detailSchema = z
         .object({
           id: z.number().int().positive(),
           label: z.string(),
+          description: z.string().nullable().optional(),
           origin: z.enum(['predefined', 'write_in']),
           position: z.number(),
         })

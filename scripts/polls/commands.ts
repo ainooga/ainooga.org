@@ -5,7 +5,7 @@ export const usage = `Usage: pnpm poll [--env-file .env.prod.local] <command>
   validate <poll.md>
   create <poll.md> | update <poll.md>
   show <slug> | list | publish <slug> | archive <slug>
-  allowlist add <slug> <voters.yml> | allowlist revoke <slug> <voters.yml>
+  allowlist add <slug> <voters.yml> | allowlist remove <slug> <voters.yml>
   allowlist list <slug> | results <slug> | ballots <slug>`;
 function arity(args: string[], length: number): void {
   if (args.length !== length) throw new Error(usage);
@@ -20,7 +20,7 @@ async function allowlist(args: string[], api: PollApi) {
     arity(args, 3);
     return api.request(`${pathFor(args[2]!)}/allowlist`);
   }
-  if (action !== 'add' && action !== 'revoke') throw new Error(usage);
+  if (action !== 'add' && action !== 'remove') throw new Error(usage);
   arity(args, 4);
   const path = `${pathFor(args[2]!)}/allowlist`;
   const identifiers = await readEligibility(args[3]!);

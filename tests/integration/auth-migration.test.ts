@@ -24,6 +24,7 @@ describe('authentication migration', () => {
           '0002_chapter_schema.sql',
           '0003_voter_auth.sql',
           '0004_poll_api.sql',
+          '0005_simplify_chapter.sql',
         ])
           await migration(db, name);
       },
@@ -45,6 +46,7 @@ describe('authentication migration', () => {
       async applyMigrations() {
         await migration(db, '0003_voter_auth.sql');
         await migration(db, '0004_poll_api.sql');
+        await migration(db, '0005_simplify_chapter.sql');
       },
     });
     await expect(verifyLive(db)).resolves.toBeUndefined();

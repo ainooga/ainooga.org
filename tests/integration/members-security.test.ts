@@ -34,7 +34,7 @@ it('requires a current organizer token for both endpoints before inspecting priv
     { name: 'replacement', personId: 1, token: 'b'.repeat(64) },
   ]);
   expect((await f.importMember(memberInput())).status).toBe(401);
-  expect(await f.store.query('SELECT * FROM memberships')).toEqual([]);
+  expect(await f.store.query("SELECT * FROM person_tags WHERE tag='member'")).toEqual([]);
 });
 
 it('enforces readiness, methods, JSON limits and rate limiting', async () => {

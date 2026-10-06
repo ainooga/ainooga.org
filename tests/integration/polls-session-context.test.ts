@@ -44,7 +44,7 @@ it('binds a draft to its session and rejects a replacement identity without writ
   });
   expect(rejected.status).toBe(409);
   expect(await rejected.json()).toMatchObject({ code: 'session_changed' });
-  for (const table of ['poll_ballots', 'poll_submission_receipts', 'poll_ballot_choices'])
+  for (const table of ['poll_ballots', 'poll_ballot_choices'])
     expect(await f.store.query(`SELECT * FROM ${table}`)).toEqual([]);
   expect(
     await f.store.query("SELECT * FROM poll_options WHERE origin='write_in'"),

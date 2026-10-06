@@ -19,14 +19,14 @@ export function submissionOutcome(
   s: Submission,
   results: D1Result<Record<string, unknown>>[],
 ) {
-  const receipt = results[6]!.results[0];
+  const receipt = results[5]!.results[0];
   // Winning this private nonce proves authorization at the atomic claim. A later
   // expiry must not report failure for a ballot that the transaction accepted.
-  if (receipt?.attempt_nonce === s.nonce) return ballotResult(results[7]!);
-  requireSession(results[5]!);
+  if (receipt?.attempt_nonce === s.nonce) return ballotResult(results[6]!);
+  requireSession(results[4]!);
   if (receipt?.request_id === s.input.requestId && receipt.payload_hash === s.payloadHash)
-    return ballotResult(results[7]!);
-  const state = results[8]!.results[0]!;
+    return ballotResult(results[6]!);
+  const state = results[7]!.results[0]!;
   checkWindow(p, s.input, String(state.now));
   if (state.writeInAllowed === 0)
     reject(

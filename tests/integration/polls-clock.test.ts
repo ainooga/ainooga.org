@@ -37,12 +37,7 @@ it.each(['close', 'edit', 'session'] as const)(
     await f.setTime(
       boundary === 'close' ? '2026-09-29T12:01:59.999Z' : '2026-09-29T12:00:59.999Z',
     );
-    const tables = [
-      'poll_ballots',
-      'poll_options',
-      'poll_ballot_choices',
-      'poll_submission_receipts',
-    ];
+    const tables = ['poll_ballots', 'poll_options', 'poll_ballot_choices'];
     const before = await Promise.all(
       tables.map((t) => f.store.query(`SELECT * FROM ${t}`)),
     );

@@ -1,3 +1,4 @@
+import { eligiblePerson } from '../polls/eligibility.js';
 import type { Identity, Poll, Session } from './types.js';
 import { reject } from './http.js';
 
@@ -20,8 +21,8 @@ export async function eligibleIdentity(
   return db
     .prepare(
       `SELECT i.id,i.person_id,i.normalized_value FROM person_identifiers i
-    JOIN poll_allowlist a ON a.person_id = i.person_id
-    WHERE i.kind = ? AND i.normalized_value = ? AND a.poll_id = ? AND a.revoked_at IS NULL`,
+    JOIN polls p ON ${eligiblePerson('i.person_id')}
+    WHERE i.kind = ? AND i.normalized_value = ? AND p.id = ?`,
     )
     .bind(kind, value, pollId)
     .first<Identity>();
@@ -40,9 +41,9 @@ export async function insertSession(
       `INSERT INTO voter_sessions
     (token_hash,person_id,identifier_id,identifier_value,assurance,poll_id,created_at,expires_at)
     SELECT ?,i.person_id,i.id,i.normalized_value,?,?,?,? FROM person_identifiers i
-    JOIN poll_allowlist a ON a.person_id = i.person_id JOIN polls p ON p.id = a.poll_id
+    JOIN polls p ON ${eligiblePerson('i.person_id')}
     WHERE i.id = ? AND i.person_id = ? AND i.normalized_value = ?
-      AND a.poll_id = ? AND a.revoked_at IS NULL AND p.status = 'published'
+      AND p.id = ? AND p.status = 'published'
       AND (? = 'verified' OR p.identity_mode = 'honor')`,
     )
     .bind(
@@ -71,9 +72,8 @@ export async function readSession(
     .prepare(
       `SELECT s.person_id,s.assurance,s.expires_at FROM voter_sessions s
     JOIN person_identifiers i ON i.id = s.identifier_id AND i.person_id = s.person_id AND i.normalized_value = s.identifier_value
-    JOIN poll_allowlist a ON a.person_id = s.person_id
-    JOIN polls p ON p.id = a.poll_id
-    WHERE s.token_hash = ? AND s.expires_at > ? AND a.poll_id = ? AND a.revoked_at IS NULL
+    JOIN polls p ON ${eligiblePerson('s.person_id')}
+    WHERE s.token_hash = ? AND s.expires_at > ? AND p.id = ?
     AND p.status = 'published' AND (s.assurance = 'verified' OR (s.poll_id = p.id AND p.identity_mode = 'honor'))`,
     )
     .bind(hash, now.toISOString(), poll.id)

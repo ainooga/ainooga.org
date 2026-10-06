@@ -17,9 +17,9 @@ it('previews without writes and imports all member relationships repeatably', as
   const applied = await f.importMember(memberInput());
   expect(applied.status).toBe(200);
   expect(await applied.json()).toEqual(proposed);
-  expect(
-    await f.store.query('SELECT status,joined_at,ended_at FROM memberships'),
-  ).toEqual([{ status: 'active', joined_at: null, ended_at: null }]);
+  expect(await f.store.query("SELECT tag FROM person_tags WHERE tag='member'")).toEqual([
+    { tag: 'member' },
+  ]);
   expect(await f.store.query('SELECT kind,status FROM subscriptions')).toEqual([
     { kind: 'event_invites', status: 'unknown' },
   ]);
@@ -34,8 +34,13 @@ it('previews without writes and imports all member relationships repeatably', as
       registered_at: null,
     },
   ]);
-  expect(await f.store.query('SELECT * FROM organizer_permissions')).toEqual([]);
-  expect((await f.store.query('SELECT * FROM poll_allowlist')).length).toBe(3);
+  expect(await f.store.query('SELECT allowed_person_ids FROM polls ORDER BY id')).toEqual(
+    [
+      { allowed_person_ids: '[2]' },
+      { allowed_person_ids: '[2]' },
+      { allowed_person_ids: '[3]' },
+    ],
+  );
   const repeat = await f.importMember(memberInput());
   expect(repeat.status).toBe(200);
   expect(
@@ -57,7 +62,8 @@ it('serializes concurrent duplicates without orphaned people or events', async (
   for (const table of [
     'events',
     'event_links',
-    'memberships',
+    'organizations',
+    'organization_people',
     'person_sources',
     'event_participation',
   ]) {

@@ -15,34 +15,32 @@ function statements(db: D1Database, pollId: number, input: Change, now: string) 
       sql.push(
         db
           .prepare(
-            `INSERT INTO people (created_at,updated_at) SELECT ?,? WHERE NOT EXISTS (${identity}) AND ${writable}`,
+            `INSERT INTO people(created_at,updated_at)
+        SELECT ?,? WHERE NOT EXISTS (${identity}) AND ${writable}`,
           )
           .bind(now, now, item.kind, value, pollId),
       );
       sql.push(
         db
           .prepare(
-            `INSERT INTO person_identifiers (person_id,kind,value,normalized_value)
+            `INSERT INTO person_identifiers(person_id,kind,value,normalized_value)
         SELECT last_insert_rowid(),?,?,? WHERE NOT EXISTS (${identity}) AND ${writable}`,
           )
           .bind(item.kind, value, value, item.kind, value, pollId),
       );
     }
+    const members =
+      input.action === 'add'
+        ? `SELECT value AS id FROM json_each(allowed_person_ids) UNION ${identity}`
+        : `SELECT value AS id FROM json_each(allowed_person_ids) WHERE value NOT IN (${identity})`;
+    // Read and replace JSON in the UPDATE, never from a stale JS snapshot.
     sql.push(
       db
         .prepare(
-          `INSERT INTO poll_allowlist (poll_id,person_id,added_at,revoked_at)
-      SELECT ?,person_id,?,? FROM person_identifiers WHERE kind=? AND normalized_value=? AND ${writable}
-      ON CONFLICT (poll_id,person_id) DO UPDATE SET revoked_at=excluded.revoked_at`,
+          `UPDATE polls SET allowed_person_ids=(SELECT json_group_array(id) FROM (SELECT id FROM (${members}) ORDER BY id))
+      WHERE id=? AND status!='archived'`,
         )
-        .bind(
-          pollId,
-          now,
-          input.action === 'revoke' ? now : null,
-          item.kind,
-          value,
-          pollId,
-        ),
+        .bind(item.kind, value, pollId),
     );
   }
   return sql;
@@ -55,8 +53,7 @@ export async function changeAllowlist(
 ) {
   const p = await getPoll(db, slug);
   if (p.status === 'archived') reject(409, 'archived', 'Archived polls cannot change.');
-  // Revoking an unknown identifier must not invent a person, or silently miss a typo.
-  if (input.action === 'revoke') {
+  if (input.action === 'remove') {
     for (const item of input.identifiers) {
       const value = item.kind === 'email' ? item.value.toLowerCase() : item.value;
       if (
@@ -67,7 +64,7 @@ export async function changeAllowlist(
           .bind(item.kind, value)
           .first())
       )
-        reject(400, 'unknown_identifier', 'Cannot revoke an unknown identifier.');
+        reject(400, 'unknown_identifier', 'Cannot remove an unknown identifier.');
     }
   }
   const results = await db.batch<Record<string, unknown>>([
@@ -83,8 +80,8 @@ export async function listAllowlist(db: D1Database, slug: string) {
   return (
     await db
       .prepare(
-        `SELECT a.person_id AS personId,p.name,a.added_at AS addedAt,a.revoked_at AS revokedAt
-    FROM poll_allowlist a JOIN people p ON p.id=a.person_id WHERE a.poll_id=? ORDER BY a.person_id`,
+        `SELECT person.id AS personId,person.name FROM polls p,
+    json_each(p.allowed_person_ids) j JOIN people person ON person.id=j.value WHERE p.id=? ORDER BY person.id`,
       )
       .bind(p.id)
       .all()

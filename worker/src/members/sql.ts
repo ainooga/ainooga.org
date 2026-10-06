@@ -41,7 +41,12 @@ export function snapshot(sql: ImportSql, input: MemberInput): D1PreparedStatemen
       [input.source, input.sourceKey, input.source, email],
     ),
     prepare(`SELECT * FROM person_identifiers WHERE person_id=${person}`, [email]),
-    prepare(`SELECT * FROM memberships WHERE person_id=${person}`, [email]),
+    prepare(
+      `SELECT o.id,op.person_id FROM organizations o LEFT JOIN organization_people op
+      ON op.organization_id=o.id AND op.person_id=${person} AND op.relationship='employee'
+      WHERE lower(trim(o.name))=lower(trim(?))`,
+      [email, input.company],
+    ),
     prepare(
       `SELECT * FROM subscriptions WHERE kind='event_invites' AND person_id=${person}`,
       [email],

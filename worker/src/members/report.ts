@@ -13,7 +13,7 @@ const fieldSchema = z
         'professionalRole',
         'email',
         'source',
-        'membership',
+        'member',
         'phone',
         'linkedin',
         'eventInvites',
@@ -64,7 +64,6 @@ export function importReport(rows: Row[][], input: MemberInput): ImportResult {
   add('person', person ? 'unchanged' : 'create');
   if (person) {
     add('name', fieldAction(person.name, input.name));
-    add('company', fieldAction(person.company, input.company));
     add(
       'professionalRole',
       fieldAction(person.professional_role, input.professionalRole),
@@ -72,7 +71,8 @@ export function importReport(rows: Row[][], input: MemberInput): ImportResult {
   }
   add('email', person ? 'unchanged' : 'create');
   add('source', rows[1]!.length ? 'unchanged' : 'create');
-  add('membership', membershipAction(rows[3]![0], rows[1]![0]));
+  add('member', rows[5]!.some((r) => r.tag === 'member') ? 'unchanged' : 'create');
+  add('company', companyAction(rows[3]![0], input.company));
   for (const contact of contacts(input))
     add(
       contact.kind,
@@ -101,9 +101,9 @@ function registrationAction(row: Row | undefined, status: string): Action {
   if (!row) return 'create';
   return row.registration_status === status ? 'unchanged' : 'preserve';
 }
-function membershipAction(row: Row | undefined, source: Row | undefined): Action {
-  if (!row) return 'create';
-  return row.status === 'active' && row.source === source?.id ? 'unchanged' : 'preserve';
+function companyAction(row: Row | undefined, company: string | null): Action {
+  if (company === null || row?.person_id != null) return 'unchanged';
+  return row ? 'fill' : 'create';
 }
 function subscriptionAction(row: Row | undefined, input: MemberInput): Action {
   if (!row) return 'create';

@@ -49,7 +49,14 @@ async function main(): Promise<void> {
   const remote = flags.includes('--remote');
   const target = remote ? 'remote-ainooga-d1' : 'local-ainooga-d1';
   const db = new WranglerStore(remote);
-  if (remote && command === 'backfill') await requireMaintenance();
+  if (
+    remote &&
+    (command === 'backfill' ||
+      (command === 'migrate' &&
+        (await db.query("SELECT name FROM sqlite_master WHERE name='memberships'"))
+          .length > 0))
+  )
+    await requireMaintenance();
   await dispatch(command, db, target);
   console.log(`${command} completed (${remote ? 'remote' : 'local'}).`);
 }

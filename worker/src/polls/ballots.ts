@@ -39,7 +39,7 @@ export async function submitBallot(
     sessionStatement(deps.db, voter, p.id),
     deps.db
       .prepare(
-        'SELECT request_id,payload_hash,attempt_nonce FROM poll_submission_receipts WHERE poll_id=? AND person_id=?',
+        'SELECT request_id,payload_hash,attempt_nonce FROM poll_ballots WHERE poll_id=? AND person_id=?',
       )
       .bind(p.id, voter.personId),
     ballotStatement(deps.db, p.id, voter.personId),

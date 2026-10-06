@@ -1,3 +1,4 @@
+import { organizationWrites } from './organizations.js';
 import { contacts, type MemberInput } from './schemas.js';
 import { permitted, type ImportSql } from './sql.js';
 
@@ -5,9 +6,9 @@ export function peopleWrites(sql: ImportSql, input: MemberInput) {
   const { write, person, email } = sql;
   return [
     write(
-      `INSERT INTO people (name,company,professional_role) SELECT ?,?,?
+      `INSERT INTO people (name,professional_role) SELECT ?,?
       WHERE ${permitted} AND ${person} IS NULL`,
-      [input.name, input.company, input.professionalRole, email],
+      [input.name, input.professionalRole, email],
     ),
     write(
       `INSERT INTO person_identifiers (person_id,kind,value,normalized_value)
@@ -21,12 +22,7 @@ export function peopleWrites(sql: ImportSql, input: MemberInput) {
       ON CONFLICT(source,source_key) DO UPDATE SET last_imported_at=strftime('%Y-%m-%dT%H:%M:%fZ','now')`,
       [email, input.source, input.sourceKey],
     ),
-    write(
-      `INSERT INTO memberships (person_id,status,source)
-      SELECT person_id,'active',id FROM person_sources WHERE source=? AND source_key=? AND ${permitted}
-      ON CONFLICT(person_id) DO NOTHING`,
-      [input.source, input.sourceKey],
-    ),
+    ...organizationWrites(sql, input),
     ...contacts(input).map((c) =>
       write(
         `INSERT INTO person_identifiers (person_id,kind,value,normalized_value)
@@ -34,7 +30,7 @@ export function peopleWrites(sql: ImportSql, input: MemberInput) {
         [email, c.kind, c.value, c.normalized],
       ),
     ),
-    ...input.tags.map((tag) =>
+    ...[...new Set(['member', ...input.tags])].map((tag) =>
       write(
         `INSERT INTO person_tags (person_id,tag)
       SELECT ${person},? WHERE ${permitted} ON CONFLICT(person_id,tag) DO NOTHING`,
@@ -48,7 +44,6 @@ export function peopleWrites(sql: ImportSql, input: MemberInput) {
 function profileWrites({ write, person, email }: ImportSql, input: MemberInput) {
   return [
     ['name', input.name],
-    ['company', input.company],
     ['professional_role', input.professionalRole],
   ]
     .filter(([, value]) => value !== null)

@@ -1,3 +1,4 @@
+import { eligiblePerson } from '../polls/eligibility.js';
 import type { AuthDependencies, Identity, Poll } from './types.js';
 
 export async function createEmailChallenge(
@@ -52,10 +53,9 @@ export async function consumeEmail(
       consumed_by = CASE WHEN proof_hash = ? THEN ? ELSE NULL END
       WHERE id = ? AND browser_hash = ? AND poll_id = ? AND kind = 'email'
       AND consumed_by IS NULL AND expires_at > ? AND attempts < 5
-      AND EXISTS (SELECT 1 FROM person_identifiers i JOIN poll_allowlist a ON a.person_id = i.person_id
-        JOIN polls p ON p.id = a.poll_id WHERE i.id = auth_challenges.identifier_id
+      AND EXISTS (SELECT 1 FROM person_identifiers i JOIN polls p ON ${eligiblePerson('i.person_id')} WHERE i.id = auth_challenges.identifier_id
         AND i.normalized_value = auth_challenges.identifier_value
-        AND a.poll_id = auth_challenges.poll_id AND a.revoked_at IS NULL AND p.status = 'published')`,
+        AND p.id = auth_challenges.poll_id AND p.status = 'published')`,
       )
       .bind(proofHash, sessionHash, id, browserHash, poll.id, now),
     deps.db

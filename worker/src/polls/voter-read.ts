@@ -22,7 +22,7 @@ export async function readDetails(db: D1Database, p: PollRow, voter: Voter) {
     db.prepare('SELECT * FROM polls WHERE id=?').bind(p.id),
     db
       .prepare(
-        'SELECT id,label,origin,position FROM poll_options WHERE poll_id=? ORDER BY position,id',
+        'SELECT id,label,origin,position,description FROM poll_options WHERE poll_id=? ORDER BY position,id',
       )
       .bind(p.id),
   ]);

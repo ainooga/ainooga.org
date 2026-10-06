@@ -116,7 +116,7 @@ it.each(['before_vote', 'after_vote', 'never'] as const)(
     expect((await f.admin('/topics/results')).status).toBe(200);
   },
 );
-it('deduplicates normalized write-ins, retains them on edits, and excludes revoked ballots until restoration', async () => {
+it('deduplicates normalized write-ins, retains them on edits, and retains accepted ballots after eligibility removal', async () => {
   f = await pollFixture();
   const cookie = await f.ready();
   const submission = await f.ballotFor(cookie);
@@ -160,17 +160,17 @@ it('deduplicates normalized write-ins, retains them on edits, and excludes revok
       action,
       identifiers: [{ kind: 'email', value: 'voter@example.com' }],
     });
-  await change('revoke');
+  await change('remove');
   expect(
     (await f.request('/api/polls/topics', 'GET', undefined, { Cookie: cookie })).status,
   ).toBe(401);
   expect(await (await f.admin('/topics/results')).json()).toMatchObject({
-    ballotCount: 0,
+    ballotCount: 1,
     eligibleCount: 0,
-    options: expect.arrayContaining([expect.objectContaining({ votes: 0 })]),
+    options: expect.arrayContaining([expect.objectContaining({ votes: 1 })]),
   });
   expect(await (await f.admin('/topics/ballots')).json()).toMatchObject([
-    { personId: 2, revision: 3, revokedAt: expect.any(String) },
+    { personId: 2, revision: 3, currentlyEligible: false },
   ]);
   await change('add');
   expect(await (await f.admin('/topics/results')).json()).toMatchObject({
@@ -202,6 +202,8 @@ it('rejects foreign options, disabled write-ins and invalid write-in lengths wit
         .status,
     );
   expect(
-    await f.store.query('SELECT count(*) AS n FROM poll_submission_receipts'),
+    await f.store.query(
+      'SELECT count(*) AS n FROM poll_ballots WHERE request_id IS NOT NULL',
+    ),
   ).toEqual([{ n: 0 }]);
 });

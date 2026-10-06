@@ -8,46 +8,53 @@ afterEach(async () => {
   vi.restoreAllMocks();
 });
 
-it('reuses a newsletter/poll person while preserving identity, consent, membership and attendance', async () => {
+it('reuses a newsletter/poll person while preserving identity, consent, company relationships and attendance', async () => {
   f = await memberFixture();
   const input = memberInput();
   input.email = ' Voter@Example.com '.trim();
   await f.store.execute([
-    "UPDATE people SET company='Existing',professional_role=NULL WHERE id=2",
+    'UPDATE people SET professional_role=NULL WHERE id=2',
+    "INSERT INTO organizations(id,name) VALUES(1,'Existing')",
+    "INSERT INTO organization_people VALUES(1,2,'employee')",
     "UPDATE person_identifiers SET verified_at='2026-01-01T00:00:00.000Z' WHERE id=2",
     "INSERT INTO subscriptions(person_id,email_identifier_id,kind,status,confirmation_token_hash) VALUES(2,2,'newsletter','pending','keep-token')",
     "INSERT INTO person_sources(id,person_id,source,source_key) VALUES(50,2,'manual','existing')",
-    "INSERT INTO memberships(person_id,status,joined_at,ended_at,source) VALUES(2,'inactive','2020-01-01','2025-01-01',50)",
-    "INSERT INTO organizer_permissions(person_id,permission) VALUES(2,'polls:manage')",
   ]);
   const before = await f.store.query('SELECT * FROM person_identifiers');
-  const memberships = await f.store.query('SELECT * FROM memberships');
+  const companies = await f.store.query('SELECT * FROM organization_people');
   const newsletter = await f.store.query('SELECT * FROM subscriptions');
-  const allowlist = await f.store.query('SELECT * FROM poll_allowlist');
-  const permissions = await f.store.query('SELECT * FROM organizer_permissions');
+  const allowlist = await f.store.query(
+    'SELECT id,allowed_person_ids FROM polls ORDER BY id',
+  );
   const response = await f.importMember(input);
   expect(response.status).toBe(200);
   expect((await response.json()).actions).toEqual(
     expect.arrayContaining([
       { field: 'name', action: 'preserve' },
-      { field: 'company', action: 'preserve' },
+      { field: 'company', action: 'create' },
       { field: 'professionalRole', action: 'fill' },
-      { field: 'membership', action: 'preserve' },
+      { field: 'member', action: 'create' },
     ]),
   );
   expect(await f.store.query('SELECT count(*) AS n FROM people')).toEqual([{ n: 3 }]);
   expect(
-    await f.store.query('SELECT name,company,professional_role FROM people WHERE id=2'),
-  ).toEqual([{ name: 'Voter', company: 'Existing', professional_role: 'Engineer' }]);
+    await f.store.query('SELECT name,professional_role FROM people WHERE id=2'),
+  ).toEqual([{ name: 'Voter', professional_role: 'Engineer' }]);
   expect(await f.store.query('SELECT * FROM person_identifiers WHERE id<=4')).toEqual(
     before,
   );
-  expect(await f.store.query('SELECT * FROM memberships')).toEqual(memberships);
+  expect(await f.store.query('SELECT * FROM organization_people')).toEqual(
+    expect.arrayContaining(companies),
+  );
+  expect(await f.store.query('SELECT count(*) AS n FROM organization_people')).toEqual([
+    { n: 2 },
+  ]);
   expect(
     await f.store.query("SELECT * FROM subscriptions WHERE kind='newsletter'"),
   ).toEqual(newsletter);
-  expect(await f.store.query('SELECT * FROM poll_allowlist')).toEqual(allowlist);
-  expect(await f.store.query('SELECT * FROM organizer_permissions')).toEqual(permissions);
+  expect(
+    await f.store.query('SELECT id,allowed_person_ids FROM polls ORDER BY id'),
+  ).toEqual(allowlist);
   await f.store.execute([
     "UPDATE event_participation SET registration_status='cancelled',attendance_status='attended',checked_in_at='2026-01-01T18:00:00.000Z'",
   ]);
@@ -160,7 +167,8 @@ it('rolls back the entire member on a late SQL failure and redacts diagnostics',
   for (const table of [
     'events',
     'event_links',
-    'memberships',
+    'organizations',
+    'organization_people',
     'person_sources',
     'subscriptions',
     'person_tags',
@@ -186,7 +194,7 @@ it('reports and fills blank fields consistently and races safely with newsletter
     { kind: 'newsletter', status: 'pending' },
   ]);
   await f.store.execute([
-    "UPDATE people SET company='  ' WHERE name='Example Member'",
+    'DELETE FROM organization_people',
     "UPDATE events SET location=' '",
   ]);
   const proposed = await (await f.importMember(input, true)).json();
@@ -197,8 +205,10 @@ it('reports and fills blank fields consistently and races safely with newsletter
   });
   expect(await (await f.importMember(input)).json()).toEqual(proposed);
   expect(
-    await f.store.query("SELECT company FROM people WHERE name='Example Member'"),
-  ).toEqual([{ company: 'Example Company' }]);
+    await f.store.query(
+      "SELECT o.name FROM organizations o JOIN organization_people op ON op.organization_id=o.id JOIN people p ON p.id=op.person_id WHERE p.name='Example Member'",
+    ),
+  ).toEqual([{ name: 'Example Company' }]);
   expect(await f.store.query('SELECT location FROM events')).toEqual([
     { location: 'Example venue' },
   ]);

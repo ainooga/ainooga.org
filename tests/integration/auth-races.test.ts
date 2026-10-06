@@ -119,7 +119,7 @@ describe('logout and authentication races', () => {
   });
 
   it.each([
-    "UPDATE poll_allowlist SET revoked_at='now' WHERE poll_id=2",
+    "UPDATE polls SET allowed_person_ids='[]' WHERE id=2",
     "UPDATE polls SET status='draft' WHERE id=2",
     'UPDATE person_identifiers SET person_id=3 WHERE id=4',
     "UPDATE person_identifiers SET normalized_value='999999999999999999' WHERE id=4",

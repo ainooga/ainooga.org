@@ -1,7 +1,7 @@
 // @vitest-environment node
 import { BackgroundTasks } from '../helpers/background';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { chapterDatabase } from '../helpers/d1';
+import { chapterDatabase, migration } from '../helpers/d1';
 import { createDb } from '../../worker/src/db/client';
 import { handleSubscribe } from '../../worker/src/subscribe';
 import { handleContactSponsor } from '../../worker/src/contact-sponsor';
@@ -19,6 +19,12 @@ class EmailRecorder implements EmailSender {
 let context: Awaited<ReturnType<typeof chapterDatabase>>;
 beforeEach(async () => {
   context = await chapterDatabase();
+  for (const name of [
+    '0003_voter_auth.sql',
+    '0004_poll_api.sql',
+    '0005_simplify_chapter.sql',
+  ])
+    await migration(context.store, name);
 });
 afterEach(async () => {
   await context.dispose();
@@ -100,11 +106,15 @@ describe('forms against local D1', () => {
     expect(await context.store.query('SELECT id,name FROM people')).toEqual([
       { id: 4, name: 'Existing' },
     ]);
-    expect(await context.store.query('SELECT COUNT(*) AS n FROM memberships')).toEqual([
-      { n: 0 },
-    ]);
     expect(
-      await context.store.query('SELECT COUNT(*) AS n FROM organizer_permissions'),
+      await context.store.query(
+        "SELECT COUNT(*) AS n FROM person_tags WHERE tag='member'",
+      ),
+    ).toEqual([{ n: 0 }]);
+    expect(
+      await context.store.query(
+        "SELECT COUNT(*) AS n FROM sqlite_master WHERE name='organizer_permissions'",
+      ),
     ).toEqual([{ n: 0 }]);
   });
 

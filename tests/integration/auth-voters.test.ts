@@ -159,9 +159,7 @@ describe('email verification', () => {
     ).toBe(400);
     f.deps.botValid = true;
     const c = await emailChallenge(f);
-    await f.store.execute([
-      "UPDATE poll_allowlist SET revoked_at = 'now' WHERE poll_id=2",
-    ]);
+    await f.store.execute(["UPDATE polls SET allowed_person_ids='[]' WHERE id=2"]);
     expect(
       (await f.call(verifyPath, { challengeId: c.id, code: '123456' }, c.browser)).status,
     ).toBe(400);
@@ -180,7 +178,7 @@ describe('voter sessions', () => {
       await (await f.call('/api/polls/other/session', undefined, cookie)).json(),
     ).toEqual({ authenticated: false });
     expect((await f.call('/api/admin/me', undefined, cookie)).status).toBe(401);
-    await f.store.execute(["UPDATE poll_allowlist SET revoked_at='now' WHERE poll_id=2"]);
+    await f.store.execute(["UPDATE polls SET allowed_person_ids='[]' WHERE id=2"]);
     expect(
       await (await f.call('/api/polls/verified/session', undefined, cookie)).json(),
     ).toEqual({ authenticated: false });

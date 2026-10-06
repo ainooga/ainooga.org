@@ -1,6 +1,6 @@
 import { reject } from '../auth/http.js';
 import type { PollInput } from './schemas.js';
-import { normalizeLabel } from './schemas.js';
+import { normalizeLabel, optionValue } from './schemas.js';
 import { adminDetail, definition, getPoll } from './store.js';
 
 function draftChildren(db: D1Database, input: PollInput): D1PreparedStatement[] {
@@ -8,26 +8,20 @@ function draftChildren(db: D1Database, input: PollInput): D1PreparedStatement[] 
   return [
     db.prepare(`DELETE FROM poll_options WHERE poll_id IN (${poll})`).bind(input.slug),
     db
-      .prepare(`DELETE FROM poll_eligible_tags WHERE poll_id IN (${poll})`)
-      .bind(input.slug),
-    db
       .prepare(
-        `INSERT INTO poll_options (poll_id,label,normalized_label,position,origin)
-      SELECT p.id,json_extract(j.value,'$.label'),json_extract(j.value,'$.normalized'),j.key,'predefined'
+        `INSERT INTO poll_options (poll_id,label,normalized_label,position,origin,description)
+      SELECT p.id,json_extract(j.value,'$.label'),json_extract(j.value,'$.normalized'),j.key,'predefined',json_extract(j.value,'$.description')
       FROM polls p,json_each(?) j WHERE p.slug = ? AND p.status = 'draft'`,
       )
       .bind(
         JSON.stringify(
-          input.options.map((label) => ({ label, normalized: normalizeLabel(label) })),
+          input.options.map((o) => {
+            const value = optionValue(o);
+            return { ...value, normalized: normalizeLabel(value.label) };
+          }),
         ),
         input.slug,
       ),
-    db
-      .prepare(
-        `INSERT INTO poll_eligible_tags (poll_id,tag) SELECT p.id,j.value
-      FROM polls p,json_each(?) j WHERE p.slug = ? AND p.status = 'draft'`,
-      )
-      .bind(JSON.stringify(input.eligibleTags), input.slug),
   ];
 }
 function values(p: PollInput) {
@@ -43,6 +37,7 @@ function values(p: PollInput) {
     p.endsAt,
     Number(p.allowEdits),
     p.editDeadline,
+    JSON.stringify(p.eligibleTags),
   ];
 }
 export async function createPoll(
@@ -56,8 +51,8 @@ export async function createPoll(
     await db.batch([
       db
         .prepare(
-          `INSERT INTO polls (title,description,identity_mode,min_selections,max_selections,allow_write_ins,results_visibility,starts_at,ends_at,allow_edits,edit_deadline,slug,created_by,created_at,updated_at)
-        VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+          `INSERT INTO polls (title,description,identity_mode,min_selections,max_selections,allow_write_ins,results_visibility,starts_at,ends_at,allow_edits,edit_deadline,eligible_tags,slug,created_by,created_at,updated_at)
+        VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
         )
         .bind(...values(p), p.slug, personId, now, now),
       ...draftChildren(db, p),
@@ -83,7 +78,7 @@ export async function updatePoll(
   const result = await db.batch([
     db
       .prepare(
-        `UPDATE polls SET title=?,description=?,identity_mode=?,min_selections=?,max_selections=?,allow_write_ins=?,results_visibility=?,starts_at=?,ends_at=?,allow_edits=?,edit_deadline=?,updated_at=? WHERE slug=? AND status='draft'`,
+        `UPDATE polls SET title=?,description=?,identity_mode=?,min_selections=?,max_selections=?,allow_write_ins=?,results_visibility=?,starts_at=?,ends_at=?,allow_edits=?,edit_deadline=?,eligible_tags=?,updated_at=? WHERE slug=? AND status='draft'`,
       )
       .bind(...values(p), now, slug),
     ...draftChildren(db, p),
@@ -99,6 +94,7 @@ async function updatePublished(db: D1Database, p: PollInput, now: string) {
       ...input,
       title: '',
       description: '',
+      options: input.options.map(optionValue),
       eligibleTags: [...input.eligibleTags].sort(),
     });
   if (frozen(current) !== frozen(p))

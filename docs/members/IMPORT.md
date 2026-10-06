@@ -1,6 +1,6 @@
 # Member imports
 
-Use an organizer API token to import normalized JSON through the Worker. Cloudflare credentials are not needed. The API adds chapter data without subscribing anyone to the newsletter, verifying their identity, granting organizer permissions, or adding them to a poll.
+Use an organizer API token to import normalized JSON through the Worker. Cloudflare credentials are not needed. The API adds chapter data without subscribing anyone to the newsletter, verifying their identity, or granting organizer access. Every imported person receives the `member` tag, which immediately makes them eligible for polls using that tag.
 
 The [synthetic example](./example.json) is the complete input format. Keep real input, source converters, and reports in ignored `ai/`. Never put them in `content/`, `static/`, committed fixtures, or this directory.
 
@@ -30,7 +30,8 @@ Each member is one atomic request. The file is **not** one transaction: earlier 
 The file is an array of member objects, at most 5 MiB and 10,000 entries. Every field in the example is required. Use `null` for unknown optional values and empty arrays for absent tags/registrations. Unknown properties are rejected, including internal IDs, permissions, verification, and attendance fields. Each record must fit within 16 KiB and contain at most 25 tags and 25 registrations.
 
 - `source` is a lowercase provenance namespace. `sourceKey` is that source's stable record key. Matching uses normalized email and `(source, sourceKey)`; existing associations must agree. An existing person with a different key under the same source requires manual reconciliation. Names, phones, and LinkedIn URLs never merge people.
-- Missing people, email/contact identifiers, and active memberships are created. New identifiers are unverified; membership dates remain unknown. Existing memberships retain their status, dates, and provenance. Missing people in a later file are not deleted or deactivated.
+- Missing people and email/contact identifiers are created, and the `member` tag is added. New identifiers are unverified. Missing people in a later file are not deleted or untagged. Membership is a tag, separate from consent.
+- `company` creates or reuses an organization by trimmed, case-insensitive name and adds an `employee` relationship. Existing organization relationships remain; changed company names add a relationship without guessing whether the old one ended.
 - Missing profile fields are filled. Existing values and verification are preserved. Tags and phone/LinkedIn identifiers are additive. Email normalization trims and lowercases without stripping dots or plus suffixes. Phone normalization removes formatting without adding a country code. LinkedIn values may be HTTPS URLs on `linkedin.com` or `www.linkedin.com`, or relative paths resolved against `https://www.linkedin.com`; the original value is retained.
 - `eventInvites.status` accepts only `unknown` or `unsubscribed`. An explicit opt-out can suppress an existing invitation subscription and clears pending confirmation tokens. An unknown preference never restores consent. Existing opt-out dates are retained; missing dates can be filled. Newsletter subscriptions and their confirmation links remain unchanged. No email is sent.
 - Events match only by `(platform, externalId)`. New events use supplied metadata; existing populated metadata and links are preserved. Optional missing metadata can be filled. Dates are UTC with milliseconds; `endsAt` must follow `startsAt`. URLs require HTTPS without embedded credentials. Timezones must be recognized IANA names.
@@ -42,12 +43,12 @@ The file is an array of member objects, at most 5 MiB and 10,000 entries. Every 
 
 Successful responses contain `{ actions: [{ field, action }], conflicts: [] }`. Preview returns `identity_conflict` in `conflicts` with no actions when associations disagree. Import returns HTTP 409 for that conflict, with no writes for that member. Validation/body-size/authentication errors use the existing 400/413/401/403 conventions. Errors never echo submitted values. SQL failures roll back the entire member, including newly created events. Responses are not cached, and application error logs contain only a request ID.
 
-This feature needs no migration, secret, or new readiness flag. Deploy the Worker through the existing build workflow after merge. For an explicitly authorized production upload:
+This version requires migration 0005 and its matching Worker. Follow the [schema rollout](../DATABASE.md#schema-simplification-rollout) before importing. It adds no secret or readiness flag. For an explicitly authorized production upload:
 
 1. Keep the original export and reviewed normalized file in ignored storage. Resolve validation errors and review a production preview.
 2. Record the baseline with `pnpm db:size --remote`.
 3. Run `import` with the production environment file. Save its report under `ai/`; investigate any preserved differences or conflicts.
 4. Rerun `preview`, reconcile every input member/event/registration with the outcomes, and record the new size. An identical file should propose no content additions or fills.
-5. Complete the deferred newsletter, Turnstile voting, and restricted-poll checks after import. Membership alone does not make a person eligible; use the existing poll allowlist workflow.
+5. Complete the deferred newsletter, Turnstile voting, and restricted-poll checks after import. The `member` tag grants access to polls configured with that tag; explicit allowances are optional.
 
 If interrupted, rerun the same file. If the file was wrong, stop and inspect the affected records before a targeted correction; do not delete shared people or restore the whole database over newer activity. Database recovery procedures remain in [DATABASE.md](../DATABASE.md).

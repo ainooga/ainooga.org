@@ -87,14 +87,14 @@ it('runs the real CLI through preview, a lost committed response, and safe recov
   expect(requests).toBe(0);
   const preview = JSON.parse((await run('preview')).stdout);
   expect(preview.changes.create).toBe(19);
-  expect(await f.store.query('SELECT * FROM memberships')).toEqual([]);
+  expect(await f.store.query("SELECT * FROM person_tags WHERE tag='member'")).toEqual([]);
   await expect(run('import')).rejects.toMatchObject({
     stderr: expect.stringContaining('after 1 confirmed members'),
   });
   expect(modes).toEqual(['preview', 'preview', 'preview', 'preview', 'import', 'import']);
-  expect(await f.store.query('SELECT count(*) AS n FROM memberships')).toEqual([
-    { n: 2 },
-  ]);
+  expect(
+    await f.store.query("SELECT count(*) AS n FROM person_tags WHERE tag='member'"),
+  ).toEqual([{ n: 2 }]);
   const retried = await run('import');
   expect(JSON.parse(retried.stdout)).toMatchObject({
     changes: { create: 0, fill: 0 },

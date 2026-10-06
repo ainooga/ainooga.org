@@ -1,3 +1,4 @@
+import { eligiblePerson } from './eligibility.js';
 import type { Env } from '../types.js';
 import type { AuthDependencies } from '../auth/types.js';
 import { cookie } from '../auth/cookies.js';
@@ -8,9 +9,8 @@ import type { PollRow } from './store.js';
 
 export const sessionFrom = `FROM voter_sessions s
   JOIN person_identifiers i ON i.id=s.identifier_id AND i.person_id=s.person_id AND i.normalized_value=s.identifier_value
-  JOIN poll_allowlist a ON a.person_id=s.person_id
-  JOIN polls p ON p.id=a.poll_id`;
-export const sessionWhere = `s.token_hash=? AND s.expires_at>${DATABASE_NOW} AND p.id=? AND a.revoked_at IS NULL
+  JOIN polls p ON ${eligiblePerson('s.person_id')}`;
+export const sessionWhere = `s.token_hash=? AND s.expires_at>${DATABASE_NOW} AND p.id=?
   AND p.status='published' AND (s.assurance='verified' OR (s.poll_id=p.id AND p.identity_mode='honor'))`;
 export interface Voter {
   personId: number;

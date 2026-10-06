@@ -63,6 +63,8 @@
             <span
               >{option.label}{#if option.origin === 'write_in'}<span class="poll-note"
                   >&nbsp;(write-in)</span
+                >{/if}{#if option.description}<br /><span class="poll-note"
+                  >{option.description}</span
                 >{/if}</span
             >
           </label>

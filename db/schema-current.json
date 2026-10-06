@@ -1,0 +1,225 @@
+{
+  "migration": "0005_simplify_chapter.sql",
+  "definitions": [
+    {
+      "type": "table",
+      "name": "auth_challenges",
+      "sql": "CREATE TABLE auth_challenges (\n  id TEXT PRIMARY KEY NOT NULL,\n  kind TEXT NOT NULL CHECK (kind IN ('email', 'discord')),\n  poll_id INTEGER NOT NULL REFERENCES polls(id) ON DELETE RESTRICT ON UPDATE RESTRICT,\n  identifier_id INTEGER REFERENCES person_identifiers(id) ON DELETE RESTRICT ON UPDATE RESTRICT,\n  identifier_value TEXT,\n  browser_hash TEXT NOT NULL,\n  proof_hash TEXT,\n  attempts INTEGER NOT NULL DEFAULT 0 CHECK (attempts BETWEEN 0 AND 5),\n  consumed_by TEXT,\n  created_at TEXT NOT NULL,\n  expires_at TEXT NOT NULL CHECK (expires_at > created_at),\n  CHECK ((kind = 'email' AND identifier_id IS NOT NULL AND identifier_value IS NOT NULL AND proof_hash IS NOT NULL) OR kind = 'discord')\n)"
+    },
+    {
+      "type": "table",
+      "name": "contact_requests",
+      "sql": "CREATE TABLE contact_requests (\n  id INTEGER PRIMARY KEY AUTOINCREMENT,\n  person_id INTEGER REFERENCES people(id) ON DELETE RESTRICT ON UPDATE RESTRICT,\n  submitted_name TEXT NOT NULL,\n  submitted_phone TEXT NOT NULL,\n  preferred_date TEXT,\n  preferred_time TEXT,\n  source TEXT DEFAULT 'sponsor',\n  created_at TEXT DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))\n)"
+    },
+    {
+      "type": "table",
+      "name": "event_links",
+      "sql": "CREATE TABLE event_links (\n  event_id INTEGER NOT NULL REFERENCES events(id) ON DELETE RESTRICT ON UPDATE RESTRICT,\n  platform TEXT NOT NULL CHECK (length(trim(platform, char(9,10,11,12,13,32))) > 0),\n  external_id TEXT,\n  url TEXT NOT NULL CHECK (length(trim(url, char(9,10,11,12,13,32))) > 0),\n  PRIMARY KEY (event_id, platform),\n  UNIQUE (platform, external_id)\n)"
+    },
+    {
+      "type": "table",
+      "name": "event_participation",
+      "sql": "CREATE TABLE event_participation (\n  event_id INTEGER NOT NULL REFERENCES events(id) ON DELETE RESTRICT ON UPDATE RESTRICT,\n  person_id INTEGER NOT NULL REFERENCES people(id) ON DELETE RESTRICT ON UPDATE RESTRICT,\n  registration_status TEXT CHECK (registration_status IN ('invited', 'approved', 'pending_approval', 'declined', 'waitlist', 'cancelled')),\n  attendance_status TEXT NOT NULL DEFAULT 'unknown' CHECK (attendance_status IN ('unknown', 'attended', 'absent')),\n  registered_at TEXT,\n  checked_in_at TEXT,\n  source TEXT NOT NULL CHECK (length(trim(source, char(9,10,11,12,13,32))) > 0),\n  updated_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),\n  PRIMARY KEY (event_id, person_id),\n  CHECK (checked_in_at IS NULL OR attendance_status = 'attended')\n)"
+    },
+    {
+      "type": "table",
+      "name": "events",
+      "sql": "CREATE TABLE events (\n  id INTEGER PRIMARY KEY AUTOINCREMENT,\n  name TEXT NOT NULL CHECK (length(trim(name, char(9,10,11,12,13,32))) > 0),\n  starts_at TEXT NOT NULL,\n  ends_at TEXT CHECK (ends_at > starts_at),\n  timezone TEXT,\n  location TEXT,\n  capacity INTEGER CHECK (capacity IS NULL OR (typeof(capacity) = 'integer' AND capacity >= 0)),\n  ainooga_url TEXT UNIQUE,\n  created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),\n  updated_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))\n)"
+    },
+    {
+      "type": "view",
+      "name": "events_with_counts",
+      "sql": "CREATE VIEW events_with_counts AS\n  SELECT e.*,(SELECT count(*) FROM event_participation ep\n    WHERE ep.event_id=e.id AND ep.registration_status='approved') AS registered\n  FROM events e"
+    },
+    {
+      "type": "index",
+      "name": "idx_auth_challenges_expiry",
+      "sql": "CREATE INDEX idx_auth_challenges_expiry ON auth_challenges(expires_at)"
+    },
+    {
+      "type": "index",
+      "name": "idx_auth_challenges_identifier",
+      "sql": "CREATE INDEX idx_auth_challenges_identifier ON auth_challenges(identifier_id, created_at)"
+    },
+    {
+      "type": "index",
+      "name": "idx_auth_challenges_poll",
+      "sql": "CREATE INDEX idx_auth_challenges_poll ON auth_challenges(poll_id)"
+    },
+    {
+      "type": "index",
+      "name": "idx_choices_option",
+      "sql": "CREATE INDEX idx_choices_option ON poll_ballot_choices(option_id,poll_id)"
+    },
+    {
+      "type": "index",
+      "name": "idx_contact_requests_person",
+      "sql": "CREATE INDEX idx_contact_requests_person ON contact_requests(person_id)"
+    },
+    {
+      "type": "index",
+      "name": "idx_contact_requests_source_created",
+      "sql": "CREATE INDEX idx_contact_requests_source_created ON contact_requests(source, created_at)"
+    },
+    {
+      "type": "index",
+      "name": "idx_identifiers_contact",
+      "sql": "CREATE INDEX idx_identifiers_contact ON person_identifiers(kind, normalized_value)\n  WHERE kind IN ('phone', 'linkedin')"
+    },
+    {
+      "type": "index",
+      "name": "idx_identifiers_voting",
+      "sql": "CREATE UNIQUE INDEX idx_identifiers_voting ON person_identifiers(kind, normalized_value)\n  WHERE kind IN ('email', 'discord')"
+    },
+    {
+      "type": "index",
+      "name": "idx_options_creator",
+      "sql": "CREATE INDEX idx_options_creator ON poll_options(created_by_person_id)"
+    },
+    {
+      "type": "index",
+      "name": "idx_options_order",
+      "sql": "CREATE INDEX idx_options_order ON poll_options(poll_id, position, id)"
+    },
+    {
+      "type": "index",
+      "name": "idx_organization_people_person",
+      "sql": "CREATE INDEX idx_organization_people_person ON organization_people(person_id, organization_id)"
+    },
+    {
+      "type": "index",
+      "name": "idx_organizations_name",
+      "sql": "CREATE UNIQUE INDEX idx_organizations_name ON organizations(lower(trim(name)))"
+    },
+    {
+      "type": "index",
+      "name": "idx_participation_person",
+      "sql": "CREATE INDEX idx_participation_person ON event_participation(person_id, event_id)"
+    },
+    {
+      "type": "index",
+      "name": "idx_participation_registration",
+      "sql": "CREATE INDEX idx_participation_registration ON event_participation(event_id, registration_status)"
+    },
+    {
+      "type": "index",
+      "name": "idx_person_sources_person",
+      "sql": "CREATE INDEX idx_person_sources_person ON person_sources(person_id)"
+    },
+    {
+      "type": "index",
+      "name": "idx_person_tags_tag",
+      "sql": "CREATE INDEX idx_person_tags_tag ON person_tags(tag, person_id)"
+    },
+    {
+      "type": "index",
+      "name": "idx_polls_creator",
+      "sql": "CREATE INDEX idx_polls_creator ON polls(created_by)"
+    },
+    {
+      "type": "index",
+      "name": "idx_polls_schedule",
+      "sql": "CREATE INDEX idx_polls_schedule ON polls(status, starts_at, ends_at)"
+    },
+    {
+      "type": "index",
+      "name": "idx_sponsorships_organization",
+      "sql": "CREATE INDEX idx_sponsorships_organization ON sponsorships(organization_id)"
+    },
+    {
+      "type": "index",
+      "name": "idx_sponsorships_person",
+      "sql": "CREATE INDEX idx_sponsorships_person ON sponsorships(person_id)"
+    },
+    {
+      "type": "index",
+      "name": "idx_subscriptions_email",
+      "sql": "CREATE INDEX idx_subscriptions_email ON subscriptions(email_identifier_id, person_id)"
+    },
+    {
+      "type": "index",
+      "name": "idx_subscriptions_status",
+      "sql": "CREATE INDEX idx_subscriptions_status ON subscriptions(kind, status)"
+    },
+    {
+      "type": "index",
+      "name": "idx_voter_sessions_expiry",
+      "sql": "CREATE INDEX idx_voter_sessions_expiry ON voter_sessions(expires_at)"
+    },
+    {
+      "type": "index",
+      "name": "idx_voter_sessions_identifier",
+      "sql": "CREATE INDEX idx_voter_sessions_identifier ON voter_sessions(identifier_id, person_id)"
+    },
+    {
+      "type": "index",
+      "name": "idx_voter_sessions_poll",
+      "sql": "CREATE INDEX idx_voter_sessions_poll ON voter_sessions(poll_id)"
+    },
+    {
+      "type": "table",
+      "name": "organization_people",
+      "sql": "CREATE TABLE organization_people (\n  organization_id INTEGER NOT NULL REFERENCES organizations(id) ON DELETE RESTRICT ON UPDATE RESTRICT,\n  person_id INTEGER NOT NULL REFERENCES people(id) ON DELETE RESTRICT ON UPDATE RESTRICT,\n  relationship TEXT NOT NULL CHECK (relationship IN ('contact', 'employee', 'representative')),\n  PRIMARY KEY (organization_id, person_id, relationship)\n)"
+    },
+    {
+      "type": "table",
+      "name": "organizations",
+      "sql": "CREATE TABLE organizations (\n  id INTEGER PRIMARY KEY AUTOINCREMENT,\n  name TEXT NOT NULL CHECK (length(trim(name, char(9,10,11,12,13,32))) > 0),\n  website TEXT,\n  created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),\n  updated_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))\n)"
+    },
+    {
+      "type": "table",
+      "name": "people",
+      "sql": "CREATE TABLE people (\n  id INTEGER PRIMARY KEY AUTOINCREMENT,\n  name TEXT,\n  professional_role TEXT,\n  created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),\n  updated_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))\n)"
+    },
+    {
+      "type": "table",
+      "name": "person_identifiers",
+      "sql": "CREATE TABLE person_identifiers (\n  id INTEGER PRIMARY KEY AUTOINCREMENT,\n  person_id INTEGER NOT NULL REFERENCES people(id) ON DELETE RESTRICT ON UPDATE RESTRICT,\n  kind TEXT NOT NULL CHECK (kind IN ('email', 'discord', 'phone', 'linkedin')),\n  value TEXT NOT NULL CHECK (length(trim(value, char(9,10,11,12,13,32))) > 0),\n  normalized_value TEXT NOT NULL CHECK (length(trim(normalized_value, char(9,10,11,12,13,32))) > 0),\n  display_label TEXT,\n  verified_at TEXT,\n  created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),\n  UNIQUE (person_id, kind, normalized_value),\n  UNIQUE (id, person_id)\n)"
+    },
+    {
+      "type": "table",
+      "name": "person_sources",
+      "sql": "CREATE TABLE person_sources (\n  id INTEGER PRIMARY KEY AUTOINCREMENT,\n  person_id INTEGER NOT NULL REFERENCES people(id) ON DELETE RESTRICT ON UPDATE RESTRICT,\n  source TEXT NOT NULL CHECK (length(trim(source, char(9,10,11,12,13,32))) > 0),\n  source_key TEXT NOT NULL CHECK (length(trim(source_key, char(9,10,11,12,13,32))) > 0),\n  first_imported_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),\n  last_imported_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),\n  UNIQUE (source, source_key),\n  UNIQUE (id, person_id)\n)"
+    },
+    {
+      "type": "table",
+      "name": "person_tags",
+      "sql": "CREATE TABLE person_tags (\n  person_id INTEGER NOT NULL REFERENCES people(id) ON DELETE RESTRICT ON UPDATE RESTRICT,\n  tag TEXT NOT NULL CHECK (length(trim(tag, char(9,10,11,12,13,32))) > 0 AND tag = lower(trim(tag))),\n  PRIMARY KEY (person_id, tag)\n)"
+    },
+    {
+      "type": "table",
+      "name": "poll_ballot_choices",
+      "sql": "CREATE TABLE poll_ballot_choices (\n  ballot_id INTEGER NOT NULL,\n  poll_id INTEGER NOT NULL,\n  option_id INTEGER NOT NULL,\n  PRIMARY KEY (ballot_id,option_id),\n  FOREIGN KEY (ballot_id,poll_id) REFERENCES poll_ballots(id,poll_id) ON DELETE RESTRICT ON UPDATE RESTRICT,\n  FOREIGN KEY (option_id,poll_id) REFERENCES poll_options(id,poll_id) ON DELETE RESTRICT ON UPDATE RESTRICT\n)"
+    },
+    {
+      "type": "table",
+      "name": "poll_ballots",
+      "sql": "CREATE TABLE \"poll_ballots\" (\n  id INTEGER PRIMARY KEY AUTOINCREMENT,\n  poll_id INTEGER NOT NULL REFERENCES polls(id) ON DELETE RESTRICT ON UPDATE RESTRICT,\n  person_id INTEGER NOT NULL REFERENCES people(id) ON DELETE RESTRICT ON UPDATE RESTRICT,\n  submitted_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),\n  updated_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),\n  revision INTEGER NOT NULL DEFAULT 1 CHECK (typeof(revision)='integer' AND revision>=1),\n  request_id TEXT,\n  payload_hash TEXT,\n  attempt_nonce TEXT,\n  UNIQUE (poll_id,person_id),\n  UNIQUE (id,poll_id),\n  CHECK ((request_id IS NULL AND payload_hash IS NULL AND attempt_nonce IS NULL)\n    OR (request_id IS NOT NULL AND payload_hash IS NOT NULL AND attempt_nonce IS NOT NULL\n      AND length(payload_hash)=64 AND length(attempt_nonce)=64))\n)"
+    },
+    {
+      "type": "table",
+      "name": "poll_options",
+      "sql": "CREATE TABLE poll_options (\n  id INTEGER PRIMARY KEY AUTOINCREMENT,\n  poll_id INTEGER NOT NULL REFERENCES polls(id) ON DELETE RESTRICT ON UPDATE RESTRICT,\n  label TEXT NOT NULL CHECK (length(trim(label, char(9,10,11,12,13,32))) > 0),\n  normalized_label TEXT NOT NULL CHECK (length(trim(normalized_label, char(9,10,11,12,13,32))) > 0),\n  position INTEGER NOT NULL DEFAULT 0 CHECK (typeof(position) = 'integer' AND position >= 0),\n  origin TEXT NOT NULL CHECK (origin IN ('predefined', 'write_in')),\n  created_by_person_id INTEGER REFERENCES people(id) ON DELETE RESTRICT ON UPDATE RESTRICT,\n  created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')), description TEXT\n  CHECK (description IS NULL OR length(description)<=1000),\n  UNIQUE (poll_id, normalized_label),\n  UNIQUE (id, poll_id),\n  CHECK (origin <> 'write_in' OR created_by_person_id IS NOT NULL)\n)"
+    },
+    {
+      "type": "table",
+      "name": "polls",
+      "sql": "CREATE TABLE polls (\n  id INTEGER PRIMARY KEY AUTOINCREMENT,\n  slug TEXT NOT NULL UNIQUE CHECK (length(trim(slug, char(9,10,11,12,13,32))) > 0),\n  title TEXT NOT NULL CHECK (length(trim(title, char(9,10,11,12,13,32))) > 0),\n  description TEXT,\n  status TEXT NOT NULL DEFAULT 'draft' CHECK (status IN ('draft', 'published', 'archived')),\n  identity_mode TEXT NOT NULL CHECK (identity_mode IN ('honor', 'verified')),\n  min_selections INTEGER NOT NULL CHECK (typeof(min_selections) = 'integer' AND min_selections >= 1),\n  max_selections INTEGER CHECK (max_selections IS NULL OR (typeof(max_selections) = 'integer' AND max_selections >= min_selections)),\n  allow_write_ins INTEGER NOT NULL DEFAULT 0 CHECK (allow_write_ins IN (0, 1)),\n  results_visibility TEXT NOT NULL CHECK (results_visibility IN ('before_vote', 'after_vote', 'never')),\n  starts_at TEXT NOT NULL,\n  ends_at TEXT NOT NULL CHECK (ends_at > starts_at),\n  allow_edits INTEGER NOT NULL DEFAULT 0 CHECK (allow_edits IN (0, 1)),\n  edit_deadline TEXT,\n  created_by INTEGER NOT NULL REFERENCES people(id) ON DELETE RESTRICT ON UPDATE RESTRICT,\n  created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),\n  updated_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')), eligible_tags TEXT NOT NULL DEFAULT '[]'\n  CHECK (json_valid(eligible_tags) AND json_type(eligible_tags)='array'), allowed_person_ids TEXT NOT NULL DEFAULT '[]'\n  CHECK (json_valid(allowed_person_ids) AND json_type(allowed_person_ids)='array'),\n  CHECK (edit_deadline IS NULL OR (allow_edits = 1 AND edit_deadline > starts_at AND edit_deadline <= ends_at))\n)"
+    },
+    {
+      "type": "table",
+      "name": "sponsorships",
+      "sql": "CREATE TABLE sponsorships (\n  id INTEGER PRIMARY KEY AUTOINCREMENT,\n  organization_id INTEGER REFERENCES organizations(id) ON DELETE RESTRICT ON UPDATE RESTRICT,\n  person_id INTEGER REFERENCES people(id) ON DELETE RESTRICT ON UPDATE RESTRICT,\n  tier TEXT NOT NULL CHECK (tier IN ('platinum', 'gold', 'silver', 'bronze', 'community')),\n  starts_at TEXT,\n  ends_at TEXT,\n  CHECK ((organization_id IS NULL) <> (person_id IS NULL)),\n  CHECK (starts_at IS NULL OR ends_at IS NULL OR ends_at > starts_at)\n)"
+    },
+    {
+      "type": "table",
+      "name": "subscriptions",
+      "sql": "CREATE TABLE subscriptions (\n  id INTEGER PRIMARY KEY AUTOINCREMENT,\n  person_id INTEGER NOT NULL REFERENCES people(id) ON DELETE RESTRICT ON UPDATE RESTRICT,\n  email_identifier_id INTEGER NOT NULL,\n  kind TEXT NOT NULL CHECK (kind IN ('newsletter', 'event_invites')),\n  status TEXT NOT NULL CHECK (status IN ('unknown', 'pending', 'confirmed', 'unsubscribed')),\n  confirmation_token_hash TEXT UNIQUE,\n  confirmation_expires_at TEXT,\n  confirmed_at TEXT,\n  unsubscribed_at TEXT,\n  source TEXT DEFAULT 'website',\n  created_at TEXT DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),\n  UNIQUE (person_id, kind),\n  FOREIGN KEY (email_identifier_id, person_id) REFERENCES person_identifiers(id, person_id) ON DELETE RESTRICT ON UPDATE RESTRICT\n)"
+    },
+    {
+      "type": "table",
+      "name": "voter_sessions",
+      "sql": "CREATE TABLE voter_sessions (\n  token_hash TEXT PRIMARY KEY NOT NULL,\n  person_id INTEGER NOT NULL REFERENCES people(id) ON DELETE RESTRICT ON UPDATE RESTRICT,\n  identifier_id INTEGER NOT NULL,\n  identifier_value TEXT NOT NULL,\n  assurance TEXT NOT NULL CHECK (assurance IN ('honor', 'verified')),\n  poll_id INTEGER REFERENCES polls(id) ON DELETE RESTRICT ON UPDATE RESTRICT,\n  created_at TEXT NOT NULL,\n  expires_at TEXT NOT NULL CHECK (expires_at > created_at),\n  FOREIGN KEY (identifier_id, person_id) REFERENCES person_identifiers(id, person_id) ON DELETE RESTRICT ON UPDATE RESTRICT,\n  CHECK ((assurance = 'honor' AND poll_id IS NOT NULL) OR (assurance = 'verified' AND poll_id IS NULL))\n)"
+    }
+  ]
+}
