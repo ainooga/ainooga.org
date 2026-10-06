@@ -70,11 +70,29 @@ The file lives under `miniflare-D1DatabaseObject/`. A `-wal` file can contain re
 
 Before 0005, the migration command reconciles retained subscribers and inquiries. It fills missing records, preserves current subscription status and consumed-token state, hashes still-needed pending tokens, and stops on conflicting identities/provenance/inquiry IDs. Obsolete legacy preferences are deliberately discarded. SQL guards prevent dropping unreconciled records. Reconciliation can be rerun after interruption. Historical migrations remain unchanged.
 
+Before any reconciliation or migration writes, the command checks existing organizations for name collisions using SQLite's `lower(trim(name))`, matching the new unique index. A collision stops the command with grouped organization IDs, without printing names. Rename distinct organizations or deliberately reconcile duplicates while preserving their sponsorships and person relationships, then rerun the command.
+
 Migration 0005 replaces subscription `status` with `subscribed`, stored as SQLite `0`/`1`. For event invitations, every old state except `unsubscribed` becomes true. For newsletters, only old `pending` and `confirmed` records become true. Newsletter confirmation is separate: `confirmation_pending=1` means confirmation is still required. Newsletter recipients must satisfy both `subscribed=1` and `confirmation_pending=0`. Existing confirmation tokens and timestamps are preserved; dates are not invented for historical records. Member imports never create newsletter subscriptions.
 
 If a local database already applied an earlier version of the undeployed 0005 migration, applying migrations again will not replay it. Recreate that development database and re-import using the updated boolean format before running the updated Worker. Do not reset production.
 
 ### Schema simplification rollout
+
+Before entering maintenance, run this read-only query against the target database. No rows means no current organization-name collisions. The migration command checks again before writing; the unique index remains the final constraint.
+
+```sql
+SELECT group_concat(id, ', ') AS organization_ids
+FROM (
+  SELECT id, lower(trim(name)) AS name_key
+  FROM organizations
+  ORDER BY id
+)
+GROUP BY name_key
+HAVING count(*) > 1
+ORDER BY min(id);
+```
+
+For production, use `pnpm exec wrangler d1 execute ainooga-d1 --config worker/wrangler.toml --remote --command "SELECT group_concat(id, ', ') AS organization_ids FROM (SELECT id, lower(trim(name)) AS name_key FROM organizations ORDER BY id) GROUP BY name_key HAVING count(*) > 1 ORDER BY min(id)"`. Resolve any reported collisions before continuing.
 
 1. Before merging/deploying this Worker, set existing Worker secrets `CHAPTER_SCHEMA_READY=false` and `AUTH_READY=false`. Confirm form/confirmation maintenance responses and API 503 responses; allow in-flight requests to finish. `AUTH_READY=false` also stops scheduled auth cleanup. Pause other database writers.
 2. Deploy the matching Worker with maintenance still enabled. Do not run old application code against the simplified schema.

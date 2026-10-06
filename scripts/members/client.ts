@@ -7,6 +7,14 @@ import {
 export interface MemberApi {
   request(input: MemberInput, preview: boolean): Promise<ImportResult>;
 }
+// Only fixed client diagnostics and numeric HTTP statuses belong in this type.
+export class MemberClientError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'MemberClientError';
+  }
+}
+
 export class MemberClient implements MemberApi {
   private readonly base: URL;
   constructor(
@@ -14,29 +22,29 @@ export class MemberClient implements MemberApi {
     url: string,
   ) {
     if (!/^[a-f0-9]{64}$/.test(token))
-      throw new Error('Set AINOOGA_API_TOKEN to your organizer token.');
+      throw new MemberClientError('Set AINOOGA_API_TOKEN to your organizer token.');
     try {
       this.base = new URL(url);
     } catch {
-      throw new Error('Set AINOOGA_API_URL to an explicit API origin.');
+      throw new MemberClientError('Set AINOOGA_API_URL to an explicit API origin.');
     }
     const local = ['localhost', '127.0.0.1', '[::1]'].includes(this.base.hostname);
     if (this.base.protocol !== 'https:' && !(local && this.base.protocol === 'http:'))
-      throw new Error('Use HTTPS for the API URL, except on localhost.');
+      throw new MemberClientError('Use HTTPS for the API URL, except on localhost.');
     if (
       [this.base.username, this.base.password, this.base.search, this.base.hash].some(
         (value) => value !== '',
       ) ||
       this.base.pathname !== '/'
     )
-      throw new Error(
+      throw new MemberClientError(
         'AINOOGA_API_URL must be an origin without credentials, path, query or fragment.',
       );
   }
   async request(input: MemberInput, preview: boolean): Promise<ImportResult> {
     const payload = JSON.stringify(input);
     if (Buffer.byteLength(payload) > 16384)
-      throw new Error('API payload exceeds 16 KiB.');
+      throw new MemberClientError('API payload exceeds 16 KiB.');
     let response: Response;
     try {
       response = await fetch(
@@ -53,13 +61,16 @@ export class MemberClient implements MemberApi {
         },
       );
     } catch {
-      throw new Error('API request failed or timed out; redirects are refused.');
+      throw new MemberClientError(
+        'API request failed or timed out; redirects are refused.',
+      );
     }
-    if (!response.ok) throw new Error(`API request failed (HTTP ${response.status}).`);
+    if (!response.ok)
+      throw new MemberClientError(`API request failed (HTTP ${response.status}).`);
     try {
       return importResultSchema.parse(await response.json());
     } catch {
-      throw new Error('Invalid import API response.');
+      throw new MemberClientError('Invalid import API response.');
     }
   }
 }
