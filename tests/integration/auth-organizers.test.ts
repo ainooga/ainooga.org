@@ -19,7 +19,11 @@ describe('organizer API access', () => {
     expect(response.status).toBe(200);
     expect(await response.json()).toEqual({ name: 'organizer', personId: 1 });
     expect(response.headers.get('Cache-Control')).toBe('no-store');
-    expect(await f.store.query('SELECT * FROM organizer_permissions')).toEqual([]);
+    expect(
+      await f.store.query(
+        "SELECT * FROM sqlite_master WHERE name='organizer_permissions'",
+      ),
+    ).toEqual([]);
   });
   it('rejects missing, incorrect, and removed credentials', async () => {
     expect((await f.call('/api/admin/me')).status).toBe(401);

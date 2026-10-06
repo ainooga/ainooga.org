@@ -1,3 +1,4 @@
+import { eligiblePerson } from './eligibility.js';
 import { getPoll } from './store.js';
 
 export function resultStatements(db: D1Database, pollId: number) {
@@ -6,16 +7,14 @@ export function resultStatements(db: D1Database, pollId: number) {
       .prepare(
         `SELECT o.id,o.label,count(v.option_id) AS votes FROM poll_options o
       LEFT JOIN (SELECT c.option_id FROM poll_ballot_choices c
-        JOIN poll_ballots b ON b.id=c.ballot_id JOIN poll_allowlist a ON a.poll_id=b.poll_id AND a.person_id=b.person_id
-        WHERE b.poll_id=? AND a.revoked_at IS NULL) v ON v.option_id=o.id
+        JOIN poll_ballots b ON b.id=c.ballot_id WHERE b.poll_id=?) v ON v.option_id=o.id
       WHERE o.poll_id=? GROUP BY o.id ORDER BY o.position,o.id`,
       )
       .bind(pollId, pollId),
     db
       .prepare(
-        `SELECT count(*) AS eligibleCount,count(b.id) AS ballotCount FROM poll_allowlist a
-      LEFT JOIN poll_ballots b ON b.poll_id=a.poll_id AND b.person_id=a.person_id
-      WHERE a.poll_id=? AND a.revoked_at IS NULL`,
+        `SELECT (SELECT count(*) FROM people person WHERE ${eligiblePerson('person.id')}) AS eligibleCount,
+      (SELECT count(*) FROM poll_ballots WHERE poll_id=p.id) AS ballotCount FROM polls p WHERE p.id=?`,
       )
       .bind(pollId),
   ];
@@ -31,16 +30,17 @@ export async function organizerBallots(db: D1Database, slug: string) {
   const p = await getPoll(db, slug);
   const rows = await db
     .prepare(
-      `SELECT b.person_id AS personId,p.name,b.revision,b.submitted_at AS submittedAt,b.updated_at AS updatedAt,a.revoked_at AS revokedAt,
+      `SELECT b.person_id AS personId,p.name,b.revision,b.submitted_at AS submittedAt,b.updated_at AS updatedAt,${eligiblePerson('b.person_id', 'poll')} AS currentlyEligible,
     (SELECT json_group_array(json_object('kind',kind,'value',value)) FROM person_identifiers WHERE person_id=p.id AND kind IN ('email','discord')) AS identifiers,
     (SELECT json_group_array(option_id) FROM poll_ballot_choices WHERE ballot_id=b.id) AS selections
-    FROM poll_ballots b JOIN people p ON p.id=b.person_id JOIN poll_allowlist a ON a.poll_id=b.poll_id AND a.person_id=b.person_id
+    FROM poll_ballots b JOIN people p ON p.id=b.person_id JOIN polls poll ON poll.id=b.poll_id
     WHERE b.poll_id=? ORDER BY b.person_id`,
     )
     .bind(p.id)
     .all();
   return rows.results.map(({ identifiers, selections, ...row }) => ({
     ...row,
+    currentlyEligible: row.currentlyEligible === 1,
     identifiers: JSON.parse(String(identifiers)) as unknown,
     optionIds: JSON.parse(String(selections)) as number[],
   }));

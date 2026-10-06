@@ -1,3 +1,4 @@
+import { eligiblePerson } from './eligibility.js';
 import { reject } from '../auth/http.js';
 import type { PollInput } from './schemas.js';
 
@@ -16,6 +17,8 @@ export interface PollRow {
   ends_at: string;
   allow_edits: number;
   edit_deadline: string | null;
+  eligible_tags: string;
+  allowed_person_ids: string;
 }
 export async function getPoll(db: D1Database, slug: string): Promise<PollRow> {
   return (
@@ -29,19 +32,17 @@ export async function options(db: D1Database, id: number) {
   return (
     await db
       .prepare(
-        'SELECT id,label,origin,position FROM poll_options WHERE poll_id = ? ORDER BY position,id',
+        'SELECT id,label,origin,position,description FROM poll_options WHERE poll_id = ? ORDER BY position,id',
       )
       .bind(id)
-      .all<{ id: number; label: string; origin: string; position: number }>()
+      .all<{
+        id: number;
+        label: string;
+        origin: string;
+        position: number;
+        description: string | null;
+      }>()
   ).results;
-}
-export async function tags(db: D1Database, id: number): Promise<string[]> {
-  return (
-    await db
-      .prepare('SELECT tag FROM poll_eligible_tags WHERE poll_id = ? ORDER BY tag')
-      .bind(id)
-      .all<{ tag: string }>()
-  ).results.map((r) => r.tag);
 }
 export function config(p: PollRow) {
   return {
@@ -64,33 +65,30 @@ export async function definition(db: D1Database, p: PollRow): Promise<PollInput>
     ...config(p),
     options: (await options(db, p.id))
       .filter((o) => o.origin === 'predefined')
-      .map((o) => o.label),
-    eligibleTags: await tags(db, p.id),
+      .map((o) =>
+        o.description === null ? o.label : { label: o.label, description: o.description },
+      ),
+    eligibleTags: JSON.parse(p.eligible_tags) as string[],
   };
 }
-export const activeVoters = `SELECT person_id FROM poll_allowlist WHERE poll_id = ? AND revoked_at IS NULL`;
-export const tagVoters = `SELECT DISTINCT t.person_id FROM person_tags t JOIN poll_eligible_tags e ON e.tag = t.tag WHERE e.poll_id = ?`;
-export const effectiveVoters = `${activeVoters} UNION SELECT person_id FROM (${tagVoters}) WHERE person_id NOT IN (SELECT person_id FROM poll_allowlist WHERE poll_id = ? AND revoked_at IS NOT NULL)`;
 export async function preview(db: D1Database, p: PollRow) {
   const missing = (
     await db
       .prepare(
-        'SELECT tag FROM poll_eligible_tags WHERE poll_id = ? AND NOT EXISTS (SELECT 1 FROM person_tags WHERE tag = poll_eligible_tags.tag)',
+        `SELECT j.value AS tag FROM polls p,json_each(p.eligible_tags) j
+    WHERE p.id=? AND NOT EXISTS (SELECT 1 FROM person_tags WHERE tag=j.value)`,
       )
       .bind(p.id)
       .all<{ tag: string }>()
   ).results.map((r) => r.tag);
-  const sql = p.status === 'draft' ? effectiveVoters : activeVoters;
-  const args = p.status === 'draft' ? [p.id, p.id, p.id] : [p.id];
   const count = await db
-    .prepare(`SELECT count(*) AS total FROM (${sql})`)
-    .bind(...args)
+    .prepare(
+      `SELECT count(*) AS total FROM people person JOIN polls p
+    ON ${eligiblePerson('person.id')} WHERE p.id=?`,
+    )
+    .bind(p.id)
     .first<{ total: number }>();
-  return {
-    eligibleCount: count!.total,
-    missingTags: missing,
-    snapshot: p.status !== 'draft',
-  };
+  return { eligibleCount: count!.total, missingTags: missing };
 }
 export async function adminDetail(db: D1Database, slug: string) {
   const p = await getPoll(db, slug);

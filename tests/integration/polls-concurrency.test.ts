@@ -36,7 +36,9 @@ it('accepts one concurrent first submission and one concurrent edit, with no los
     { n: 1 },
   ]);
   expect(
-    await f.store.query('SELECT count(*) AS n FROM poll_submission_receipts'),
+    await f.store.query(
+      'SELECT count(*) AS n FROM poll_ballots WHERE request_id IS NOT NULL',
+    ),
   ).toEqual([{ n: 1 }]);
 });
 it('makes simultaneous identical retries idempotent and rejects changed payloads', async () => {
@@ -157,7 +159,7 @@ it.each(['logout', 'revoke', 'archive', 'identifier'] as const)(
         await f.request('/api/auth/logout', 'POST', {}, { Cookie: cookie });
       if (action === 'revoke')
         await f.admin('/topics/allowlist', 'POST', {
-          action: 'revoke',
+          action: 'remove',
           identifiers: [{ kind: 'email', value: 'voter@example.com' }],
         });
       if (action === 'archive') await f.admin('/topics/archive', 'POST');
@@ -169,11 +171,7 @@ it.each(['logout', 'revoke', 'archive', 'identifier'] as const)(
       gate.release();
     }
     expect((await pending).status).toBe(401);
-    for (const table of [
-      'poll_ballots',
-      'poll_submission_receipts',
-      'poll_ballot_choices',
-    ])
+    for (const table of ['poll_ballots', 'poll_ballot_choices'])
       expect(await f.store.query(`SELECT count(*) AS n FROM ${table}`)).toEqual([
         { n: 0 },
       ]);
@@ -210,7 +208,7 @@ it('rolls back the receipt and option on a later statement failure', async () =>
       })
     ).status,
   ).toBe(500);
-  for (const table of ['poll_ballots', 'poll_submission_receipts'])
+  for (const table of ['poll_ballots'])
     expect(await f.store.query(`SELECT count(*) AS n FROM ${table}`)).toEqual([{ n: 0 }]);
   expect(
     await f.store.query("SELECT count(*) AS n FROM poll_options WHERE origin='write_in'"),

@@ -188,7 +188,7 @@ it('shows upcoming polls and before-vote results without enabling a ballot', asy
   f.api.poll.resultsVisibility = 'before_vote';
   f.mount();
   await screen.findByText(/Voting opens/);
-  await screen.findByText('0 of 2 eligible voters have voted.');
+  await screen.findByText('0 accepted ballots. 2 people are currently eligible.');
   expect(screen.queryByRole('button', { name: 'Submit vote' })).toBeNull();
   f.runtime.advance(1000);
   await tick();
@@ -268,4 +268,13 @@ it('recovers when the Turnstile script throws during widget creation', async () 
   await fireEvent.click(screen.getByRole('button', { name: 'Retry verification' }));
   await enter(bot, 'Email', 'voter@example.com');
   expect(await screen.findByRole('heading', { name: 'Choose a topic' })).toBeTruthy();
+});
+
+it('renders option descriptions as plain text', async () => {
+  const f = setup(true);
+  const text = '<img src=x onerror=alert(1)> **plain text**';
+  f.api.poll.options[0]!.description = text;
+  f.mount();
+  expect(await screen.findByText(text)).toBeTruthy();
+  expect(document.querySelector('img[src="x"]')).toBeNull();
 });

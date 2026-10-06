@@ -16,11 +16,17 @@ it('allows one new write-in, preserves it through edits/revocation, and rejects 
     f.request('/api/polls/topics/ballot', 'PUT', input, { Cookie: cookie });
   const first = submission([], 0, 'My suggestion');
   expect((await send(first)).status).toBe(200);
-  const before = await f.store.query('SELECT * FROM poll_submission_receipts');
+  const before = await f.store.query(
+    'SELECT request_id,payload_hash,attempt_nonce FROM poll_ballots WHERE request_id IS NOT NULL',
+  );
   expect(
     await (await send(submission([], 1, 'Another suggestion'))).json(),
   ).toMatchObject({ code: 'write_in_limit' });
-  expect(await f.store.query('SELECT * FROM poll_submission_receipts')).toEqual(before);
+  expect(
+    await f.store.query(
+      'SELECT request_id,payload_hash,attempt_nonce FROM poll_ballots WHERE request_id IS NOT NULL',
+    ),
+  ).toEqual(before);
   expect(await (await send(first)).json()).toMatchObject({ revision: 1 });
   expect((await send(submission([], 1, ' MY   SUGGESTION '))).status).toBe(200);
   const ids = await optionIds(f.db);

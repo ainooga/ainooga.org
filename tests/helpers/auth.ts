@@ -58,7 +58,7 @@ export class AuthFakes extends BackgroundTasks implements AuthDependencies {
   }
 }
 
-export async function authFixture() {
+export async function authFixture(upgrade = true) {
   const context = await chapterDatabase();
   await migration(context.store, '0003_voter_auth.sql');
   await context.store.execute([
@@ -71,6 +71,10 @@ export async function authFixture() {
     ),
     'INSERT INTO poll_allowlist (poll_id,person_id) VALUES (1,2),(2,2),(3,3)',
   ]);
+  if (upgrade) {
+    await migration(context.store, '0004_poll_api.sql');
+    await migration(context.store, '0005_simplify_chapter.sql');
+  }
   const env: Env = {
     DB: context.db,
     EMAIL: undefined as unknown as SendEmail,

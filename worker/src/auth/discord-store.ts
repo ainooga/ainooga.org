@@ -1,3 +1,4 @@
+import { eligiblePerson } from '../polls/eligibility.js';
 import type { AuthDependencies, Identity, Poll } from './types.js';
 
 export interface DiscordChallenge {
@@ -20,9 +21,9 @@ function claimSession(
     WHERE id = ? AND browser_hash = ? AND poll_id = ? AND kind = 'discord'
       AND consumed_by = 'discord_exchange' AND expires_at > ?
       AND EXISTS (SELECT 1 FROM person_identifiers i
-        JOIN poll_allowlist a ON a.person_id = i.person_id JOIN polls p ON p.id = a.poll_id
+        JOIN polls p ON ${eligiblePerson('i.person_id')}
         WHERE i.id = ? AND i.person_id = ? AND i.kind = 'discord' AND i.normalized_value = ?
-          AND a.poll_id = auth_challenges.poll_id AND a.revoked_at IS NULL AND p.status = 'published')`,
+          AND p.id = auth_challenges.poll_id AND p.status = 'published')`,
     )
     .bind(
       hash,

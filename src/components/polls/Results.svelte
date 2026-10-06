@@ -8,7 +8,8 @@
   <h2 id="poll-results-title">Results</h2>
   {#if page.results !== null}
     <p>
-      {page.results.ballotCount} of {page.results.eligibleCount} eligible voters have voted.
+      {page.results.ballotCount} accepted ballots. {page.results.eligibleCount} people are currently
+      eligible.
     </p>
     <table>
       <caption

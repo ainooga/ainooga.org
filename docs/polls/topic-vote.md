@@ -16,7 +16,8 @@ allowEdits: true
 # null means edits remain open until endsAt.
 editDeadline: null
 options:
-  - Local language models
+  - label: Local language models
+    description: Run small language models on your own hardware.
   - Robotics
   - AI for public interest projects
 # Use the companion eligible-voters.yml as the explicit guest list.

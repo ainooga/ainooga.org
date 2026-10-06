@@ -5,12 +5,12 @@ let f: Awaited<ReturnType<typeof pollFixture>>;
 afterEach(async () => {
   await f?.dispose();
 });
-const ids = (action: 'add' | 'revoke', ...values: string[]) => ({
+const ids = (action: 'add' | 'remove', ...values: string[]) => ({
   action,
   identifiers: values.map((value) => ({ kind: 'email', value })),
 });
 
-it('unions tags and explicit linked identities, respects exclusions and snapshots only once', async () => {
+it('uses live tag eligibility and removes only explicit allowances', async () => {
   f = await pollFixture();
   await f.store.execute([
     "INSERT INTO person_tags VALUES (2,'chapter'),(2,'volunteer'),(3,'chapter')",
@@ -28,10 +28,10 @@ it('unions tags and explicit linked identities, respects exclusions and snapshot
   expect(await (await f.admin('/topics')).json()).toMatchObject({
     eligibility: { eligibleCount: 2 },
   });
-  await f.admin('/topics/allowlist', 'POST', ids('revoke', 'other@example.com'));
+  await f.admin('/topics/allowlist', 'POST', ids('remove', 'other@example.com'));
   expect(await (await f.admin('/topics/publish', 'POST')).json()).toMatchObject({
     status: 'published',
-    eligibility: { eligibleCount: 1 },
+    eligibility: { eligibleCount: 2 },
   });
   await f.store.execute([
     'DELETE FROM person_tags WHERE person_id=2',
@@ -39,10 +39,12 @@ it('unions tags and explicit linked identities, respects exclusions and snapshot
   ]);
   expect((await f.admin('/topics/publish', 'POST')).status).toBe(200);
   expect(await (await f.admin('/topics/allowlist')).json()).toEqual([
-    expect.objectContaining({ personId: 2, revokedAt: null }),
-    expect.objectContaining({ personId: 3, revokedAt: expect.any(String) }),
+    expect.objectContaining({ personId: 2 }),
   ]);
-  await f.admin('/topics/allowlist', 'POST', ids('add', 'other@example.com'));
+  expect(await (await f.admin('/topics')).json()).toMatchObject({
+    eligibility: { eligibleCount: 3 },
+  });
+  await f.admin('/topics/allowlist', 'POST', ids('remove', 'voter@example.com'));
   expect(await (await f.admin('/topics')).json()).toMatchObject({
     eligibility: { eligibleCount: 2 },
   });
@@ -61,10 +63,10 @@ it('creates unverified people idempotently without membership, consent or access
     ),
   ).toEqual([{ n: 1 }]);
   expect(await f.store.query('SELECT count(*) AS n FROM people')).toEqual([{ n: 4 }]);
-  for (const table of ['memberships', 'subscriptions', 'organizer_permissions'])
+  for (const table of ['person_tags', 'subscriptions'])
     expect(await f.store.query(`SELECT count(*) AS n FROM ${table}`)).toEqual([{ n: 0 }]);
   expect(
-    (await f.admin('/topics/allowlist', 'POST', ids('revoke', 'unknown@example.com')))
+    (await f.admin('/topics/allowlist', 'POST', ids('remove', 'unknown@example.com')))
       .status,
   ).toBe(400);
   expect(

@@ -15,6 +15,21 @@ function validDeadline(p: {
   );
 }
 const label = z.string().trim().min(1).max(200);
+const optionSchema = z.union([
+  label,
+  z
+    .object({
+      label,
+      description: z.string().max(1000).nullable().optional(),
+    })
+    .strict(),
+]);
+export function optionValue(value: z.infer<typeof optionSchema>) {
+  return typeof value === 'string'
+    ? { label: value, description: null }
+    : { label: value.label, description: value.description ?? null };
+}
+
 export const identifier = z.discriminatedUnion('kind', [
   z
     .object({ kind: z.literal('email'), value: z.string().trim().max(254).email() })
@@ -47,7 +62,7 @@ export const pollSchema = z
     endsAt: date,
     allowEdits: z.boolean(),
     editDeadline: date.nullable(),
-    options: z.array(label).max(100),
+    options: z.array(optionSchema).max(100),
     eligibleTags: z.array(tag).max(50),
   })
   .strict()
@@ -62,7 +77,10 @@ export const pollSchema = z
         'editDeadline',
         'Requires edits and a deadline after start and at or before end.',
       );
-    if (new Set(p.options.map(normalizeLabel)).size !== p.options.length)
+    if (
+      new Set(p.options.map((o) => normalizeLabel(optionValue(o).label))).size !==
+      p.options.length
+    )
       issue('options', 'Labels must be unique ignoring case and whitespace.');
     if (new Set(p.eligibleTags).size !== p.eligibleTags.length)
       issue('eligibleTags', 'Tags must be unique.');
@@ -75,7 +93,7 @@ export const pollSchema = z
 export type PollInput = z.infer<typeof pollSchema>;
 export const eligibilitySchema = z
   .object({
-    action: z.enum(['add', 'revoke']),
+    action: z.enum(['add', 'remove']),
     identifiers: z.array(identifier).min(1).max(50),
   })
   .strict();

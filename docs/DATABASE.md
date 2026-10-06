@@ -1,30 +1,32 @@
 # Chapter database
 
-The API Worker uses Cloudflare D1. Migration `0002_chapter_schema.sql` implements the chapter schema; `0003_voter_auth.sql` adds voter sessions and verification challenges; `0004_poll_api.sql` adds saved poll eligibility tags and latest ballot submission receipts. The chapter cutover is complete. Authentication migration and enablement remain separate deployment steps; see [API authentication](./API.md). Merging code does not migrate production D1 or import the private member export.
+The API Worker uses Cloudflare D1. Migration `0005_simplify_chapter.sql` reduces the schema to 18 application tables plus the `events_with_counts` view. It requires the matching Worker and a maintenance window. Merging code does not migrate production D1 or import the private member export.
 
 Database tooling lives in the top-level `db/` directory: migration orchestration, preflight, backfill, verification, and size inspection. `migrations/` holds versioned SQL. Modules that use D1 keep their own adapters; the Worker adapter remains in `worker/src/db/`. Run the tooling from the repository root through the existing pnpm commands.
 
 ## Schema
 
-Versioned SQL in `migrations/` is the authoritative schema. The new tables are:
+Versioned SQL in `migrations/` is authoritative. `db/schema-current.json` captures the resulting table, index, and view definitions for verification; update it with future schema migrations.
 
-| Area           | Tables                                                                           | Relationships and rules                                                                                                                                                                           |
-| -------------- | -------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| People         | `people`, `person_identifiers`                                                   | A person has one optional, unsplit `name`. Email, Discord, phone, and LinkedIn identifiers live separately. Email/Discord lookup values are globally unique; phone/LinkedIn values can be shared. |
-| Chapter        | `person_sources`, `memberships`, `person_tags`                                   | Membership is separate from identity. `memberships.source` references a source row belonging to that same person. Source namespace/key pairs are unique. Tags carry no permissions.               |
-| Access         | `organizer_permissions`                                                          | Reserved permission records. Organizer authentication currently uses configured Worker API tokens with one organizer access level; this table is unchanged and unused by authentication.          |
-| Organizations  | `organizations`, `organization_people`, `sponsorships`                           | Relationships are explicit. A sponsorship belongs to exactly one person or organization. Company text on a person does not create an organization.                                                |
-| Existing forms | `subscriptions`, `contact_requests`                                              | One preference per person/category; delivery email must belong to that person. Inquiry details are retained as submitted snapshots and need no email or person link.                              |
-| Events         | `events`, `event_links`, `event_participation`                                   | Markdown owns public event content; `ainooga_url` links D1 records to pages. Provider/ID identifies imported events. RSVP and attendance are separate.                                            |
-| Polls          | `polls`, `poll_options`, `poll_allowlist`, `poll_ballots`, `poll_ballot_choices` | Each poll has its own eligibility list. One ballot per person/poll; composite foreign keys prevent cross-poll choices. Both honor and verified identity modes are represented.                    |
+| Area           | Tables                                                         | Rules                                                                                                                                                  |
+| -------------- | -------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| People         | `people`, `person_identifiers`                                 | One profile with an optional unsplit name. Email/Discord lookup values are globally unique; phone/LinkedIn can be shared.                              |
+| Chapter        | `person_sources`, `person_tags`                                | Provenance and descriptive tags. `member` identifies chapter members; tags can grant poll eligibility, never organizer access or consent.              |
+| Organizations  | `organizations`, `organization_people`, `sponsorships`         | Companies use an `employee` relationship; organization names match trimmed/case-insensitive text. A sponsorship belongs to one person or organization. |
+| Forms          | `subscriptions`, `contact_requests`                            | One preference per person/category. Delivery email belongs to that person. Inquiries retain submitted details with an optional person link.            |
+| Events         | `events`, `event_links`, `event_participation`                 | Capacity is nullable. `events_with_counts.registered` counts approved registrations. Attendance remains separate.                                      |
+| Polls          | `polls`, `poll_options`, `poll_ballots`, `poll_ballot_choices` | Live tag/explicit-person eligibility, optional option descriptions, one ballot per person/poll. Ballots hold latest retry metadata.                    |
+| Authentication | `voter_sessions`, `auth_challenges`                            | Hashed session tokens/proofs, expiry and consumption state. Organizer tokens live in Worker configuration.                                             |
 
-Foreign keys restrict deletion and updates. Timestamp writes use UTC ISO text with milliseconds. Nullable historical fields remain nullable. Integer bounds, boolean/enumerated values, sponsor ownership, poll selection bounds, and time ordering are checked in SQL. No cascading deletion or automatic person merging is provided.
+`person_identifiers.value` preserves display input, for example `Member@Example.com`; `normalized_value` is `member@example.com` for lookup and uniqueness. The two values can also differ for formatted phone numbers and LinkedIn paths.
 
-Polling API tables `poll_eligible_tags` and `poll_submission_receipts` store saved tag criteria and one latest idempotency receipt per person/poll. Tag criteria are resolved once into the allowlist at publication; a receipt references that allowlist and coordinates atomic ballot writes. See [poll rules and rollout](./polls/POLLS.md).
+`event_links` has the composite primary key `(event_id, platform)`. `event_id` is also a foreign key to `events`, so each event can have one link per platform. These constraints serve different purposes; a separate row ID would not replace either rule.
 
-Authentication tables `voter_sessions` and `auth_challenges` contain only hashed session tokens, HMAC email proofs, hashed OAuth/browser state, expiry, and attempt/consumption records alongside their chapter references. Organizer credentials live in a Worker secret, not D1.
+`polls.eligible_tags` and `allowed_person_ids` are JSON arrays, not PostgreSQL arrays or GIN indexes. SQLite cannot enforce a foreign key per JSON element. Organizer endpoints resolve identifiers to existing people, validate tag names, and update allowances atomically. Do not edit arrays directly without validating their contents. Eligibility checks join current people/tags; missing people never authenticate.
 
-The later APIs must enforce organizer authorization, voter proof and eligibility, publication and voting windows, selection counts across rows, write-in acceptance, result visibility, and configuration changes after publication. The schema alone is not an authorization system. Phone and LinkedIn identifiers cannot log into polls.
+Ballots reference people and polls directly. Composite foreign keys on choices still prevent cross-poll selections. Accepted ballots remain counted after eligibility changes. Latest request ID, payload hash and private attempt nonce preserve retry/concurrency behavior without a separate receipt table.
+
+Foreign keys restrict updates/deletes. Historical timestamps remain nullable; new writes use UTC ISO text with milliseconds. The API enforces authorization, selection counts, live eligibility and voting/edit windows. Phone and LinkedIn identifiers cannot log into polls.
 
 ## Existing forms
 
@@ -64,11 +66,25 @@ The file lives under `miniflare-D1DatabaseObject/`. A `-wal` file can contain re
 
 ## Migration behavior
 
-`pnpm cf:migrate:local` applies pending versioned migrations and verifies the current schema, foreign keys, and integrity. An empty local database is initialized automatically. `pnpm cf:migrate` explicitly targets production. Existing chapter databases are verified before migration; populated legacy databases and empty remote databases are rejected. These commands never rerun legacy backfill or compare live records to a migration manifest. They do not deploy the Worker or enable authentication.
+`pnpm cf:migrate:local` applies pending migrations and verifies current definitions, foreign keys and integrity. Empty local databases initialize automatically; populated legacy-only databases and empty remote databases require the historical chapter cutover first. `pnpm cf:migrate` targets production. `pnpm db:verify` checks the current schema without replaying historical backfills.
 
-For poll migration 0004, keep `POLLS_READY` absent/false, apply the migration, verify, then deploy and enable the new routes using the [poll rollout steps](./polls/POLLS.md#development-and-deployment). The two additive tables leave chapter/authentication definitions and existing forms unchanged. Ordinary `db:verify` now checks all definitions through 0004.
+Before 0005, the migration command reconciles retained subscribers and inquiries. It fills missing records, preserves current subscription status and consumed-token state, hashes still-needed pending tokens, and stops on conflicting identities/provenance/inquiry IDs. Obsolete legacy preferences are deliberately discarded. SQL guards prevent dropping unreconciled records. Reconciliation can be rerun after interruption. Historical migrations remain unchanged.
 
-For authentication migration 0003, leave existing forms open, apply the migration, run `pnpm db:verify --remote`, and follow [API deployment](./API.md#configuration-and-deployment). Ordinary verification is safe after application writes.
+Migration 0005 replaces subscription `status` with `subscribed`, stored as SQLite `0`/`1`. For event invitations, every old state except `unsubscribed` becomes true. For newsletters, only old `pending` and `confirmed` records become true. Newsletter confirmation is separate: `confirmation_pending=1` means confirmation is still required. Newsletter recipients must satisfy both `subscribed=1` and `confirmation_pending=0`. Existing confirmation tokens and timestamps are preserved; dates are not invented for historical records. Member imports never create newsletter subscriptions.
+
+If a local database already applied an earlier version of the undeployed 0005 migration, applying migrations again will not replay it. Recreate that development database and re-import using the updated boolean format before running the updated Worker. Do not reset production.
+
+### Schema simplification rollout
+
+1. Before merging/deploying this Worker, set existing Worker secrets `CHAPTER_SCHEMA_READY=false` and `AUTH_READY=false`. Confirm form/confirmation maintenance responses and API 503 responses; allow in-flight requests to finish. `AUTH_READY=false` also stops scheduled auth cleanup. Pause other database writers.
+2. Deploy the matching Worker with maintenance still enabled. Do not run old application code against the simplified schema.
+3. Run `pnpm cf:migrate`, then `pnpm db:verify --remote` and `pnpm db:size --remote`. Keep maintenance enabled if any step fails. Resolve collisions explicitly rather than rerunning the old exact-row backfill.
+4. Reconcile people/subscriptions/inquiries and confirm ballots/choices/revisions survived. Migration copies active old allowances without current tag matches as explicit person IDs. Tagged people use live tags. Old snapshot-versus-manual provenance cannot be recovered; old revocations no longer override matching tags.
+5. Enable `CHAPTER_SCHEMA_READY=true` and `AUTH_READY=true`; keep the existing `POLLS_READY=true`. Deploy the compatible SPA and refresh open poll pages. Check organizer auth, forms, eligible/ineligible poll access, voting/retry and results. Do not reset production.
+
+Set a flag with `pnpm exec wrangler secret put NAME --config worker/wrangler.toml`, entering `false` or `true` at the prompt. A Worker-only rollback after 0005 is incompatible; recovery needs a matching database schema and Worker. See [D1 foreign-key behavior](https://developers.cloudflare.com/d1/sql-api/foreign-keys/) for the table-replacement constraints used by the migration.
+
+### Historical chapter cutover tooling
 
 The following commands are for the historical chapter cutover only. Backfill and cutover verification reject the later authentication schema:
 
@@ -127,15 +143,15 @@ No production operation is part of the automated test suite. No real member uplo
 
 ## Recovery and validation
 
-Before reopening, keep maintenance enabled and either resume the backfill or restore the pre-migration database and its matching Worker version. D1 Time Travel restores the database in place; retain the recorded bookmark and SQL export. See [Time Travel and backups](https://developers.cloudflare.com/d1/reference/time-travel/).
+Before reopening, keep maintenance enabled and either resume the current migration/reconciliation command or restore the pre-migration database and its matching Worker version. Do not run the historical exact-row backfill on schema 0005. D1 Time Travel restores the database in place; retain the recorded bookmark and SQL export. See [Time Travel and backups](https://developers.cloudflare.com/d1/reference/time-travel/).
 
-After reopening, restoring the old snapshot would discard accepted signups, confirmations, and inquiries. Re-enable maintenance, export the current state, and reconcile those writes before attempting recovery. A Worker-only rollback is incompatible with the renamed inquiry table. Legacy table removal is deliberately deferred.
+After reopening, restoring the old snapshot would discard accepted signups, confirmations, and inquiries. Re-enable maintenance, export the current state, and reconcile those writes before attempting recovery. A Worker-only rollback is incompatible with the renamed inquiry table. Migration 0005 removes the legacy tables after reconciliation.
 
 Run `pnpm check` for lint, both TypeScript targets, handler/component tests, and local D1 integration tests. `pnpm test:db` runs the D1 suite alone. Tests cover fresh and populated migrations, interrupted/repeated backfills, conflict rejection, legacy recovery, concurrent signup, confirmation lifecycle, ownership constraints, and poll isolation.
 
 ## Capacity review: 2026-10-04
 
-Run the current-schema rehearsal on a disposable local database:
+The measurements below are historical, from schema 0004. The fixture now targets 0005; rerun it on actual Miniflare/D1 for a current measurement:
 
 ```sh
 pnpm exec vitest run tests/integration/capacity.test.ts
@@ -143,7 +159,7 @@ pnpm exec vitest run tests/integration/capacity.test.ts
 AINOOGA_CAPACITY_INDEXES=1 pnpm exec vitest run tests/integration/capacity.test.ts
 ```
 
-All four migrations are applied. The fixture contains 200 synthetic members with email, phone, LinkedIn-style identifiers, profiles, provenance, memberships, two invitation opt-outs and 198 unknown invitation preferences. It adds 10 events, provider links, and 734 participation records. Membership creates no newsletter consent or organizer grant. Legacy tables remain present but empty; existing production legacy rows are additional storage.
+The original measurement applied all four migrations available at that time. The fixture contains 200 synthetic members with email, phone, LinkedIn-style identifiers, profiles, provenance, memberships, two invitation opt-outs and 198 unknown invitation preferences. It adds 10 events, provider links, and 734 participation records. Membership creates no newsletter consent or organizer grant. Legacy tables remain present but empty; existing production legacy rows are additional storage.
 
 The five-year model retains 24 polls per year. Each poll has 200 eligible members, 200 ballots with two choices each, 10 predefined options, 20 write-ins, and 200 current submission receipts with UUID-length request IDs. This yields 24,000 ballots, 48,000 choices, 3,600 options, and 24,000 receipts. A real ballot edit and identical retry exercise the current query implementation on that dataset. The fixtures seed rows directly for storage measurement; they do not implement or validate the future importer.
 

@@ -1,6 +1,5 @@
 import { authFixture, ORGANIZER_TOKEN, SITE, responseCookie } from './auth';
 import { pollClock } from './poll-clock';
-import { migration } from './d1';
 import { handleAuth } from '../../worker/src/auth/router';
 import type { PollInput } from '../../worker/src/polls/schemas';
 
@@ -25,7 +24,6 @@ export function pollInput(overrides: Partial<PollInput> = {}): PollInput {
 }
 export async function pollFixture() {
   const f = await authFixture();
-  await migration(f.store, '0004_poll_api.sql');
   f.env.POLLS_READY = 'true';
   const clock = await pollClock(f.db, f.deps.time);
   f.deps.db = clock.db;

@@ -38,6 +38,7 @@ it('measures the current schema with 200 synthetic members and 120 retained poll
       '0002_chapter_schema.sql',
       '0003_voter_auth.sql',
       '0004_poll_api.sql',
+      '0005_simplify_chapter.sql',
     ])
       await migration(f.store, name);
     measured.empty = await size();
@@ -54,13 +55,23 @@ it('measures the current schema with 200 synthetic members and 120 retained poll
       { n: 48000 },
     ]);
     expect(
-      await f.store.query('SELECT count(*) AS n FROM poll_submission_receipts'),
+      await f.store.query(
+        'SELECT count(*) AS n FROM poll_ballots WHERE request_id IS NOT NULL',
+      ),
     ).toEqual([{ n: 24000 }]);
     expect(
       await f.store.query(
-        "SELECT count(*) AS n FROM subscriptions WHERE kind='newsletter' OR status='confirmed'",
+        "SELECT count(*) AS n FROM subscriptions WHERE kind='newsletter' OR confirmation_pending=1",
       ),
     ).toEqual([{ n: 0 }]);
+    expect(
+      await f.store.query(
+        'SELECT subscribed,count(*) AS n FROM subscriptions GROUP BY subscribed ORDER BY subscribed',
+      ),
+    ).toEqual([
+      { subscribed: 0, n: 2 },
+      { subscribed: 1, n: 198 },
+    ]);
     const results = await organizerResults(f.db, 'capacity-120');
     expect(results).toMatchObject({ eligibleCount: 200, ballotCount: 200 });
     expect(results.options.reduce((sum, row) => sum + Number(row.votes), 0)).toBe(400);

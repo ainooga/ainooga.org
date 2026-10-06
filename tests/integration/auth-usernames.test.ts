@@ -87,7 +87,7 @@ it('accepts multiple matching identifiers only when they belong to one person', 
 it('honors revocation for both new and existing sessions', async () => {
   const response = await login();
   await f.admin('/topics/allowlist', 'POST', {
-    action: 'revoke',
+    action: 'remove',
     identifiers: [{ kind: 'email', value: 'voter@example.com' }],
   });
   expect((await login()).status).toBe(403);

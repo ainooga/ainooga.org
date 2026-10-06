@@ -27,6 +27,8 @@ pnpm poll publish topic-vote
 
 ## Settings
 
+Choices accept either a label string or `{ label, description }`. Descriptions are optional plain text, up to 1,000 characters. Both labels and descriptions are frozen after publication.
+
 Keep every field in the example, including `null` values and `eligibleTags: []`. Put the description in the Markdown body, not frontmatter. Quote UTC dates ending in `Z`.
 
 | Setting                           | Meaning                                                                                                                                    |
@@ -37,16 +39,16 @@ Keep every field in the example, including `null` values and `eligibleTags: []`.
 | `resultsVisibility`               | `before_vote`, `after_vote`, or `never`, including after closing.                                                                          |
 | `startsAt` / `endsAt`             | Voting opens at the start and stops at the end. Voters see local times.                                                                    |
 | `allowEdits` / `editDeadline`     | With edits enabled, `null` means until closing. An explicit cutoff must be after the start and at or before the end. Otherwise use `null`. |
-| `eligibleTags`                    | Existing person tags, matched with OR. `[]` means explicit guest-list entries only.                                                        |
+| `eligibleTags`                    | Current person tags, matched live with OR. `[]` means explicit guest-list entries only.                                                    |
 
 ## Guest lists and later changes
 
-Publishing snapshots tag matches together with explicit entries. Later tag changes do not alter that list. Missing tags, no eligible voters, expired dates, or impossible selection limits prevent publication.
+Eligibility is any current matching tag OR an explicit person allowance. Tag changes take effect immediately, including on published polls. Missing tags, no eligible voters, expired dates, or impossible selection limits prevent publication.
 
-Guest-list files accept emails and **numeric Discord IDs**, not usernames. Already-linked identifiers share one person and ballot; the CLI does not create links. New identifiers create unverified records without membership, subscriptions, or organizer access. Discord username entry additionally needs the account username on its Discord record, to be populated by the later import. Until then, use email entry.
+Guest-list files accept emails and **numeric Discord IDs**, not usernames. Already-linked identifiers share one person and ballot; the CLI does not create links. New identifiers create unverified records without a `member` tag, subscriptions, or organizer access. Discord username entry additionally needs the account username on its Discord record, to be populated by the later import. Until then, use email entry.
 
 - `pnpm poll update <file>` replaces a draft. After publication, only title, description, and explicit eligibility can change.
-- `pnpm poll allowlist add|revoke <slug> <file>` changes access for everyone in that file. Uploads are repeatable. Revocation overrides tag matches and excludes retained ballots from results; adding again restores them.
+- `pnpm poll allowlist add|remove <slug> <file>` changes explicit allowances. Uploads are repeatable. Removal does not override a matching tag. To remove all access, remove the explicit allowance and every matching person tag. Accepted ballots remain in results; ineligible people cannot read or edit them.
 - `pnpm poll results <slug>` shows totals; `pnpm poll ballots <slug>` exposes individual ballots to organizers. Keep that output private.
 - `pnpm poll archive <slug>` permanently hides the poll. Run `pnpm poll --help` for all commands.
 
@@ -58,6 +60,6 @@ The voter page supports edits when permitted. **Refresh poll** clears unsaved se
 
 ## Development and deployment
 
-Follow [poll setup and deployment](../API.md#poll-setup-and-deployment) for migrations, readiness flags, and local Turnstile configuration. Use `pnpm dev:all` locally. The current UI adds no migration or secret; production still needs the existing poll schema and enabled API. Deploy the compatible Worker before the SPA, refresh any already-open poll pages, and check a controlled poll with real Turnstile. Older pages cannot submit without the new session marker.
+Follow [poll setup and deployment](../API.md#poll-setup-and-deployment) for migrations, readiness flags, and local Turnstile configuration. Run `pnpm worker:dev` and `pnpm dev` in separate terminals locally. This version requires migration 0005; follow the [schema rollout](../DATABASE.md#schema-simplification-rollout). Refresh already-open poll pages and check a controlled poll with real Turnstile. Older pages cannot submit without the new session marker.
 
 Validate changes with `pnpm check`, `pnpm build:spa`, and `pnpm test:e2e:polls`. The browser suite uses disposable local D1 and fake external services. Detailed request formats and limits live in the [API reference](../API.md#poll-api).
