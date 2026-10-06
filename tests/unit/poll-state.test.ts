@@ -53,13 +53,56 @@ it('keeps an uncertain retry possible after the deadline', async () => {
   await page.load();
   const runtime = new FakePollRuntime();
   const form = new BallotForm(page, runtime);
-  form.select(1, true);
+  form.writeIn = 'Gardens';
+  form.writeInDescription = 'AI plants';
   api.failSubmit = new PollError(0, 'network', 'Lost response');
   await form.submit();
   runtime.advance(3 * 86400000);
   await form.submit();
   expect(api.submissions).toHaveLength(2);
   expect(api.submissions[0]).toEqual(api.submissions[1]);
+  expect(api.submissions[0]).toMatchObject({
+    writeIn: 'Gardens',
+    writeInDescription: 'AI plants',
+  });
+});
+
+it('clears both write-in fields on single-choice selection, refresh and cancellation', async () => {
+  const api = new FakePollService();
+  api.authenticated = true;
+  const page = new PollPage('topics', api);
+  await page.load();
+  const form = new BallotForm(page, new FakePollRuntime());
+  for (const reset of [
+    () => form.select(1, true),
+    () => form.refresh(),
+    () => form.cancel(),
+  ]) {
+    form.writeIn = 'Gardens';
+    form.writeInDescription = 'AI plants';
+    await reset();
+    expect(form.writeIn).toBe('');
+    expect(form.writeInDescription).toBe('');
+  }
+});
+
+it('never includes stale write-in fields in an edit submission', async () => {
+  const api = new FakePollService();
+  api.authenticated = true;
+  api.poll.ballot = { revision: 1, optionIds: [1], submittedAt: 'now', updatedAt: 'now' };
+  const page = new PollPage('topics', api);
+  await page.load();
+  const form = new BallotForm(page, new FakePollRuntime());
+  form.startEdit();
+  form.writeIn = 'Stale';
+  form.writeInDescription = 'Stale description';
+  await form.submit();
+  expect(api.submissions[0]).toMatchObject({
+    expectedRevision: 1,
+    optionIds: [1],
+    writeIn: null,
+  });
+  expect(api.submissions[0]?.writeInDescription ?? null).toBeNull();
 });
 it('does not create a fresh vote if reloading after conflict fails', async () => {
   const api = new FakePollService();

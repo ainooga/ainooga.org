@@ -47,7 +47,7 @@ Keep every field in the example, including `null` values and `eligibleTags: []`.
 | --------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
 | `identityMode`                    | Use `honor` for the current voter page; verified sign-in is not yet supported there.                                                       |
 | `minSelections` / `maxSelections` | `1/1`: one choice; `N/N`: exactly N; `1/N`: up to N; `1/null`: any number, at least one.                                                   |
-| `allowWriteIns`                   | One new option per person, up to 200 characters. Accepted write-ins become choices for everyone.                                           |
+| `allowWriteIns`                   | One new option with the first vote: topic up to 200 characters and optional plain-text description up to 1,000 characters.                 |
 | `resultsVisibility`               | `before_vote`, `after_vote`, or `never`, including after closing.                                                                          |
 | `startsAt` / `endsAt`             | Voting opens at the start and stops at the end. Voters see local times.                                                                    |
 | `allowEdits` / `editDeadline`     | With edits enabled, `null` means until closing. An explicit cutoff must be after the start and at or before the end. Otherwise use `null`. |
@@ -65,14 +65,18 @@ For separate guest-list management, the [guest list example](./eligible-voters.y
 - `pnpm poll results <slug>` shows totals; `pnpm poll ballots <slug>` exposes individual ballots to organizers. Keep that output private.
 - `pnpm poll archive <slug>` permanently hides the poll. Run `pnpm poll --help` for all commands.
 
-If another tab changes the voter identity, submitting opens a confirmation dialog. Yes submits the preserved choices as the displayed email or Discord account; No asks for an eligible email in the same dialog. Cancelling keeps the draft. Replacing an existing vote still follows the poll's edit rules.
+If another tab changes the voter identity, submitting opens a confirmation dialog. Yes submits the preserved choices as the displayed email or Discord account; No asks for an eligible email in the same dialog. Cancelling keeps the draft. Replacing an existing vote still follows the poll's edit rules. A pending write-in cannot replace an existing vote; cancel and reload that voter's ballot to edit its selections.
 
 If a vote saves but its choices cannot reload, **Reload saved vote** retries loading them. Editing stays unavailable until that succeeds; the saved vote is not resubmitted.
+
+Write-ins appear as **Topic** and **Description (optional)** fields on the first ballot only. A duplicate topic selects the existing option and keeps its original description. After voting, these fields are hidden; voters can select or deselect existing options, including write-ins, but cannot add or change a topic or description.
 
 The voter page supports edits when permitted. **Refresh poll** clears unsaved selections. **Retry same vote** safely checks an uncertain submission; conflicts reload the saved ballot before another explicit submission.
 
 ## Development and deployment
 
 Follow [poll setup and deployment](../API.md#poll-setup-and-deployment) for migrations, readiness flags, and local Turnstile configuration. Run `pnpm worker:dev` and `pnpm dev` in separate terminals locally. This version requires migration 0005; follow the [schema rollout](../DATABASE.md#schema-simplification-rollout). Refresh already-open poll pages and check a controlled poll with real Turnstile. Older pages cannot submit without the new session marker.
+
+Write-in descriptions use the existing `poll_options.description` column, so this update needs no additional migration or secrets. Deploy the Worker before the SPA so the new description field is accepted. Older clients can still omit that field.
 
 Validate changes with `pnpm check`, `pnpm build:spa`, and `pnpm test:e2e:polls`. The browser suite uses disposable local D1 and fake external services. Detailed request formats and limits live in the [API reference](../API.md#poll-api).

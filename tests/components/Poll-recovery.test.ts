@@ -13,7 +13,7 @@ it('blocks editing an accepted write-in until its labels reload successfully', a
   const context = new Map<symbol, unknown>(createTurnstileContext(new FakeTurnstile()));
   context.set(POLL_SERVICES, { api, runtime: new FakePollRuntime() });
   render(Poll, { props: { slug: 'topics' }, context });
-  await fireEvent.input(await screen.findByLabelText('Write in an option'), {
+  await fireEvent.input(await screen.findByLabelText('Topic'), {
     target: { value: 'New choice' },
   });
   api.failDetail = new PollError(0, 'network', 'Offline');
@@ -55,7 +55,7 @@ it('allows editing after a detail reload even when only results fail', async () 
   const context = new Map<symbol, unknown>(createTurnstileContext(new FakeTurnstile()));
   context.set(POLL_SERVICES, { api, runtime: new FakePollRuntime() });
   render(Poll, { props: { slug: 'topics' }, context });
-  await fireEvent.input(await screen.findByLabelText('Write in an option'), {
+  await fireEvent.input(await screen.findByLabelText('Topic'), {
     target: { value: 'Saved choice' },
   });
   await fireEvent.click(screen.getByRole('button', { name: 'Submit vote' }));

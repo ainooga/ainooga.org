@@ -38,6 +38,12 @@
   }
 
   onMount(load);
+
+  function memberLink(label: string, url: string): string {
+    if (label.toLowerCase() !== 'email') return url;
+    const address = url.trim();
+    return /^mailto:/i.test(address) ? address : `mailto:${address}`;
+  }
 </script>
 
 <div class="container-narrow member-detail">
@@ -75,8 +81,11 @@
     {#if member.links}
       <div class="member-detail__links" style="margin-top: var(--space-lg)">
         {#each Object.entries(member.links) as [label, url] (label)}
-          <a href={url} class="member-detail__link" target="_blank" rel="noopener"
-            >{label}</a
+          <a
+            href={memberLink(label, url)}
+            class="member-detail__link"
+            target={label.toLowerCase() === 'email' ? undefined : '_blank'}
+            rel="noopener">{label}</a
           >
         {/each}
       </div>

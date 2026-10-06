@@ -20,7 +20,7 @@ const claimSQL = `INSERT INTO poll_ballots (poll_id,person_id,request_id,payload
   WHERE ${sessionWhere} AND s.person_id=? AND p.starts_at<=${DATABASE_NOW} AND p.ends_at>${DATABASE_NOW}
     AND (b.id IS NULL OR (p.allow_edits=1 AND coalesce(p.edit_deadline,p.ends_at)>${DATABASE_NOW}))
     AND coalesce(b.revision,0)=?
-    AND (? IS NULL OR p.allow_write_ins=1) AND ${writeInAllowed}
+    AND (? IS NULL OR (p.allow_write_ins=1 AND b.id IS NULL)) AND ${writeInAllowed}
     AND NOT EXISTS (SELECT 1 FROM json_each(?) j WHERE NOT EXISTS (SELECT 1 FROM poll_options o WHERE o.id=j.value AND o.poll_id=p.id))
     AND (SELECT count(*) FROM (${projectedSelections}))>=p.min_selections
     AND (p.max_selections IS NULL OR (SELECT count(*) FROM (${projectedSelections}))<=p.max_selections)
@@ -53,13 +53,14 @@ export function mutateBallot(db: D1Database, s: Submission): D1PreparedStatement
   return [
     db
       .prepare(
-        `INSERT INTO poll_options (poll_id,label,normalized_label,position,origin,created_by_person_id,created_at)
-      SELECT ?,?,?,coalesce((SELECT max(position)+1 FROM poll_options WHERE poll_id=?),0),'write_in',?,${DATABASE_NOW}
+        `INSERT INTO poll_options (poll_id,label,description,normalized_label,position,origin,created_by_person_id,created_at)
+      SELECT ?,?,?,?,coalesce((SELECT max(position)+1 FROM poll_options WHERE poll_id=?),0),'write_in',?,${DATABASE_NOW}
       WHERE ? IS NOT NULL AND ${receiptGuard} ON CONFLICT (poll_id,normalized_label) DO NOTHING`,
       )
       .bind(
         s.pollId,
         s.input.writeIn,
+        s.input.writeInDescription || null,
         s.normalized,
         s.pollId,
         s.personId,

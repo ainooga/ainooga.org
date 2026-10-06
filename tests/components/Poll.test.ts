@@ -88,7 +88,7 @@ describe('ballots', () => {
   it('submits a write-in, displays it, and edits the saved vote', async () => {
     const f = setup(true);
     f.mount();
-    await fireEvent.input(await screen.findByLabelText('Write in an option'), {
+    await fireEvent.input(await screen.findByLabelText('Topic'), {
       target: { value: 'AI gardens' },
     });
     await fireEvent.click(screen.getByRole('button', { name: 'Submit vote' }));
@@ -244,7 +244,7 @@ it('replaces a single-choice selection when typing a write-in', async () => {
   const f = setup(true);
   f.mount();
   await fireEvent.click(await screen.findByRole('radio', { name: 'Robotics' }));
-  await fireEvent.input(screen.getByLabelText('Write in an option'), {
+  await fireEvent.input(screen.getByLabelText('Topic'), {
     target: { value: 'X' },
   });
   await fireEvent.click(screen.getByRole('button', { name: 'Submit vote' }));

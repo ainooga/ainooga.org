@@ -139,10 +139,17 @@ export class FakePollService implements PollService {
       throw new PollError(409, 'session_changed', 'Your voter identity changed.');
     const ids = [...input.optionIds];
     if (input.writeIn !== null) {
+      if (this.poll.ballot !== null)
+        throw new PollError(
+          409,
+          'write_in_first_vote_only',
+          'Write-ins are only allowed on your first vote.',
+        );
       const id = this.poll.options.length + 1;
       this.poll.options.push({
         id,
         label: input.writeIn,
+        description: input.writeInDescription ?? null,
         origin: 'write_in',
         position: id,
       });

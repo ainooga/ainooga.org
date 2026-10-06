@@ -19,10 +19,13 @@ it('accepts one concurrent first submission and one concurrent edit, with no los
   expect(
     (await Promise.all([send('A', 0), send('B', 0)])).map((r) => r.status).sort(),
   ).toEqual([200, 409]);
-  const options = ((await (await f.admin('/topics')).json()) as { options: string[] })
-    .options;
+  const options = (
+    (await (await f.admin('/topics')).json()) as { optionRecords: { id: number }[] }
+  ).optionRecords;
+  const edit = (id: number) =>
+    f.request('/api/polls/topics/ballot', 'PUT', submission([id], 1), { Cookie: cookie });
   expect(
-    (await Promise.all([send(options[0]!, 1), send(options[1]!, 1)]))
+    (await Promise.all([edit(options[0]!.id), edit(options[1]!.id)]))
       .map((r) => r.status)
       .sort(),
   ).toEqual([200, 409]);
@@ -118,13 +121,21 @@ it('collapses simultaneous equivalent write-ins from different voters into one o
   );
   const secondSubmission = await f.ballotFor(second);
   const responses = await Promise.all([
-    f.request('/api/polls/topics/ballot', 'PUT', submission([], 0, 'Space  Robots'), {
-      Cookie: first,
-    }),
     f.request(
       '/api/polls/topics/ballot',
       'PUT',
-      secondSubmission([], 0, ' space robots '),
+      { ...submission([], 0, 'Space  Robots'), writeInDescription: 'First description' },
+      {
+        Cookie: first,
+      },
+    ),
+    f.request(
+      '/api/polls/topics/ballot',
+      'PUT',
+      {
+        ...secondSubmission([], 0, ' space robots '),
+        writeInDescription: 'Second description',
+      },
       {
         Cookie: second,
       },
@@ -134,6 +145,14 @@ it('collapses simultaneous equivalent write-ins from different voters into one o
   expect(
     await f.store.query("SELECT count(*) AS n FROM poll_options WHERE origin='write_in'"),
   ).toEqual([{ n: 1 }]);
+  const option = await f.db
+    .prepare(
+      "SELECT created_by_person_id AS creator,description FROM poll_options WHERE origin='write_in'",
+    )
+    .first<{ creator: number; description: string }>();
+  expect(option!.description).toBe(
+    option!.creator === 2 ? 'First description' : 'Second description',
+  );
   expect(await (await f.admin('/topics/results')).json()).toMatchObject({
     ballotCount: 2,
     options: expect.arrayContaining([expect.objectContaining({ votes: 2 })]),
