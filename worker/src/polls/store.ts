@@ -1,6 +1,7 @@
 import { eligiblePerson } from './eligibility.js';
 import { reject } from '../auth/http.js';
 import type { PollInput } from './schemas.js';
+import { explicitEmails } from './eligible-emails.js';
 
 export interface PollRow {
   id: number;
@@ -69,6 +70,7 @@ export async function definition(db: D1Database, p: PollRow): Promise<PollInput>
         o.description === null ? o.label : { label: o.label, description: o.description },
       ),
     eligibleTags: JSON.parse(p.eligible_tags) as string[],
+    eligibleEmails: await explicitEmails(db, p.id),
   };
 }
 export async function preview(db: D1Database, p: PollRow) {

@@ -1,6 +1,16 @@
 export interface PollApi {
   request(path: string, method?: string, body?: unknown): Promise<unknown>;
 }
+
+function connectionFailure(inviting: boolean): Error {
+  return new Error(
+    'API request failed. Check the API URL and connection; redirects are refused.' +
+      (inviting
+        ? ' Some invitations may already have been sent. Check Cloudflare Email Sending activity before rerunning.'
+        : ''),
+  );
+}
+
 export class PollClient implements PollApi {
   private readonly base: URL;
   constructor(
@@ -25,6 +35,7 @@ export class PollClient implements PollApi {
       );
   }
   async request(path: string, method = 'GET', body?: unknown): Promise<unknown> {
+    const inviting = method === 'POST' && path.endsWith('/invite');
     const payload = body === undefined ? undefined : JSON.stringify(body);
     if (payload !== undefined && Buffer.byteLength(payload) > 16384)
       throw new Error('API payload exceeds 16 KiB.');
@@ -38,12 +49,10 @@ export class PollClient implements PollApi {
         },
         body: payload,
         redirect: 'error',
-        signal: AbortSignal.timeout(15000),
+        signal: AbortSignal.timeout(inviting ? 600000 : 15000),
       });
     } catch {
-      throw new Error(
-        'API request failed. Check the API URL and connection; redirects are refused.',
-      );
+      throw connectionFailure(inviting);
     }
     if (!response.ok)
       throw new Error(

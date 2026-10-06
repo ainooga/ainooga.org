@@ -92,20 +92,25 @@ For authoring examples, CLI commands, guest-list behavior, and deployment, see t
 
 All paths below start with `/api/admin/polls`. Send `Authorization: Bearer <organizer token>`. No Cloudflare credentials are needed for these requests. Browser requests with an Origin must match `SITE_URL`; command-line requests may omit it.
 
-| Method | Path suffix         | Input / response                                                                                                   |
-| ------ | ------------------- | ------------------------------------------------------------------------------------------------------------------ |
-| GET    | (none)              | List slugs, titles, statuses, and start/end times.                                                                 |
-| POST   | (none)              | Full poll definition; creates a draft, returns 201 with saved detail.                                              |
-| GET    | `/{slug}`           | Saved definition, status, option records with IDs, and eligibility preview.                                        |
-| PUT    | `/{slug}`           | Full definition; replaces draft configuration/options/tags. Published polls permit only title/description changes. |
-| POST   | `/{slug}/publish`   | `{}`. Validate current eligibility and publish; repeat calls are idempotent.                                       |
-| POST   | `/{slug}/archive`   | `{}`. Terminal archive, repeatable.                                                                                |
-| GET    | `/{slug}/allowlist` | Explicitly allowed people IDs/names.                                                                               |
-| POST   | `/{slug}/allowlist` | `{ action: "add" or "remove", identifiers: [{ kind: "email" or "discord", value }] }`, at most 50 entries.         |
-| GET    | `/{slug}/results`   | All accepted ballots plus the current eligible-person count.                                                       |
-| GET    | `/{slug}/ballots`   | Identifiable accepted ballots, choices, revisions, timestamps, and `currentlyEligible`.                            |
+| Method | Path suffix         | Input / response                                                                                                                       |
+| ------ | ------------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
+| GET    | (none)              | List slugs, titles, statuses, and start/end times.                                                                                     |
+| POST   | (none)              | Full poll definition; creates a draft, returns 201 with saved detail.                                                                  |
+| GET    | `/{slug}`           | Saved definition, status, option records with IDs, and eligibility preview.                                                            |
+| PUT    | `/{slug}`           | Full definition; replaces draft configuration/options/tags. Published polls permit title/description and explicit eligibility changes. |
+| POST   | `/{slug}/publish`   | `{}`. Validate current eligibility and publish; repeat calls are idempotent.                                                           |
+| POST   | `/{slug}/invite`    | `{}`. Email the published poll's eligible audience; returns `{ recipients, accepted, failed }`. Repeating sends again.                 |
+| POST   | `/{slug}/archive`   | `{}`. Terminal archive, repeatable.                                                                                                    |
+| GET    | `/{slug}/allowlist` | Explicitly allowed people IDs/names.                                                                                                   |
+| POST   | `/{slug}/allowlist` | `{ action: "add" or "remove", identifiers: [{ kind: "email" or "discord", value }] }`, at most 50 entries.                             |
+| GET    | `/{slug}/results`   | All accepted ballots plus the current eligible-person count.                                                                           |
+| GET    | `/{slug}/ballots`   | Identifiable accepted ballots, choices, revisions, timestamps, and `currentlyEligible`.                                                |
 
-The definition fields match [topic-vote.md](./polls/topic-vote.md), plus a `description` string containing the Markdown body. All fields are required, including explicit `null` values and `eligibleTags: []` when no tags are configured. The API and CLI share strict validation. Drafts allow up to 100 predefined options, 50 tags, a 200-character title, and an 8,000-character description; the entire JSON payload must fit 16 KiB. Dates must be UTC timestamps ending in `Z` and are stored in canonical millisecond precision.
+The definition fields match [topic-vote.md](./polls/topic-vote.md), plus a `description` string containing the Markdown body. All fields except `eligibleEmails` are required, including explicit `null` values and `eligibleTags: []` when no tags are configured. The API and CLI share strict validation. Drafts allow up to 100 predefined options, 50 tags, a 200-character title, and an 8,000-character description; the entire JSON payload must fit 16 KiB. Dates must be UTC timestamps ending in `Z` and are stored in canonical millisecond precision.
+
+Optional `eligibleEmails: string[]` replaces the explicit person allowlist atomically with the definition update, including on published polls. Addresses are trimmed and lowercased; unknown addresses create minimal unverified people. Omitting it preserves existing allowances; `[]` clears them. It replaces all explicit allowances, including Discord-based ones, without removing tag eligibility. Saved definitions return all email identifiers of explicitly allowed people, including linked aliases; the underlying allowlist remains person-based.
+
+`invite` requires the organizer token and a published, unexpired poll. It resolves current tag and explicit-person eligibility, collects all email identifiers, deduplicates addresses, and sends individual messages through the existing `EMAIL` binding. Newsletter/event subscription flags do not filter this explicit poll audience. No request-supplied recipient or message fields are accepted. The response contains counts, never addresses or provider error details. Provider acceptance is not proof of inbox delivery; failures include timeouts with uncertain delivery. A completed batch returns HTTP 200 even with partial failures, and the CLI exits nonzero when `failed > 0`. It never retries sends automatically; invoking it again sends another invitation to the full current audience. Network failures can leave some invitations sent, so inspect Email Sending activity before repeating. Creating and publishing send nothing.
 
 Options accept a label string or `{ label, description }`, with an optional nullable plain-text description up to 1,000 characters. Responses preserve the string form when no description is set. Voter option records include `description: string | null`.
 

@@ -4,7 +4,7 @@ import { readEligibility, readPoll } from './files.js';
 export const usage = `Usage: pnpm poll [--env-file .env.prod.local] <command>
   validate <poll.md>
   create <poll.md> | update <poll.md>
-  show <slug> | list | publish <slug> | archive <slug>
+  show <slug> | list | publish <slug> | invite <slug> | archive <slug>
   allowlist add <slug> <voters.yml> | allowlist remove <slug> <voters.yml>
   allowlist list <slug> | results <slug> | ballots <slug>`;
 function arity(args: string[], length: number): void {
@@ -64,6 +64,7 @@ async function simpleCommand(command: string | undefined, path: string, api: Pol
     case 'show':
       return api.request(path);
     case 'publish':
+    case 'invite':
     case 'archive':
       return api.request(`${path}/${command}`, 'POST', {});
     case 'results':

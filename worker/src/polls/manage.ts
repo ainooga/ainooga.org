@@ -2,6 +2,7 @@ import { reject } from '../auth/http.js';
 import type { PollInput } from './schemas.js';
 import { normalizeLabel, optionValue } from './schemas.js';
 import { adminDetail, definition, getPoll } from './store.js';
+import { replaceEmailAllowlist } from './eligible-emails.js';
 
 function draftChildren(db: D1Database, input: PollInput): D1PreparedStatement[] {
   const poll = "SELECT id FROM polls WHERE slug = ? AND status = 'draft'";
@@ -56,6 +57,7 @@ export async function createPoll(
         )
         .bind(...values(p), p.slug, personId, now, now),
       ...draftChildren(db, p),
+      ...replaceEmailAllowlist(db, p.slug, p.eligibleEmails, now, 'draft'),
     ]);
   } catch (error) {
     if (await db.prepare('SELECT id FROM polls WHERE slug = ?').bind(p.slug).first())
@@ -82,6 +84,7 @@ export async function updatePoll(
       )
       .bind(...values(p), now, slug),
     ...draftChildren(db, p),
+    ...replaceEmailAllowlist(db, slug, p.eligibleEmails, now, 'draft'),
   ]);
   if (result[0]!.meta.changes !== 1)
     reject(409, 'changed', 'Poll status changed. Read it again.');
@@ -96,16 +99,23 @@ async function updatePublished(db: D1Database, p: PollInput, now: string) {
       description: '',
       options: input.options.map(optionValue),
       eligibleTags: [...input.eligibleTags].sort(),
+      eligibleEmails: [],
     });
   if (frozen(current) !== frozen(p))
-    reject(409, 'frozen', 'Only title and description can change after publication.');
-  const result = await db
-    .prepare(
-      "UPDATE polls SET title=?,description=?,updated_at=? WHERE slug=? AND status='published'",
-    )
-    .bind(p.title, p.description, now, p.slug)
-    .run();
-  if (result.meta.changes !== 1)
+    reject(
+      409,
+      'frozen',
+      'Only title, description and explicit eligibility can change after publication.',
+    );
+  const result = await db.batch([
+    db
+      .prepare(
+        "UPDATE polls SET title=?,description=?,updated_at=? WHERE slug=? AND status='published'",
+      )
+      .bind(p.title, p.description, now, p.slug),
+    ...replaceEmailAllowlist(db, p.slug, p.eligibleEmails, now, 'published'),
+  ]);
+  if (result[0]!.meta.changes !== 1)
     reject(409, 'changed', 'Poll status changed. Read it again.');
   return adminDetail(db, p.slug);
 }

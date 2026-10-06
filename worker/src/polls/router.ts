@@ -8,6 +8,7 @@ import { createPoll, updatePoll } from './manage.js';
 import { publishPoll, archivePoll } from './lifecycle.js';
 import { changeAllowlist, listAllowlist } from './allowlist.js';
 import { organizerResults, organizerBallots } from './results.js';
+import { invitePoll } from './invitations.js';
 
 export function pollsReady(env: Env): void {
   if (env.POLLS_READY !== 'true') reject(503, 'not_ready', 'Polling is not enabled yet.');
@@ -16,11 +17,12 @@ export async function adminPolls(
   request: Request,
   deps: AuthDependencies,
   actorId: number,
+  env: Env,
 ) {
   const path = new URL(request.url).pathname;
   if (path === '/api/admin/polls') return collection(request, deps, actorId);
   const match =
-    /^\/api\/admin\/polls\/([a-zA-Z0-9_-]{1,160})(?:\/(publish|archive|allowlist|results|ballots))?$/.exec(
+    /^\/api\/admin\/polls\/([a-zA-Z0-9_-]{1,160})(?:\/(publish|archive|allowlist|results|ballots|invite))?$/.exec(
       path,
     );
   if (!match) reject(404, 'not_found', 'Endpoint not found.');
@@ -38,7 +40,7 @@ export async function adminPolls(
       ),
     );
   if (request.method !== 'POST') reject(405, 'method', 'Method not allowed.');
-  return Response.json(await actionAdmin(request, deps, slug, action));
+  return Response.json(await actionAdmin(request, deps, slug, action, env));
 }
 async function collection(request: Request, deps: AuthDependencies, actorId: number) {
   if (request.method === 'GET')
@@ -82,11 +84,15 @@ async function actionAdmin(
   deps: AuthDependencies,
   slug: string,
   action: string,
+  env: Env,
 ) {
   if ((action === 'publish' || action === 'archive') && request.body !== null)
     await jsonBody(request, z.object({}).strict());
   const now = deps.now().toISOString();
   switch (action) {
+    case 'invite':
+      await jsonBody(request, z.object({}).strict());
+      return invitePoll(deps, env, slug);
     case 'publish':
       return publishPoll(deps.db, slug, now);
     case 'archive':

@@ -64,6 +64,7 @@ export const pollSchema = z
     editDeadline: date.nullable(),
     options: z.array(optionSchema).max(100),
     eligibleTags: z.array(tag).max(50),
+    eligibleEmails: z.array(z.string().trim().max(254).email().toLowerCase()).optional(),
   })
   .strict()
   .superRefine((p, ctx) => {
@@ -108,3 +109,12 @@ export const ballotSchema = z
   })
   .strict();
 export type BallotInput = z.infer<typeof ballotSchema>;
+
+export const invitationSummarySchema = z
+  .object({
+    recipients: z.number().int().nonnegative(),
+    accepted: z.number().int().nonnegative(),
+    failed: z.number().int().nonnegative(),
+  })
+  .strict()
+  .refine((summary) => summary.accepted + summary.failed === summary.recipients);

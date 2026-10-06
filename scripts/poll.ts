@@ -3,6 +3,7 @@ import { existsSync } from 'node:fs';
 import { loadEnvFile } from 'node:process';
 import { PollClient } from './polls/client.js';
 import { runPollCommand, usage } from './polls/commands.js';
+import { invitationSummarySchema } from '../worker/src/polls/schemas.js';
 
 async function main(): Promise<void> {
   const { values, positionals } = parseArgs({
@@ -23,7 +24,11 @@ async function main(): Promise<void> {
         process.env.AINOOGA_API_URL ?? 'https://ainooga.org',
       ).request(path, method, body),
   };
-  console.log(JSON.stringify(await runPollCommand(positionals, api), null, 2));
+  const result = await runPollCommand(positionals, api);
+  const summary =
+    positionals[0] === 'invite' ? invitationSummarySchema.parse(result) : null;
+  console.log(JSON.stringify(summary ?? result, null, 2));
+  if (summary !== null && summary.failed > 0) process.exitCode = 1;
 }
 main().catch((error: unknown) => {
   console.error(error instanceof Error ? error.message : 'Poll command failed.');
