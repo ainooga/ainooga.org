@@ -55,8 +55,18 @@ it.each(['confirmed', 'unsubscribed', 'pending'])(
     ]);
     const before = await f.store.query('SELECT * FROM subscriptions');
     await reconcileLegacy(f.store);
-    await migration(f.store, '0005_simplify_chapter.sql');
     expect(await f.store.query('SELECT * FROM subscriptions')).toEqual(before);
+    await migration(f.store, '0005_simplify_chapter.sql');
+    const expected = before.map((row) => {
+      const converted = { ...row };
+      delete converted.status;
+      return {
+        ...converted,
+        subscribed: Number(status !== 'unsubscribed'),
+        confirmation_pending: Number(status === 'pending'),
+      };
+    });
+    expect(await f.store.query('SELECT * FROM subscriptions')).toEqual(expected);
     expect(await createDb(f.db).confirmSubscription('old-token')).toBe(0);
     expect(await f.store.query('SELECT DISTINCT name FROM people')).toEqual([
       { name: 'Current name' },

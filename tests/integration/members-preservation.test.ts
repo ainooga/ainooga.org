@@ -17,7 +17,7 @@ it('reuses a newsletter/poll person while preserving identity, consent, company 
     "INSERT INTO organizations(id,name) VALUES(1,'Existing')",
     "INSERT INTO organization_people VALUES(1,2,'employee')",
     "UPDATE person_identifiers SET verified_at='2026-01-01T00:00:00.000Z' WHERE id=2",
-    "INSERT INTO subscriptions(person_id,email_identifier_id,kind,status,confirmation_token_hash) VALUES(2,2,'newsletter','pending','keep-token')",
+    "INSERT INTO subscriptions(person_id,email_identifier_id,kind,subscribed,confirmation_pending,confirmation_token_hash) VALUES(2,2,'newsletter',1,1,'keep-token')",
     "INSERT INTO person_sources(id,person_id,source,source_key) VALUES(50,2,'manual','existing')",
   ]);
   const before = await f.store.query('SELECT * FROM person_identifiers');
@@ -68,25 +68,34 @@ it('applies invitation opt-outs, retains their dates and never restores consent'
   const input = memberInput();
   await f.importMember(input);
   await f.store.execute([
-    "UPDATE subscriptions SET status='confirmed',confirmed_at='2026-01-01T00:00:00.000Z'",
+    "UPDATE subscriptions SET confirmed_at='2026-01-01T00:00:00.000Z'",
   ]);
   expect((await (await f.importMember(input, true)).json()).actions).toContainEqual({
     field: 'eventInvites',
-    action: 'preserve',
+    action: 'unchanged',
   });
   await f.importMember(input);
-  expect(await f.store.query('SELECT status FROM subscriptions')).toEqual([
-    { status: 'confirmed' },
+  expect(await f.store.query('SELECT subscribed FROM subscriptions')).toEqual([
+    { subscribed: 1 },
   ]);
-  input.eventInvites = { status: 'unsubscribed', unsubscribedAt: null };
-  await f.importMember(input);
+  input.eventInvites = { subscribed: false, unsubscribedAt: null };
+  const optOutPreview = await (await f.importMember(input, true)).json();
+  expect(optOutPreview.actions).toContainEqual({ field: 'eventInvites', action: 'fill' });
+  expect(await (await f.importMember(input)).json()).toEqual(optOutPreview);
   input.eventInvites.unsubscribedAt = '2026-02-01T00:00:00.000Z';
   await f.importMember(input);
   const saved = await f.store.query('SELECT * FROM subscriptions');
   expect(saved[0]).toMatchObject({
-    status: 'unsubscribed',
+    subscribed: 0,
+    confirmation_pending: 0,
     unsubscribed_at: input.eventInvites.unsubscribedAt,
     confirmation_token_hash: null,
+  });
+  expect(
+    (await (await f.importMember(memberInput(), true)).json()).actions,
+  ).toContainEqual({
+    field: 'eventInvites',
+    action: 'preserve',
   });
   await f.importMember(memberInput());
   expect(await f.store.query('SELECT * FROM subscriptions')).toEqual(saved);
@@ -188,10 +197,12 @@ it('reports and fills blank fields consistently and races safely with newsletter
   expect(response.status).toBe(200);
   expect(await f.store.query('SELECT count(*) AS n FROM people')).toEqual([{ n: 4 }]);
   expect(
-    await f.store.query('SELECT kind,status FROM subscriptions ORDER BY kind'),
+    await f.store.query(
+      'SELECT kind,subscribed,confirmation_pending FROM subscriptions ORDER BY kind',
+    ),
   ).toEqual([
-    { kind: 'event_invites', status: 'unknown' },
-    { kind: 'newsletter', status: 'pending' },
+    { kind: 'event_invites', subscribed: 1, confirmation_pending: 0 },
+    { kind: 'newsletter', subscribed: 1, confirmation_pending: 1 },
   ]);
   await f.store.execute([
     'DELETE FROM organization_people',

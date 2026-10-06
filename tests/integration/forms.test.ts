@@ -69,6 +69,11 @@ describe('forms against local D1', () => {
     expect(await context.store.query('SELECT COUNT(*) AS n FROM subscriptions')).toEqual([
       { n: 1 },
     ]);
+    expect(
+      await context.store.query(
+        'SELECT subscribed,confirmation_pending,confirmed_at FROM subscriptions',
+      ),
+    ).toEqual([{ subscribed: 1, confirmation_pending: 1, confirmed_at: null }]);
     const token = deps.email.sent[0]!.token;
     const response = await handleConfirm(
       new Request(`https://example.com/confirm?token=${token}`),
@@ -87,6 +92,13 @@ describe('forms against local D1', () => {
     expect(
       await context.store.query('SELECT confirmation_token_hash FROM subscriptions'),
     ).toEqual([{ confirmation_token_hash: null }]);
+    expect(
+      await context.store.query(
+        'SELECT subscribed,confirmation_pending,confirmed_at FROM subscriptions',
+      ),
+    ).toEqual([
+      { subscribed: 1, confirmation_pending: 0, confirmed_at: expect.any(String) },
+    ]);
   });
 
   it('reuses an email owner without overwriting their name or grants', async () => {
@@ -136,7 +148,9 @@ describe('forms against local D1', () => {
   it('does not reactivate an unsubscribed newsletter preference', async () => {
     const deps = dependencies();
     await deps.db.insertSubscriber('user@example.com', null, 'token');
-    await context.store.execute(["UPDATE subscriptions SET status='unsubscribed'"]);
+    await context.store.execute([
+      'UPDATE subscriptions SET subscribed=0,confirmation_pending=0',
+    ]);
     expect(
       (await handleSubscribe({ email: 'user@example.com', turnstileToken: 'test' }, deps))
         .status,

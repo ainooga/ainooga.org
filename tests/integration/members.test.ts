@@ -20,9 +20,9 @@ it('previews without writes and imports all member relationships repeatably', as
   expect(await f.store.query("SELECT tag FROM person_tags WHERE tag='member'")).toEqual([
     { tag: 'member' },
   ]);
-  expect(await f.store.query('SELECT kind,status FROM subscriptions')).toEqual([
-    { kind: 'event_invites', status: 'unknown' },
-  ]);
+  expect(
+    await f.store.query('SELECT kind,subscribed,confirmation_pending FROM subscriptions'),
+  ).toEqual([{ kind: 'event_invites', subscribed: 1, confirmation_pending: 0 }]);
   expect(
     await f.store.query(
       'SELECT registration_status,attendance_status,registered_at FROM event_participation',

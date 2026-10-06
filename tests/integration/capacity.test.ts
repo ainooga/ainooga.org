@@ -61,9 +61,17 @@ it('measures the current schema with 200 synthetic members and 120 retained poll
     ).toEqual([{ n: 24000 }]);
     expect(
       await f.store.query(
-        "SELECT count(*) AS n FROM subscriptions WHERE kind='newsletter' OR status='confirmed'",
+        "SELECT count(*) AS n FROM subscriptions WHERE kind='newsletter' OR confirmation_pending=1",
       ),
     ).toEqual([{ n: 0 }]);
+    expect(
+      await f.store.query(
+        'SELECT subscribed,count(*) AS n FROM subscriptions GROUP BY subscribed ORDER BY subscribed',
+      ),
+    ).toEqual([
+      { subscribed: 0, n: 2 },
+      { subscribed: 1, n: 198 },
+    ]);
     const results = await organizerResults(f.db, 'capacity-120');
     expect(results).toMatchObject({ eligibleCount: 200, ballotCount: 200 });
     expect(results.options.reduce((sum, row) => sum + Number(row.votes), 0)).toBe(400);

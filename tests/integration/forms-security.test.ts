@@ -1,6 +1,6 @@
 // @vitest-environment node
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
-import { chapterDatabase } from '../helpers/d1';
+import { chapterDatabase, migration } from '../helpers/d1';
 import { createDb } from '../../worker/src/db/client';
 import { handleSubscribe } from '../../worker/src/subscribe';
 import { BackgroundTasks } from '../helpers/background';
@@ -10,6 +10,12 @@ import type { Env } from '../../worker/src/types';
 let f: Awaited<ReturnType<typeof chapterDatabase>>;
 beforeEach(async () => {
   f = await chapterDatabase();
+  for (const name of [
+    '0003_voter_auth.sql',
+    '0004_poll_api.sql',
+    '0005_simplify_chapter.sql',
+  ])
+    await migration(f.store, name);
 });
 afterEach(async () => {
   await f.dispose();
@@ -77,24 +83,28 @@ it('a late invalidation cannot remove a replacement token or undo confirmation',
   await db.invalidateConfirmation('second');
   expect(await db.insertSubscriber('synthetic@example.com', null, 'third')).toBe(false);
   expect(await f.store.query('SELECT name FROM people')).toEqual([{ name: 'Synthetic' }]);
-  expect(await f.store.query('SELECT status FROM subscriptions')).toEqual([
-    { status: 'confirmed' },
-  ]);
+  expect(
+    await f.store.query('SELECT subscribed,confirmation_pending FROM subscriptions'),
+  ).toEqual([{ subscribed: 1, confirmation_pending: 0 }]);
 });
 
 it('does not retry other consent states or legacy pending records', async () => {
   const db = createDb(f.db);
-  for (const status of ['unknown', 'unsubscribed', 'confirmed']) {
+  for (const subscribed of [0, 1]) {
     await db.insertSubscriber('synthetic@example.com', null, 'original');
     await f.db
-      .prepare('UPDATE subscriptions SET status=?,confirmation_token_hash=NULL')
-      .bind(status)
+      .prepare(
+        'UPDATE subscriptions SET subscribed=?,confirmation_pending=0,confirmation_token_hash=NULL',
+      )
+      .bind(subscribed)
       .run();
     expect(await db.insertSubscriber('synthetic@example.com', null, 'replacement')).toBe(
       false,
     );
   }
-  await f.store.execute(["UPDATE subscriptions SET status='pending', source='legacy'"]);
+  await f.store.execute([
+    "UPDATE subscriptions SET subscribed=1,confirmation_pending=1,source='legacy'",
+  ]);
   expect(await db.insertSubscriber('synthetic@example.com', null, 'replacement')).toBe(
     false,
   );

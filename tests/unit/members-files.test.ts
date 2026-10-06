@@ -137,9 +137,26 @@ it('normalizes contact values without inventing verification or a country code',
   expect(
     memberSchema.safeParse({
       ...input,
-      eventInvites: { status: 'unknown', unsubscribedAt: '2026-01-01T00:00:00.000Z' },
+      eventInvites: { subscribed: true, unsubscribedAt: '2026-01-01T00:00:00.000Z' },
     }).success,
   ).toBe(false);
+});
+
+it('requires a boolean invitation preference and rejects contradictory opt-out dates', () => {
+  for (const subscribed of [true, false])
+    expect(
+      memberSchema.safeParse({
+        ...memberInput(),
+        eventInvites: { subscribed, unsubscribedAt: null },
+      }).success,
+    ).toBe(true);
+  for (const subscribed of ['true', 'false', 0, 1, null])
+    expect(
+      memberSchema.safeParse({
+        ...memberInput(),
+        eventInvites: { subscribed, unsubscribedAt: null },
+      }).success,
+    ).toBe(false);
 });
 
 it('deduplicates event changes and reports preserved fields without private values', () => {

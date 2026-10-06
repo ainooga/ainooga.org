@@ -72,6 +72,12 @@ it('rejects privilege fields, unsafe URLs and malformed records without writes',
     { ...memberInput(), linkedin: '//evil.test/steal' },
     { ...memberInput(), linkedin: 'data:text/plain,unsafe' },
     { ...memberInput(), eventInvites: { status: 'confirmed', unsubscribedAt: null } },
+    { ...memberInput(), eventInvites: { subscribed: 'true', unsubscribedAt: null } },
+    { ...memberInput(), eventInvites: { subscribed: 1, unsubscribedAt: null } },
+    {
+      ...memberInput(),
+      eventInvites: { subscribed: true, unsubscribedAt: '2026-01-01T00:00:00.000Z' },
+    },
     {
       ...memberInput(),
       participations: [...memberInput().participations, ...memberInput().participations],

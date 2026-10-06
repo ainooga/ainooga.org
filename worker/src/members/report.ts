@@ -107,9 +107,9 @@ function companyAction(row: Row | undefined, company: string | null): Action {
 }
 function subscriptionAction(row: Row | undefined, input: MemberInput): Action {
   if (!row) return 'create';
-  if (input.eventInvites.status === 'unknown')
-    return row.status === 'unknown' ? 'unchanged' : 'preserve';
-  return row.status !== 'unsubscribed' ||
+  if (input.eventInvites.subscribed)
+    return row.subscribed === 1 ? 'unchanged' : 'preserve';
+  return row.subscribed !== 0 ||
     (row.unsubscribed_at === null && input.eventInvites.unsubscribedAt !== null)
     ? 'fill'
     : 'unchanged';

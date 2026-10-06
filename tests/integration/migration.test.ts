@@ -91,6 +91,12 @@ describe('chapter migration', () => {
         preferred_time: '14:00',
       },
     ]);
+    for (const name of [
+      '0003_voter_auth.sql',
+      '0004_poll_api.sql',
+      '0005_simplify_chapter.sql',
+    ])
+      await migration(context.store, name);
     const adapter = createDb(context.db);
     expect(await adapter.confirmSubscription('old-token')).toBe(1);
     expect(await adapter.confirmSubscription('old-token')).toBe(0);

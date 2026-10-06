@@ -10,7 +10,7 @@
     "linkedin": "/in/example-member",
     "tags": ["volunteer"],
     "eventInvites": {
-      "status": "unknown",
+      "subscribed": true,
       "unsubscribedAt": null
     },
     "participations": [

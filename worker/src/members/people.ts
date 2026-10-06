@@ -58,14 +58,19 @@ function profileWrites({ write, person, email }: ImportSql, input: MemberInput) 
 
 function subscriptionWrite({ write, email }: ImportSql, input: MemberInput) {
   return write(
-    `INSERT INTO subscriptions (person_id,email_identifier_id,kind,status,unsubscribed_at,source)
+    `INSERT INTO subscriptions (person_id,email_identifier_id,kind,subscribed,unsubscribed_at,source)
     SELECT person_id,id,'event_invites',?,?,? FROM person_identifiers
     WHERE kind='email' AND normalized_value=? AND ${permitted}
-    ON CONFLICT(person_id,kind) DO UPDATE SET status='unsubscribed',
+    ON CONFLICT(person_id,kind) DO UPDATE SET subscribed=0,
       unsubscribed_at=COALESCE(subscriptions.unsubscribed_at,excluded.unsubscribed_at),
-      confirmation_token_hash=NULL,confirmation_expires_at=NULL,source=excluded.source
-    WHERE excluded.status='unsubscribed' AND (subscriptions.status!='unsubscribed'
+      confirmation_pending=0,confirmation_token_hash=NULL,confirmation_expires_at=NULL,source=excluded.source
+    WHERE excluded.subscribed=0 AND (subscriptions.subscribed!=0
       OR (subscriptions.unsubscribed_at IS NULL AND excluded.unsubscribed_at IS NOT NULL))`,
-    [input.eventInvites.status, input.eventInvites.unsubscribedAt, input.source, email],
+    [
+      Number(input.eventInvites.subscribed),
+      input.eventInvites.unsubscribedAt,
+      input.source,
+      email,
+    ],
   );
 }

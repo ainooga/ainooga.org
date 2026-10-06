@@ -72,11 +72,11 @@ export const memberSchema = z
     tags: z.array(text(64).refine((v) => v === v.toLowerCase())).max(25),
     eventInvites: z
       .object({
-        status: z.enum(['unknown', 'unsubscribed']),
+        subscribed: z.boolean(),
         unsubscribedAt: timestamp.nullable(),
       })
       .strict()
-      .refine((v) => v.status === 'unsubscribed' || v.unsubscribedAt === null),
+      .refine((v) => !v.subscribed || v.unsubscribedAt === null),
     participations: z
       .array(
         z

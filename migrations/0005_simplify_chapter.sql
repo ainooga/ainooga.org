@@ -24,6 +24,35 @@ INSERT INTO simplification_guard SELECT NOT EXISTS (
 );
 DROP TABLE simplification_guard;
 
+CREATE TABLE subscriptions_new (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  person_id INTEGER NOT NULL REFERENCES people(id) ON DELETE RESTRICT ON UPDATE RESTRICT,
+  email_identifier_id INTEGER NOT NULL,
+  kind TEXT NOT NULL CHECK (kind IN ('newsletter', 'event_invites')),
+  subscribed INTEGER NOT NULL CHECK (subscribed IN (0, 1)),
+  confirmation_pending INTEGER NOT NULL DEFAULT 0 CHECK (confirmation_pending IN (0, 1)),
+  confirmation_token_hash TEXT UNIQUE,
+  confirmation_expires_at TEXT,
+  confirmed_at TEXT,
+  unsubscribed_at TEXT,
+  source TEXT DEFAULT 'website',
+  created_at TEXT DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),
+  UNIQUE (person_id, kind),
+  FOREIGN KEY (email_identifier_id, person_id) REFERENCES person_identifiers(id, person_id) ON DELETE RESTRICT ON UPDATE RESTRICT,
+  CHECK (confirmation_pending = 0 OR (kind = 'newsletter' AND subscribed = 1))
+);
+INSERT INTO subscriptions_new
+  SELECT id,person_id,email_identifier_id,kind,
+    CASE WHEN kind='event_invites' THEN status!='unsubscribed'
+      ELSE status IN ('pending','confirmed') END,
+    kind='newsletter' AND status='pending',
+    confirmation_token_hash,confirmation_expires_at,confirmed_at,unsubscribed_at,source,created_at
+  FROM subscriptions;
+DROP TABLE subscriptions;
+ALTER TABLE subscriptions_new RENAME TO subscriptions;
+CREATE INDEX idx_subscriptions_email ON subscriptions(email_identifier_id, person_id);
+CREATE INDEX idx_subscriptions_subscribed ON subscriptions(kind, subscribed, confirmation_pending);
+
 INSERT INTO person_tags(person_id,tag)
   SELECT person_id,'member' FROM memberships
   UNION SELECT person_id,'member' FROM event_participation

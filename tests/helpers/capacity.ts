@@ -18,8 +18,8 @@ export async function seedChapter(store: SqlStore) {
     "INSERT INTO person_tags(person_id,tag) SELECT id,'member' FROM people",
     "INSERT INTO organizations(id,name) SELECT id,'Example Company '||id FROM people WHERE id<=20",
     "INSERT INTO organization_people SELECT (id%20)+1,id,'employee' FROM people",
-    `INSERT INTO subscriptions (person_id,email_identifier_id,kind,status,source)
-      SELECT id,id,'event_invites',CASE WHEN id<=2 THEN 'unsubscribed' ELSE 'unknown' END,'ai_collective' FROM people`,
+    `INSERT INTO subscriptions (person_id,email_identifier_id,kind,subscribed,source)
+      SELECT id,id,'event_invites',id>2,'ai_collective' FROM people`,
     `WITH RECURSIVE n(x) AS (SELECT 1 UNION ALL SELECT x+1 FROM n WHERE x<10)
       INSERT INTO events (id,name,starts_at) SELECT x,'Synthetic Event '||x,'2026-01-01T00:00:00.000Z' FROM n`,
     "INSERT INTO event_links (event_id,platform,external_id,url) SELECT id,'synthetic','event-'||id,'https://example.com/event/'||id FROM events",

@@ -29,12 +29,13 @@ export async function insertSubscriber(
     db
       .prepare(
         `INSERT INTO subscriptions
-      (person_id, email_identifier_id, kind, status, confirmation_token_hash, source)
-      SELECT person_id, id, 'newsletter', 'pending', ?, 'website'
+      (person_id, email_identifier_id, kind, subscribed, confirmation_pending, confirmation_token_hash, source)
+      SELECT person_id, id, 'newsletter', 1, 1, ?, 'website'
       FROM person_identifiers WHERE kind = 'email' AND normalized_value = ?
       ON CONFLICT (person_id, kind) DO UPDATE SET confirmation_token_hash = excluded.confirmation_token_hash,
         confirmation_expires_at = NULL
-      WHERE subscriptions.status = 'pending' AND subscriptions.source = 'website'
+      WHERE subscriptions.subscribed = 1 AND subscriptions.confirmation_pending = 1
+        AND subscriptions.source = 'website'
         AND subscriptions.email_identifier_id = excluded.email_identifier_id
         AND subscriptions.confirmation_token_hash IS NULL`,
       )
@@ -50,9 +51,10 @@ export async function confirmSubscription(
   const result = await db
     .prepare(
       `UPDATE subscriptions
-    SET status = 'confirmed', confirmed_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now'),
+    SET confirmation_pending = 0, confirmed_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now'),
         confirmation_token_hash = NULL, confirmation_expires_at = NULL
-    WHERE kind = 'newsletter' AND status = 'pending' AND confirmation_token_hash = ?
+    WHERE kind = 'newsletter' AND subscribed = 1 AND confirmation_pending = 1
+      AND confirmation_token_hash = ?
       AND (confirmation_expires_at IS NULL OR
            confirmation_expires_at > strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))`,
     )
@@ -68,7 +70,7 @@ export async function invalidateConfirmation(
   await db
     .prepare(
       `UPDATE subscriptions SET confirmation_token_hash = NULL, confirmation_expires_at = NULL
-    WHERE kind = 'newsletter' AND status = 'pending' AND source = 'website'
+    WHERE kind = 'newsletter' AND subscribed = 1 AND confirmation_pending = 1 AND source = 'website'
       AND confirmation_token_hash = ?`,
     )
     .bind(await hashToken(token))

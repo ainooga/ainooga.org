@@ -14,7 +14,7 @@ export function memberInput(): MemberInput {
     linkedin: '/in/example-member',
     tags: ['volunteer'],
     eventInvites: {
-      status: 'unknown' as 'unknown' | 'unsubscribed',
+      subscribed: true,
       unsubscribedAt: null as string | null,
     },
     participations: [
