@@ -31,7 +31,11 @@ test('email entry, write-in, editing, another voter and logout through real D1',
   await page.getByLabel('Write in an option').fill('Browser write-in');
   await page.getByRole('button', { name: 'Submit vote', exact: true }).click();
   await expect(page.getByText('Your vote is saved.', { exact: true })).toBeVisible();
-  await expect(page.getByText('1 of 2 eligible voters have voted.')).toBeVisible();
+  await expect(
+    page.getByText('1 accepted ballots. 2 people are currently eligible.', {
+      exact: true,
+    }),
+  ).toBeVisible();
   await page.getByRole('button', { name: 'Edit vote', exact: true }).click();
   await page.getByRole('radio', { name: 'Robotics', exact: true }).check();
   await page.getByRole('button', { name: 'Save changes', exact: true }).click();
@@ -51,7 +55,11 @@ test('email entry, write-in, editing, another voter and logout through real D1',
     .getByRole('radio', { name: 'Browser write-in (write-in)', exact: true })
     .check();
   await page.getByRole('button', { name: 'Submit vote', exact: true }).click();
-  await expect(page.getByText('2 of 2 eligible voters have voted.')).toBeVisible();
+  await expect(
+    page.getByText('2 accepted ballots. 2 people are currently eligible.', {
+      exact: true,
+    }),
+  ).toBeVisible();
   expect(errors).toEqual([]);
 });
 test('Discord fallback, sorry page and keyboard entry', async ({ page }) => {
@@ -203,7 +211,11 @@ test('an accepted lost response cannot be retried as another voter without confi
   expect(payloads[1]).toBe(payloads[0]);
   expect(await (await other.request.get(`/api/polls/${slug}/ballot`)).json()).toBeNull();
   await dialog.getByRole('button', { name: 'Yes', exact: true }).click();
-  await expect(page.getByText('2 of 2 eligible voters have voted.')).toBeVisible();
+  await expect(
+    page.getByText('2 accepted ballots. 2 people are currently eligible.', {
+      exact: true,
+    }),
+  ).toBeVisible();
   expect(JSON.parse(payloads[2]!).requestId).not.toBe(JSON.parse(payloads[0]!).requestId);
 });
 test('a second identity change while the dialog is open requires another confirmation', async ({
