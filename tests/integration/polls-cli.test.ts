@@ -85,6 +85,32 @@ it('runs the real CLI with an env file through HTTP and D1 from authoring to res
     eligibility: { eligibleCount: 1 },
   });
   expect(await cli('publish', 'topic-vote')).toMatchObject({ status: 'published' });
+  const invitations: string[] = [];
+  f.env.EMAIL = {
+    async send(message) {
+      invitations.push(String(message.to));
+      if (message.to === 'other@example.com') throw new Error('Private provider failure');
+      return { messageId: 'test-message' };
+    },
+  };
+  expect(await cli('invite', 'topic-vote')).toEqual({
+    recipients: 1,
+    accepted: 1,
+    failed: 0,
+  });
+  await f.admin('/topic-vote/allowlist', 'POST', {
+    action: 'add',
+    identifiers: [{ kind: 'email', value: 'other@example.com' }],
+  });
+  await expect(cli('invite', 'topic-vote')).rejects.toMatchObject({
+    code: 1,
+    stdout: expect.stringContaining('"failed": 1'),
+  });
+  expect(invitations.sort()).toEqual([
+    'other@example.com',
+    'voter@example.com',
+    'voter@example.com',
+  ]);
   const login = await f.request('/api/polls/topic-vote/auth/honor', 'POST', {
     identifier: { kind: 'email', value: 'voter@example.com' },
     turnstileToken: 'bot',

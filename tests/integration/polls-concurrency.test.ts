@@ -223,7 +223,11 @@ it('orders publication against draft edits without changing published options', 
   });
   const gate = pauseBatch(f.db, 'before');
   f.deps.db = gate.db;
-  const update = f.admin('/topics', 'PUT', pollInput({ options: ['Replacement'] }));
+  const update = f.admin(
+    '/topics',
+    'PUT',
+    pollInput({ options: ['Replacement'], eligibleEmails: ['unwanted@example.com'] }),
+  );
   await gate.reached;
   try {
     expect((await f.admin('/topics/publish', 'POST')).status).toBe(200);
@@ -234,5 +238,11 @@ it('orders publication against draft edits without changing published options', 
   expect(await (await f.admin('/topics')).json()).toMatchObject({
     options: ['Robotics', 'Language models'],
     status: 'published',
+    eligibleEmails: ['voter@example.com'],
   });
+  expect(
+    await f.store.query(
+      "SELECT * FROM person_identifiers WHERE normalized_value='unwanted@example.com'",
+    ),
+  ).toEqual([]);
 });

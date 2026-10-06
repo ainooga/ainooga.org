@@ -92,8 +92,26 @@ it.each([
   { eligibleTags: ['MixedCase'] },
   { eligibleTags: ['a', 'a'] },
   { options: [' X ', 'x'] },
+  { eligibleEmails: ['not an email'] },
 ])('rejects invalid poll configuration %j', (patch) => {
   expect(pollSchema.safeParse(pollInput(patch)).success).toBe(false);
+});
+it('accepts and normalizes explicit poll emails', () => {
+  expect(
+    pollSchema.parse({ ...pollInput(), eligibleEmails: [' VOTER@EXAMPLE.COM '] }),
+  ).toMatchObject({ eligibleEmails: ['voter@example.com'] });
+});
+it('sends one empty-body invitation request for the entire poll', async () => {
+  const calls: unknown[] = [];
+  expect(
+    await runPollCommand(['invite', 'topics'], {
+      async request(...args) {
+        calls.push(args);
+        return { recipients: 7, accepted: 7, failed: 0 };
+      },
+    }),
+  ).toEqual({ recipients: 7, accepted: 7, failed: 0 });
+  expect(calls).toEqual([['/topics/invite', 'POST', {}]]);
 });
 it.each([
   'http://example.com',

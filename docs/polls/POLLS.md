@@ -4,11 +4,11 @@ Organizers manage polls with Markdown/YAML files and `pnpm poll`. Voters follow 
 
 ## Create and publish
 
-Copy the [example poll](./topic-vote.md) and [guest list](./eligible-voters.yml) into ignored `.local/polls/`, then edit the title, choices, **UTC dates**, and voters. These files are CLI inputs, not static site content.
+Copy the [example poll](./topic-vote.md) into ignored `.local/polls/` or `ai/polls/`, then edit the title, choices, **UTC dates**, and voters. These files are CLI inputs, not static site content, and do not need to be committed.
 
 ```sh
 mkdir -p .local/polls
-cp docs/polls/topic-vote.md docs/polls/eligible-voters.yml .local/polls/
+cp docs/polls/topic-vote.md .local/polls/
 ```
 
 Put `AINOOGA_API_TOKEN` and `AINOOGA_API_URL` in ignored `.env`: use `http://localhost:8787` locally or `https://ainooga.org` for production. See [organizer setup](../API.md#organizer-setup) for tokens. To use another env file, add `--env-file .env.prod.local` after `pnpm poll`; existing shell variables take precedence.
@@ -18,18 +18,30 @@ After editing your copies:
 ```sh
 pnpm poll validate .local/polls/topic-vote.md
 pnpm poll create .local/polls/topic-vote.md
-pnpm poll allowlist add topic-vote .local/polls/eligible-voters.yml
 pnpm poll show topic-vote
 pnpm poll publish topic-vote
+pnpm poll invite topic-vote
 ```
 
-`validate` works offline. `create` saves a draft; check its settings and eligible-person count with `show` before publishing. Then share `https://ainooga.org/#/polls/topic-vote` or, locally, `http://localhost:5173/#/polls/topic-vote`. There is no public poll directory.
+`validate` works offline. `create` saves a draft; check its settings and eligible-person count with `show` before publishing. Drafts are not visible on the voter page. Once published, the link is `https://ainooga.org/#/polls/topic-vote` or, locally, `http://localhost:5173/#/polls/topic-vote`. There is no public poll directory.
+
+For production, use `pnpm poll --env-file .env.prod.local <command> ...` with `AINOOGA_API_URL=https://ainooga.org`. Existing shell variables override the env file. Deployment of the invitation endpoint must finish before using `invite`; it requires no migration or new secrets.
+
+## Send invitations
+
+`pnpm poll invite <slug>` emails everyone currently eligible through any configured tag or explicit allowance. It collects all email identifiers for those people, normalizes/deduplicates addresses, and sends a separate message to each address. Other recipients are never included in the message. People with no email identifier cannot receive an email. Newsletter and event subscription settings are separate from this explicit poll invitation command.
+
+The poll must be published and not yet closed. Creating or publishing does not send email. Invitations contain the poll link and voting instructions, not an authentication token or verification code.
+
+The command prints `{ recipients, accepted, failed }` and exits nonzero if any send fails. `accepted` means the provider accepted the message, not confirmed inbox delivery. `failed` includes timed-out sends whose delivery is uncertain. Check Cloudflare Email Sending activity if the command fails or loses its response. There are no automatic retries; running `invite` again sends the entire current audience another invitation.
 
 ## Settings
 
 Choices accept either a label string or `{ label, description }`. Descriptions are optional plain text, up to 1,000 characters. Both labels and descriptions are frozen after publication.
 
 Keep every field in the example, including `null` values and `eligibleTags: []`. Put the description in the Markdown body, not frontmatter. Quote UTC dates ending in `Z`.
+
+`eligibleEmails` is optional. When provided, it replaces the explicit person allowlist using those emails; `[]` clears it. When omitted on an update, the existing explicit allowlist is preserved. Tag eligibility still applies. Unknown addresses create minimal unverified person records, without subscriptions or organizer access. This is saved in the same transaction as the poll. `show` lists all email identifiers of explicitly allowed people, including linked aliases.
 
 | Setting                           | Meaning                                                                                                                                    |
 | --------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
@@ -40,14 +52,15 @@ Keep every field in the example, including `null` values and `eligibleTags: []`.
 | `startsAt` / `endsAt`             | Voting opens at the start and stops at the end. Voters see local times.                                                                    |
 | `allowEdits` / `editDeadline`     | With edits enabled, `null` means until closing. An explicit cutoff must be after the start and at or before the end. Otherwise use `null`. |
 | `eligibleTags`                    | Current person tags, matched live with OR. `[]` means explicit guest-list entries only.                                                    |
+| `eligibleEmails`                  | Optional email list granting explicit voting eligibility. Addresses are trimmed and lowercased.                                            |
 
 ## Guest lists and later changes
 
 Eligibility is any current matching tag OR an explicit person allowance. Tag changes take effect immediately, including on published polls. Missing tags, no eligible voters, expired dates, or impossible selection limits prevent publication.
 
-Guest-list files accept emails and **numeric Discord IDs**, not usernames. Already-linked identifiers share one person and ballot; the CLI does not create links. New identifiers create unverified records without a `member` tag, subscriptions, or organizer access. Discord username entry additionally needs the account username on its Discord record, to be populated by the later import. Until then, use email entry.
+For separate guest-list management, the [guest list example](./eligible-voters.yml) accepts emails and **numeric Discord IDs**, not usernames. Already-linked identifiers share one person and ballot; the CLI does not create links. New identifiers create unverified records without a `member` tag, subscriptions, or organizer access. Discord username entry additionally needs the account username on its Discord record, to be populated by the later import. Until then, use email entry.
 
-- `pnpm poll update <file>` replaces a draft. After publication, only title, description, and explicit eligibility can change.
+- `pnpm poll update <file>` replaces a draft. After publication, only title, description, and explicit eligibility can change. Providing `eligibleEmails` replaces all explicit person allowances, including ones previously added through Discord; omit it to preserve those allowances.
 - `pnpm poll allowlist add|remove <slug> <file>` changes explicit allowances. Uploads are repeatable. Removal does not override a matching tag. To remove all access, remove the explicit allowance and every matching person tag. Accepted ballots remain in results; ineligible people cannot read or edit them.
 - `pnpm poll results <slug>` shows totals; `pnpm poll ballots <slug>` exposes individual ballots to organizers. Keep that output private.
 - `pnpm poll archive <slug>` permanently hides the poll. Run `pnpm poll --help` for all commands.

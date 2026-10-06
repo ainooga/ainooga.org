@@ -41,7 +41,7 @@ async function admin(
     return importMember(request, deps.db);
   if (path === '/api/admin/polls' || path.startsWith('/api/admin/polls/')) {
     pollsReady(env);
-    return adminPolls(request, deps, actor.personId);
+    return adminPolls(request, deps, actor.personId, env);
   }
   return adminPerson(request, deps.db, path);
 }

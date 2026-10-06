@@ -20,9 +20,11 @@ options:
     description: Run small language models on your own hardware.
   - Robotics
   - AI for public interest projects
-# Use the companion eligible-voters.yml as the explicit guest list.
-# Alternatively, list existing person tags here; any matching tag qualifies.
+# Any matching tag OR an explicit email qualifies.
 eligibleTags: []
+# Replace these synthetic addresses with real voters, or use tags and [].
+eligibleEmails:
+  - voter@example.com
 ---
 
 Help us choose what to cover at our next chapter meeting. Pick **up to two** topics you would attend.
