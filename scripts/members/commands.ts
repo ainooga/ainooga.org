@@ -1,6 +1,6 @@
 import { readMembers } from './files.js';
 import { summarize } from './summary.js';
-import type { MemberApi } from './client.js';
+import { MemberClientError, type MemberApi } from './client.js';
 import type { ImportResult } from '../../worker/src/members/report.js';
 
 export const usage = `Usage: pnpm members [--env-file .env.prod.local] <command> <members.json>
@@ -16,8 +16,11 @@ export async function runMemberCommand(args: string[], api: MemberApi) {
   for (const [index, record] of records.entries()) {
     try {
       previews.push(await api.request(record, true));
-    } catch {
-      throw new Error(`Preview failed at row ${index + 1}. No import writes were sent.`);
+    } catch (error) {
+      const reason = error instanceof MemberClientError ? ` ${error.message}` : '';
+      throw new Error(
+        `Preview failed at row ${index + 1}. No import writes were sent.${reason}`,
+      );
     }
   }
   const summary = summarize(records, previews);
@@ -34,9 +37,10 @@ export async function runMemberCommand(args: string[], api: MemberApi) {
   for (const record of records) {
     try {
       results.push(await api.request(record, false));
-    } catch {
+    } catch (error) {
+      const reason = error instanceof MemberClientError ? ` ${error.message}` : '';
       throw new Error(
-        `Import stopped after ${results.length} confirmed members. Row ${results.length + 1} may have committed. Safely rerun the same file; resolve conflicts before changing identities.`,
+        `Import stopped after ${results.length} confirmed members. Row ${results.length + 1} may have committed. Safely rerun the same file; resolve conflicts before changing identities.${reason}`,
       );
     }
   }

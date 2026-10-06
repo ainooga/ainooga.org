@@ -17,6 +17,18 @@ export async function verifyLive(db: SqlStore): Promise<void> {
     throw new Error('Integrity check failed');
 }
 
+async function checkOrganizationNames(db: SqlStore): Promise<void> {
+  const collisions = await db.query(`SELECT group_concat(id, ', ') AS ids
+    FROM (SELECT id,lower(trim(name)) AS name_key FROM organizations ORDER BY id)
+    GROUP BY name_key HAVING count(*) > 1 ORDER BY min(id)`);
+  if (collisions.length > 0) {
+    const groups = collisions.map((row) => `[${row.ids}]`).join('; ');
+    throw new Error(
+      `Organization name collisions for IDs ${groups} under lower(trim(name)). Rename distinct organizations or reconcile duplicates while preserving sponsorships and person relationships, then rerun migration. No reconciliation or migration writes were made.`,
+    );
+  }
+}
+
 export async function migrate(db: MigrationStore): Promise<void> {
   const rows = await db.query("SELECT name FROM sqlite_master WHERE type = 'table'");
   const names = rows
@@ -30,6 +42,7 @@ export async function migrate(db: MigrationStore): Promise<void> {
   if (names.includes('people')) {
     if (names.includes('memberships')) {
       await verifyChapterDefinitions(db);
+      await checkOrganizationNames(db);
       await reconcileLegacy(db);
     } else {
       await verifyLive(db);

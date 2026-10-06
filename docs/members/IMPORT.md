@@ -25,6 +25,8 @@ Results contain member/event/registration counts, action totals, and row/field r
 
 Each member is one atomic request. The file is **not** one transaction: earlier members remain imported if a later request fails. The CLI stops and reports confirmed progress; the last request may have committed even if its response was lost. Safely rerun the same reviewed file. Do not change source keys or emails to bypass conflicts.
 
+Failures retain the row/progress information and include safe client diagnostics. Missing or invalid configuration identifies `AINOOGA_API_TOKEN` or the API origin requirement. HTTP 401 means the token was rejected, 429 means rate limiting, and 503 means the service is unavailable, including maintenance or incomplete configuration. Transport failures and invalid responses have separate messages. Unexpected exceptions and server response bodies stay redacted. The CLI stops without automatic retries; correct the cause, then rerun the same file.
+
 ## Input and preservation rules
 
 The file is an array of member objects, at most 5 MiB and 10,000 entries. Every field in the example is required. Use `null` for unknown optional values and empty arrays for absent tags/registrations. Unknown properties are rejected, including internal IDs, permissions, verification, and attendance fields. Each record must fit within 16 KiB and contain at most 25 tags and 25 registrations.
