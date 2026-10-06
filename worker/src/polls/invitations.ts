@@ -26,7 +26,7 @@ function invitation(poll: PollRow, siteUrl: string) {
   const instructions =
     `Choose at least ${poll.min_selections} option(s), ${maximum}.` +
     (poll.allow_write_ins
-      ? ' You can add one write-in; it becomes a choice for everyone.'
+      ? ' You can add one write-in with your first vote; it becomes a choice for everyone.'
       : '') +
     (poll.allow_edits
       ? ` You can edit until ${poll.edit_deadline ?? poll.ends_at}.`

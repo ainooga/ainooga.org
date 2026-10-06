@@ -11,6 +11,7 @@ async function setup() {
   await page.load();
   const form = new BallotForm(page, new FakePollRuntime());
   form.writeIn = 'Keep my draft';
+  form.writeInDescription = 'Keep my description';
   return { api, page, form };
 }
 it('checks only on submission and confirms the preserved draft under the new session', async () => {
@@ -25,6 +26,7 @@ it('checks only on submission and confirms the preserved draft under the new ses
   expect(api.submissions[1]).toMatchObject({
     sessionContext: api.poll.sessionContext,
     writeIn: original.writeIn,
+    writeInDescription: 'Keep my description',
     expectedRevision: 0,
   });
   expect(api.submissions[1]!.requestId).not.toBe(original.requestId);
@@ -47,6 +49,7 @@ it('keeps the draft on cancellation and failed replacement email entry', async (
   await form.submit();
   form.identity.dismiss();
   expect(form.writeIn).toBe('Keep my draft');
+  expect(form.writeInDescription).toBe('Keep my description');
   expect(form.pending).toBeNull();
   await form.submit();
   form.identity.stage = 'email';
@@ -67,8 +70,25 @@ it('keeps a confirmed uncertain write identical on retry', async () => {
   expect(form.identity.stage).toBe('submitting');
   expect(form.identity.open).toBe(true);
   const attempt = api.submissions.at(-1);
+  expect(attempt?.writeInDescription).toBe('Keep my description');
   await form.submit();
   expect(api.submissions.at(-1)).toEqual(attempt);
+});
+
+it('preserves a write-in draft when confirmation targets someone who already voted', async () => {
+  const { api, form } = await setup();
+  api.switchVoter('other@example.com');
+  api.poll.ballot = { revision: 1, optionIds: [1], submittedAt: 'now', updatedAt: 'now' };
+  await form.submit();
+  const original = structuredClone(api.poll.ballot);
+  const pending = JSON.parse(JSON.stringify(form.pending));
+  await form.identity.confirm();
+  expect(form.identity.open).toBe(true);
+  expect(form.identity.stage).toBe('confirm');
+  expect(form.identity.message).toContain('Write-ins are only allowed on the first vote');
+  expect(form.pending).toEqual(pending);
+  expect(api.submissions).toHaveLength(1);
+  expect(api.poll.ballot).toEqual(original);
 });
 it.each([429, 503])(
   'keeps the draft when replacement email returns %s',

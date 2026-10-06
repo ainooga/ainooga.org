@@ -71,6 +71,7 @@ export interface Submission {
   expectedRevision: number;
   optionIds: number[];
   writeIn: string | null;
+  writeInDescription?: string | null;
 }
 export interface GuestIdentifier {
   kind: 'email' | 'discord_username';

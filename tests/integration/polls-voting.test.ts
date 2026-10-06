@@ -83,9 +83,12 @@ it.each([
       turnstileToken: 'bot',
     });
     const renewed = await f.ballotFor(responseCookie(login));
+    const option = await f.db
+      .prepare("SELECT id FROM poll_options WHERE normalized_label='first'")
+      .first<{ id: number }>();
     expect(
       (
-        await f.request('/api/polls/topics/ballot', 'PUT', renewed([], 1, 'First'), {
+        await f.request('/api/polls/topics/ballot', 'PUT', renewed([option!.id], 1), {
           Cookie: responseCookie(login),
         })
       ).status,
@@ -116,7 +119,7 @@ it.each(['before_vote', 'after_vote', 'never'] as const)(
     expect((await f.admin('/topics/results')).status).toBe(200);
   },
 );
-it('deduplicates normalized write-ins, retains them on edits, and retains accepted ballots after eligibility removal', async () => {
+it('retains write-ins on edits and accepted ballots after eligibility removal', async () => {
   f = await pollFixture();
   const cookie = await f.ready();
   const submission = await f.ballotFor(cookie);
@@ -128,7 +131,7 @@ it('deduplicates normalized write-ins, retains them on edits, and retains accept
       await f.request(
         '/api/polls/topics/ballot',
         'PUT',
-        submission([options[0]!.id], 0, ' ROBOTICS '),
+        submission([], 0, 'Space   Robots'),
         { Cookie: cookie },
       )
     ).status,
@@ -136,7 +139,7 @@ it('deduplicates normalized write-ins, retains them on edits, and retains accept
   const next = await f.request(
     '/api/polls/topics/ballot',
     'PUT',
-    submission([], 1, 'Space   Robots'),
+    submission([options[1]!.id], 1),
     { Cookie: cookie },
   );
   expect(next.status).toBe(200);

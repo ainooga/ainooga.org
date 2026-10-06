@@ -21,14 +21,17 @@ it('allows one new write-in, preserves it through edits/revocation, and rejects 
   );
   expect(
     await (await send(submission([], 1, 'Another suggestion'))).json(),
-  ).toMatchObject({ code: 'write_in_limit' });
+  ).toMatchObject({ code: 'write_in_first_vote_only' });
   expect(
     await f.store.query(
       'SELECT request_id,payload_hash,attempt_nonce FROM poll_ballots WHERE request_id IS NOT NULL',
     ),
   ).toEqual(before);
   expect(await (await send(first)).json()).toMatchObject({ revision: 1 });
-  expect((await send(submission([], 1, ' MY   SUGGESTION '))).status).toBe(200);
+  const suggestion = await f.db
+    .prepare("SELECT id FROM poll_options WHERE normalized_label='my suggestion'")
+    .first<{ id: number }>();
+  expect((await send(submission([suggestion!.id], 1))).status).toBe(200);
   const ids = await optionIds(f.db);
   expect((await send(submission([ids[0]!], 2))).status).toBe(200);
   for (const action of ['revoke', 'add'])
@@ -38,7 +41,7 @@ it('allows one new write-in, preserves it through edits/revocation, and rejects 
     });
   const rejected = await send(submission([], 3, 'Still another'));
   expect(rejected.status).toBe(409);
-  expect(await rejected.json()).toMatchObject({ code: 'write_in_limit' });
+  expect(await rejected.json()).toMatchObject({ code: 'write_in_first_vote_only' });
   expect(
     await f.store.query("SELECT count(*) AS n FROM poll_options WHERE origin='write_in'"),
   ).toEqual([{ n: 1 }]);
@@ -46,14 +49,17 @@ it('allows one new write-in, preserves it through edits/revocation, and rejects 
     { revision: 3 },
   ]);
 });
-it('does not spend an allowance when a submitted label already exists', async () => {
+it('deduplicates existing topics on the first vote but does not allow new topics on edits', async () => {
   f = await pollFixture();
   const cookie = await f.ready();
   const submission = await f.ballotFor(cookie);
   const send = (input: ReturnType<typeof submission>) =>
     f.request('/api/polls/topics/ballot', 'PUT', input, { Cookie: cookie });
   expect((await send(submission([], 0, ' ROBOTICS '))).status).toBe(200);
-  expect((await send(submission([], 1, 'New suggestion'))).status).toBe(200);
+  expect(
+    await f.store.query("SELECT count(*) AS n FROM poll_options WHERE origin='write_in'"),
+  ).toEqual([{ n: 0 }]);
+  expect((await send(submission([], 1, 'New suggestion'))).status).toBe(409);
 });
 it('allows only one creator when different voters compete for the final option slot', async () => {
   f = await pollFixture();

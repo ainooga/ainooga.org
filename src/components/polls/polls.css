@@ -14,7 +14,8 @@
   gap: var(--space-md);
 }
 .poll-entry input,
-.poll-options > input {
+.poll-options > input,
+.poll-options > textarea {
   width: 100%;
   padding: var(--space-md);
   border: var(--border-width-thin) solid var(--color-border);
@@ -22,6 +23,9 @@
   background: var(--color-surface);
   color: var(--color-text);
   font: inherit;
+}
+.poll-options > textarea {
+  resize: vertical;
 }
 .poll-actions {
   display: flex;

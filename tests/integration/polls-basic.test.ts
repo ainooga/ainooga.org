@@ -22,7 +22,7 @@ it('creates, publishes, authenticates, votes, retries, edits and returns aggrega
     optionIds: first.optionIds,
   });
   expect(await (await vote()).json()).toMatchObject({ revision: 1 });
-  const edit = submission([], 1, 'New talk');
+  const edit = submission([poll.options[1]!.id], 1);
   expect(
     await (
       await f.request('/api/polls/topics/ballot', 'PUT', edit, { Cookie: cookie })
@@ -33,7 +33,7 @@ it('creates, publishes, authenticates, votes, retries, edits and returns aggrega
     ballotCount: 1,
     eligibleCount: 1,
     options: expect.arrayContaining([
-      expect.objectContaining({ label: 'New talk', votes: 1 }),
+      expect.objectContaining({ label: 'Language models', votes: 1 }),
     ]),
   });
 });

@@ -8,13 +8,11 @@ links:
   linkedin: https://www.linkedin.com/in/johnathangardner/
   email: john.gardner@ainooga.org
 bio: >
-  Senior Full-Stack Engineer at RevRise Media (Full-Time). Founder / AI Research
-  Engineer, Evolutionary Systems at Ardea (Part-Time).
+  Senior software engineer and AI researcher with 20+ years of experience building software, leading engineering teams, and turning difficult ideas into working systems. His background spans full-stack development, architecture, consulting, and technical leadership, and he remains thoroughly in the code.
 
-  With 20+ years in full-stack software engineering and consulting, I bridge
-  practical leadership as VRSEN's CTO with pioneering AI research at Ardea. I
-  deliver solutions while exploring artificial consciousness frontiers, seeking
-  to augment our potential. My strength is the intersection of technical
-  implementation and philosophical reasoning; building effective teams and
-  elegant systems, remaining thoroughly in-the-code.
+  These days, most of his attention is on Ardea, where he’s exploring evolutionary approaches to AI, machine reasoning, world models, artificial consciousness, and systems that expand what people can do. He’s currently wrapping up research that exceeded his expectations, preparing a paper, and bringing that work into a product proof of concept.
+
+  John gravitates toward problems that sit between disciplines, especially where software engineering, AI, systems thinking, and philosophy overlap. His strength lies in taking difficult or poorly defined ideas, reasoning through them from first principles, and figuring out how to make them work.
+
+  He brings that same curiosity to AINooga, connecting with people who want to build, experiment, share what they’re learning, and ask difficult questions about intelligence and the role AI should play in our lives.
 ---

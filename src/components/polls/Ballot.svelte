@@ -69,8 +69,9 @@
             >
           </label>
         {/each}
-        {#if poll.allowWriteIns}
-          <label for="poll-write-in">Write in an option</label>
+        {#if poll.allowWriteIns && poll.ballot === null}
+          <p>Write in an option</p>
+          <label for="poll-write-in">Topic</label>
           <input
             id="poll-write-in"
             maxlength="200"
@@ -80,9 +81,17 @@
                 form.selected = [];
             }}
           />
+          <label for="poll-write-in-description">Description (optional)</label>
+          <textarea
+            id="poll-write-in-description"
+            maxlength="1000"
+            rows="3"
+            bind:value={form.writeInDescription}
+          ></textarea>
           <p class="poll-note">
-            You can add one new option per poll. Accepted write-ins become choices for
-            everyone eligible to vote.
+            You can add one new option with your first vote. Its topic and description
+            cannot be changed afterward. Accepted write-ins become choices for everyone
+            eligible to vote.
           </p>
         {/if}
       </fieldset>

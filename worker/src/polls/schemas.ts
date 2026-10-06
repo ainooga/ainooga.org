@@ -106,8 +106,13 @@ export const ballotSchema = z
     expectedRevision: z.number().int().min(0).max(2147483646),
     optionIds: z.array(z.number().int().positive().safe()),
     writeIn: label.nullable(),
+    writeInDescription: z.string().trim().max(1000).nullable().optional(),
   })
-  .strict();
+  .strict()
+  .refine((p) => p.writeIn !== null || !p.writeInDescription, {
+    path: ['writeInDescription'],
+    message: 'A write-in description requires a topic.',
+  });
 export type BallotInput = z.infer<typeof ballotSchema>;
 
 export const invitationSummarySchema = z

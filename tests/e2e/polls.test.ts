@@ -28,7 +28,8 @@ test('email entry, write-in, editing, another voter and logout through real D1',
   const errors: string[] = [];
   page.on('pageerror', (error) => errors.push(error.message));
   await enter(page, 'browser-vote');
-  await page.getByLabel('Write in an option').fill('Browser write-in');
+  await page.getByLabel('Topic').fill('Browser write-in');
+  await page.getByLabel('Description (optional)').fill('A topic from the browser');
   await page.getByRole('button', { name: 'Submit vote', exact: true }).click();
   await expect(page.getByText('Your vote is saved.', { exact: true })).toBeVisible();
   await expect(
@@ -37,6 +38,9 @@ test('email entry, write-in, editing, another voter and logout through real D1',
     }),
   ).toBeVisible();
   await page.getByRole('button', { name: 'Edit vote', exact: true }).click();
+  await expect(page.getByLabel('Topic', { exact: true })).toHaveCount(0);
+  await expect(page.getByLabel('Description (optional)')).toHaveCount(0);
+  await expect(page.getByText('A topic from the browser', { exact: true })).toBeVisible();
   await page.getByRole('radio', { name: 'Robotics', exact: true }).check();
   await page.getByRole('button', { name: 'Save changes', exact: true }).click();
   await expect(
@@ -49,10 +53,16 @@ test('email entry, write-in, editing, another voter and logout through real D1',
   await page.getByLabel('Email', { exact: true }).fill('other@example.com');
   await page.getByRole('button', { name: 'Continue', exact: true }).click();
   await expect(
-    page.getByRole('radio', { name: 'Browser write-in (write-in)', exact: true }),
+    page.getByRole('radio', {
+      name: 'Browser write-in (write-in) A topic from the browser',
+      exact: true,
+    }),
   ).toBeVisible();
   await page
-    .getByRole('radio', { name: 'Browser write-in (write-in)', exact: true })
+    .getByRole('radio', {
+      name: 'Browser write-in (write-in) A topic from the browser',
+      exact: true,
+    })
     .check();
   await page.getByRole('button', { name: 'Submit vote', exact: true }).click();
   await expect(
@@ -129,7 +139,7 @@ test('two tabs require confirmation, preserve a cancelled draft, and restore foc
   context,
 }) => {
   await enter(page, 'browser-confirm');
-  await page.getByLabel('Write in an option').fill('Preserved draft');
+  await page.getByLabel('Topic').fill('Preserved draft');
   const other = await context.newPage();
   await other.goto('/#/polls/browser-confirm');
   await changeEmail(other, 'other@example.com');
@@ -147,7 +157,7 @@ test('two tabs require confirmation, preserve a cancelled draft, and restore foc
   await page.keyboard.press('Escape');
   await expect(dialog).toHaveCount(0);
   await expect(submit).toBeFocused();
-  await expect(page.getByLabel('Write in an option')).toHaveValue('Preserved draft');
+  await expect(page.getByLabel('Topic')).toHaveValue('Preserved draft');
   await submit.click();
   await dialog.getByRole('button', { name: 'Yes', exact: true }).click();
   await expect(page.locator('.poll-ballot li')).toHaveText('Preserved draft');
@@ -244,7 +254,7 @@ test('accepted write-ins cannot be invisibly edited after a failed detail reload
 }) => {
   const slug = 'browser-write-in-reload';
   await enter(page, slug);
-  await page.getByLabel('Write in an option').fill('Visible after reload');
+  await page.getByLabel('Topic').fill('Visible after reload');
   let fail = true;
   let writes = 0;
   page.on('request', (request) => {

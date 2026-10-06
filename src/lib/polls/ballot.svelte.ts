@@ -8,6 +8,7 @@ import { messageFor, type PollPage } from './page.svelte';
 export class BallotForm {
   selected = $state<number[]>([]);
   writeIn = $state('');
+  writeInDescription = $state('');
   editing = $state(false);
   busy = $state(false);
   message = $state('');
@@ -34,6 +35,7 @@ export class BallotForm {
     this.selected = [...(detail.ballot?.optionIds ?? [])];
     this.revision = detail.ballot?.revision ?? 0;
     this.writeIn = '';
+    this.writeInDescription = '';
     this.editing = false;
     this.pending = null;
   }
@@ -42,7 +44,10 @@ export class BallotForm {
       ? this.selected.filter((value) => value !== id)
       : [...this.selected, id];
     this.selected = single ? [id] : multiple;
-    if (single) this.writeIn = '';
+    if (single) {
+      this.writeIn = '';
+      this.writeInDescription = '';
+    }
   }
   startEdit() {
     if (this.needsReload) return;
@@ -73,7 +78,9 @@ export class BallotForm {
       this.message = 'Voting or ballot editing has closed.';
       return null;
     }
-    const count = selectedCount(p, this.selected, this.writeIn);
+    const fields = this.writeInFields();
+    if (fields === null) return null;
+    const count = selectedCount(p, this.selected, fields.writeIn ?? '');
     if (
       count < p.minSelections ||
       (p.maxSelections !== null && count > p.maxSelections)
@@ -86,8 +93,18 @@ export class BallotForm {
       sessionContext: this.context,
       expectedRevision: this.revision,
       optionIds: [...this.selected],
-      writeIn: this.writeIn.trim() || null,
+      ...fields,
     };
+  }
+  private writeInFields(): Pick<Submission, 'writeIn' | 'writeInDescription'> | null {
+    if (this.revision > 0) return { writeIn: null };
+    const writeIn = this.writeIn.trim() || null;
+    const writeInDescription = this.writeInDescription.trim() || null;
+    if (writeIn === null && writeInDescription !== null) {
+      this.message = 'Enter a topic for your write-in description.';
+      return null;
+    }
+    return { writeIn, ...(writeInDescription === null ? {} : { writeInDescription }) };
   }
   async submit() {
     if (this.busy || this.needsReload) return;
@@ -119,6 +136,12 @@ export class BallotForm {
   }
   async submitAs(detail: PollDetail) {
     if (this.busy || this.pending === null) return;
+    if (detail.ballot !== null && this.pending.writeIn !== null) {
+      this.identity.stage = 'confirm';
+      this.identity.message =
+        'This voter already has a saved vote. Write-ins are only allowed on the first vote. Cancel and reload their ballot to edit selections.';
+      return;
+    }
     this.pending = {
       ...this.pending,
       requestId: this.runtime.uuid(),

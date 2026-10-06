@@ -19,9 +19,10 @@ export async function submitBallot(
   await requireContext(input.sessionContext, voter, p.id);
   input = { ...input, optionIds: [...new Set(input.optionIds)].sort((a, b) => a - b) };
   const normalized = input.writeIn === null ? null : normalizeLabel(input.writeIn);
-  const payloadHash = await hashToken(
-    JSON.stringify([input.expectedRevision, input.optionIds, normalized]),
-  );
+  const payload = [input.expectedRevision, input.optionIds, normalized];
+  // Keep legacy hashes for description-free requests so accepted retries survive deployment.
+  if (input.writeInDescription) payload.push(input.writeInDescription);
+  const payloadHash = await hashToken(JSON.stringify(payload));
   const s = {
     pollId: p.id,
     personId: voter.personId,

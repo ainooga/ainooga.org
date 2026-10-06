@@ -28,6 +28,12 @@ export function submissionOutcome(
     return ballotResult(results[6]!);
   const state = results[7]!.results[0]!;
   checkWindow(p, s.input, String(state.now));
+  if (receipt !== undefined && s.normalized !== null)
+    reject(
+      409,
+      'write_in_first_vote_only',
+      'Write-ins are only allowed on your first vote. Select existing options when editing.',
+    );
   if (state.writeInAllowed === 0)
     reject(
       409,
