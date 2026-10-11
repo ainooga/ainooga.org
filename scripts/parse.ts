@@ -12,6 +12,7 @@ import {
   type SiteConfigType,
   type ParsedDoc,
   type ContentType,
+  type EventFrontmatterType,
 } from './types.js';
 
 const FRONTMATTER_SCHEMAS: Record<ContentType, z.ZodType> = {
@@ -76,8 +77,35 @@ export function parseSiteConfig(): SiteConfigType {
   return result.data;
 }
 
-export function parseAll(): { docs: ParsedDoc[]; errors: FieldError[] } {
-  const types: ContentType[] = ['posts', 'events', 'members', 'sponsors'];
+function eventIdentityErrors(docs: ParsedDoc[]): FieldError[] {
+  const seen = new Map<string, string>();
+  const errors: FieldError[] = [];
+  for (const doc of docs.filter((doc) => doc.type === 'events')) {
+    const fields = doc.frontmatter as EventFrontmatterType;
+    const identities = [
+      { field: 'slug', key: JSON.stringify(['slug', doc.slug]) },
+      ...(fields.links ?? []).map((link) => ({
+        field: 'links',
+        key: JSON.stringify(['link', link.platform, link.externalId]),
+      })),
+    ];
+    for (const { field, key } of identities) {
+      const previous = seen.get(key);
+      if (previous !== undefined)
+        errors.push({
+          filePath: doc.filePath,
+          field,
+          message: `Duplicate event identity also used by ${previous}.`,
+        });
+      seen.set(key, doc.filePath);
+    }
+  }
+  return errors;
+}
+
+export function parseAll(
+  types: ContentType[] = ['posts', 'events', 'members', 'sponsors'],
+): { docs: ParsedDoc[]; errors: FieldError[] } {
   const docs: ParsedDoc[] = [];
   const allErrors: FieldError[] = [];
 
@@ -99,5 +127,5 @@ export function parseAll(): { docs: ParsedDoc[]; errors: FieldError[] } {
     }
   }
 
-  return { docs, errors: allErrors };
+  return { docs, errors: [...allErrors, ...eventIdentityErrors(docs)] };
 }

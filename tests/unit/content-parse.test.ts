@@ -115,6 +115,62 @@ it('rejects malformed frontmatter instead of silently ignoring it', () => {
   expect(() => parseAll()).toThrow();
 });
 
+const eventFields = {
+  title: 'Meeting',
+  date: '2026-10-17T13:00:00-04:00',
+  endDate: '2026-10-17T17:00:00-04:00',
+  location: 'BDC',
+  organizer: 'Chapter',
+  tags: [],
+  status: 'published',
+  timezone: 'America/New_York',
+  capacity: 60,
+  links: [
+    { platform: 'luma', externalId: 'evt-example', url: 'https://luma.com/example' },
+  ],
+};
+
+it('accepts structured event references and normalizes offset dates', () => {
+  content('content/events/meeting.md', eventFields);
+  const result = parseAll();
+  expect(result.errors).toEqual([]);
+  expect(result.docs[0]?.frontmatter).toMatchObject({
+    date: new Date('2026-10-17T17:00:00.000Z'),
+    timezone: 'America/New_York',
+    capacity: 60,
+    links: eventFields.links,
+  });
+});
+
+it.each([
+  { endDate: '2026-10-17T12:00:00-04:00' },
+  { timezone: 'Not/A_Zone' },
+  { capacity: -1 },
+  { capacity: 1.5 },
+  { links: [{ ...eventFields.links[0], url: 'not a URL' }] },
+  { links: [{ ...eventFields.links[0], url: 'http://localhost/example' }] },
+  { links: [{ ...eventFields.links[0], url: 'https://user:password@luma.com/example' }] },
+  { links: [{ ...eventFields.links[0], externalId: '' }] },
+  { links: [eventFields.links[0], eventFields.links[0]] },
+])('rejects invalid event metadata %j', (fields) => {
+  content('content/events/meeting.md', { ...eventFields, ...fields });
+  expect(parseAll().errors.length).toBeGreaterThan(0);
+});
+
+it.each(['slug', 'platform identity'])(
+  'rejects duplicate event %s across files',
+  (kind) => {
+    content('content/events/meeting.md', eventFields);
+    content(`content/events/archive/${kind === 'slug' ? 'meeting' : 'other'}.md`, {
+      ...eventFields,
+      links: kind === 'slug' ? [] : eventFields.links,
+    });
+    expect(parseAll().errors.some((error) => error.message.includes('Duplicate'))).toBe(
+      true,
+    );
+  },
+);
+
 it('requires a valid site configuration and preserves navigation', () => {
   expect(() => parseSiteConfig()).toThrow('content/site.yml not found');
   content('content/site.yml', { title: '', unknown: 'field' });

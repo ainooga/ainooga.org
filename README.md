@@ -50,6 +50,21 @@ pnpm build:content  # validates and generates JSON
 pnpm dev            # see it live
 ```
 
+Published events sync to D1 after checks pass on `master`. PRs validate and preview
+the event records without accessing production. Add `timezone`, optional `capacity`,
+and `links: [{ platform: luma, externalId: evt-..., url: https://luma.com/... }]`
+to frontmatter. Keep published filenames stable; a platform ID also allows matching
+an existing event after a rename. Omitted fields and links are preserved in D1;
+drafts and removed files do not delete event history or registrations.
+
+Use `pnpm events validate`, `pnpm events sync --local`, or
+`pnpm events sync --remote --dry-run` to check changes. For automation, configure
+GitHub Actions secrets `CLOUDFLARE_ACCOUNT_ID` and `CLOUDFLARE_API_TOKEN` with D1 write
+permission for the account. The Check workflow can be rerun or manually triggered
+on `master` to retry a failed sync. Website deployment runs separately.
+Changed events use transactional D1 file imports, which briefly pause database
+access. Unchanged events do not write.
+
 ## Project structure
 
 ```

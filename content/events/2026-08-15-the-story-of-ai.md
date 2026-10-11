@@ -2,6 +2,11 @@
 title: 'The Story of AI'
 date: 2026-08-15T18:00:00-04:00
 endDate: 2026-08-15T21:00:00-04:00
+timezone: America/New_York
+links:
+  - platform: luma
+    externalId: evt-KE3lSDAxeJlB0UB
+    url: https://luma.com/aic-ch-8-15
 location: TBD
 organizer: ainooga-founders
 tags: [talk, history, ai, community]

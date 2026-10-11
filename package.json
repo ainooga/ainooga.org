@@ -46,7 +46,8 @@
     "db:verify:cutover": "tsx db/cli.ts verify-cutover",
     "poll": "tsx scripts/poll.ts",
     "members": "tsx scripts/members.ts",
-    "test:e2e:polls": "playwright test --config playwright.polls.config.ts"
+    "events": "tsx scripts/events.ts",
+    "test:e2e:polls": "pnpm build:content && playwright test --config playwright.polls.config.ts"
   },
   "simple-git-hooks": {
     "pre-commit": ".githooks/pre-commit",

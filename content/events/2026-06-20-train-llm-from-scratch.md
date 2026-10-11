@@ -2,6 +2,11 @@
 title: Train a Language Model from Scratch
 date: 2026-06-20T13:00:00-04:00
 endDate: 2026-06-20T17:00:00-04:00
+timezone: America/New_York
+links:
+  - platform: luma
+    externalId: evt-zbNw5BqQPQzAxtv
+    url: https://luma.com/n6m86mo1
 location: 'The Enterprise Center (FLOOR 3), 1010 Georgia Ave, Chattanooga, TN 37402'
 organizer: ainooga-founders
 tags: [workshop, llm, training, hands-on]

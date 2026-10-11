@@ -13,7 +13,7 @@ export default defineConfig({
     screenshot: 'only-on-failure',
   },
   webServer: {
-    command: 'pnpm build:content && pnpm exec tsx tests/helpers/poll-browser-server.ts',
+    command: 'pnpm exec tsx tests/helpers/poll-browser-server.ts',
     url: 'http://127.0.0.1:4179',
     reuseExistingServer: false,
     timeout: 60000,

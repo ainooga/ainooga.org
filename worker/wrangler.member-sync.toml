@@ -15,7 +15,7 @@ AIC_BOT_EMAIL = "bot@ainooga.org"
 
 [triggers]
 # Enable ["* * * * *"] after the authentication and isolated-D1 rollout checks.
-crons = []
+crons = ["* * * * *"]
 
 [observability.logs]
 enabled = true
