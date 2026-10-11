@@ -1,4 +1,8 @@
 import { z } from 'zod';
+import {
+  invitationTagsSchema,
+  invitationMessageSchema,
+} from '../worker/src/events/schemas.js';
 
 // .strict() rejects unknown keys. No .default() — absence is error.
 // YAML auto-coerces ISO date strings to Date objects.
@@ -66,6 +70,8 @@ export const EventFrontmatter = z
       .optional(),
     organizer: z.string().min(1),
     tags: z.array(z.string()),
+    inviteTags: invitationTagsSchema.optional(),
+    inviteMessage: invitationMessageSchema.optional(),
     excerpt: z.string().max(500).optional(),
     banner: z.string().optional(),
     status: z.enum(['draft', 'published']),

@@ -84,6 +84,29 @@ For local development, copy `worker/.dev.vars.example` to the ignored `worker/.d
 
 Run `pnpm check` and `pnpm test:coverage`. A Worker `wrangler deploy --dry-run` validates bundling/bindings without deploying. Live email delivery and Discord browser consent remain checks for a future verified-entry UI. The current unverified guest-list UI needs a real Turnstile smoke check; it does not require those providers. This PR does not import real members, create production polls, or implement the later comprehensive security review.
 
+## Event invitations
+
+Organizer-only POST endpoints use the existing bearer token, Origin checks,
+chapter/auth readiness, rate limits and no-store responses:
+
+- `/api/admin/events/{slug}/invite/preview` returns `{ recipients, subject, text, html }` without sending or listing addresses.
+- `/api/admin/events/{slug}/invite` returns `{ recipients, accepted, failed }`. Repeating sends again.
+
+Both accept strict JSON with `title`, `date` (UTC ISO), `location`,
+`status: "published"`, and nonempty `inviteTags`. Optional fields are `endDate`
+(UTC ISO, after date), `timezone`, `inviteMessage` and `links` (objects with
+`platform` and HTTPS `url`). The CLI reads these from local event frontmatter.
+Invalid fields return 400; started events and tags absent from D1 return 409.
+Arbitrary recipient addresses are rejected. Event details are not saved to D1.
+
+Recipients match any invitation tag, excluding explicit event opt-outs. People
+without a preference and already registered people are included. Email aliases
+are normalized and deduplicated. Subscription and participation records are unchanged.
+Preview does not require email configuration; sending without it returns 503.
+Individual failures return HTTP 200 with counts, while the CLI exits nonzero.
+There are no automatic retries; a timeout or lost response can leave delivery
+uncertain. See [event invitations](./events/INVITATIONS.md) for usage.
+
 ## Poll API
 
 For authoring examples, CLI commands, guest-list behavior, and deployment, see the [poll guide](./polls/POLLS.md). The endpoint contracts below are for API clients.
