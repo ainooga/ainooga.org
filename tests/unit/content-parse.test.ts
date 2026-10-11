@@ -1,9 +1,11 @@
 // @vitest-environment node
 import { afterEach, beforeEach, expect, it } from 'vitest';
-import { mkdtempSync, mkdirSync, writeFileSync, rmSync } from 'node:fs';
+import { mkdtempSync, mkdirSync, writeFileSync, rmSync, readFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, dirname } from 'node:path';
 import { parseAll, parseSiteConfig } from '../../scripts/parse';
+import { emitAll } from '../../scripts/emit';
+import { renderDoc } from '../../scripts/render';
 
 const originalDirectory = process.cwd();
 let directory: string;
@@ -140,6 +142,54 @@ it('accepts structured event references and normalizes offset dates', () => {
     capacity: 60,
     links: eventFields.links,
   });
+});
+
+it('normalizes invitation frontmatter without exposing it in public event JSON', () => {
+  content('content/events/meeting.md', {
+    ...eventFields,
+    inviteTags: [' member ', 'helper'],
+    inviteMessage: '  Bring a laptop.\n\nEveryone is welcome.  ',
+  });
+  const result = parseAll(['events']);
+  expect(result.errors).toEqual([]);
+  const doc = result.docs[0]!;
+  expect(doc.frontmatter).toMatchObject({
+    inviteTags: ['member', 'helper'],
+    inviteMessage: 'Bring a laptop.\n\nEveryone is welcome.',
+  });
+  emitAll([renderDoc(doc)]);
+  const detail = JSON.parse(readFileSync('static/data/events/meeting.json', 'utf8'));
+  const index = JSON.parse(readFileSync('static/data/events/index.json', 'utf8'));
+  expect(detail).toMatchObject({ slug: 'meeting', title: eventFields.title, tags: [] });
+  expect(detail).not.toHaveProperty('inviteTags');
+  expect(detail).not.toHaveProperty('inviteMessage');
+  expect(JSON.stringify(index)).not.toContain('invite');
+  expect(doc.frontmatter.inviteTags).toEqual(['member', 'helper']);
+});
+
+it.each([
+  { inviteTags: ['MEMBER'] },
+  { inviteTags: ['member', ' member '] },
+  { inviteTags: [''] },
+  { inviteTags: [42] },
+  { inviteTags: ['x'.repeat(101)] },
+  { inviteTags: Array.from({ length: 51 }, (_, i) => `tag${i}`) },
+  { inviteMessage: '' },
+  { inviteMessage: ' '.repeat(10) },
+  { inviteMessage: 'x'.repeat(8001) },
+  { inviteMessage: null },
+])('reports invalid invitation frontmatter %j with its file and field', (fields) => {
+  content('content/events/meeting.md', { ...eventFields, ...fields });
+  const result = parseAll(['events']);
+  expect(result.errors).toEqual(
+    expect.arrayContaining([
+      expect.objectContaining({
+        filePath: 'content/events/meeting.md',
+        field: expect.stringMatching(/^invite/),
+      }),
+    ]),
+  );
+  expect(result.docs).toEqual([]);
 });
 
 it.each([

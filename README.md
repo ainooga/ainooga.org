@@ -65,6 +65,14 @@ on `master` to retry a failed sync. Website deployment runs separately.
 Changed events use transactional D1 file imports, which briefly pause database
 access. Unchanged events do not write.
 
+To send event invitations, configure `inviteTags` and optional plain-text
+`inviteMessage` in frontmatter, then run
+`pnpm events invite <slug> --dry-run` to preview or `pnpm events invite <slug>` to
+send. Explicit event invitation opt-outs are respected; people without a
+preference are included. See [event invitations](docs/events/INVITATIONS.md) for
+recipient rules and environment files. The command reads local content directly;
+no event sync or new database migration is required.
+
 ## Project structure
 
 ```

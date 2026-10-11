@@ -81,12 +81,16 @@ export function emitAll(docs: ProcessedDoc[]): void {
     mkdirSync(typeDir, { recursive: true });
 
     for (const doc of typeDocs) {
-      const detail = {
+      const detail: Record<string, unknown> = {
         slug: doc.slug,
         ...doc.data,
         bodyHtml: doc.bodyHtml,
         images: doc.images,
       };
+      if (type === 'events') {
+        delete detail.inviteTags;
+        delete detail.inviteMessage;
+      }
       const outPath = join(typeDir, `${doc.slug}.json`);
       writeFileSync(outPath, JSON.stringify(detail, null, 2));
     }

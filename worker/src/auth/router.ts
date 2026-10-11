@@ -11,6 +11,7 @@ import { honor, session, logout } from './sessions.js';
 import { requestEmail, verifyEmail } from './email.js';
 import { startDiscord, completeDiscord } from './discord.js';
 import { importMember } from '../members/router.js';
+import { adminEvents } from '../events/router.js';
 
 export function isAuthRoute(path: string): boolean {
   return (
@@ -34,6 +35,7 @@ async function admin(
   if (!exists) return reject(503, 'configuration', 'Organizer person record is missing.');
   const path = new URL(request.url).pathname;
   if (path === '/api/admin/me' && request.method === 'GET') return Response.json(actor);
+  if (path.startsWith('/api/admin/events/')) return adminEvents(request, deps, env);
   if (
     path === '/api/admin/members/import' ||
     path === '/api/admin/members/import/preview'

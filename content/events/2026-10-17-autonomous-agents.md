@@ -6,6 +6,11 @@ timezone: America/New_York
 location: Business Development Center (BDC), 100 Cherokee Blvd. Suite 100, Chattanooga, TN 37405
 organizer: ainooga-founders
 tags: [workshop, agents, automation, hands-on]
+inviteTags: [member]
+inviteMessage: |-
+  Want to put autonomous AI agents to work? Join us at the next AINooga meetup to explore tools like Muse and Dots, walk through real examples, and get help setting up your own. Bring a laptop and something you’d like to automate, or just come hang out and learn.
+
+  All experience levels welcome!
 banner: ./2026-10-17-autonomous-agents-hero.jpg
 excerpt: Explore autonomous agents, bring a task you want to automate, and get help setting up a system that works for you. All experience levels welcome.
 status: published
