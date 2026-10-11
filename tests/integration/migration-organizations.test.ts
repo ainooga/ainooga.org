@@ -83,7 +83,10 @@ it('migrates distinct organizations and permits subsequent migration verificatio
     remote: false,
     query: (sql: string) => fixture.store.query(sql),
     execute: (sql: string[]) => fixture.store.execute(sql),
-    applyMigrations: () => migration(fixture.store, '0005_simplify_chapter.sql'),
+    async applyMigrations() {
+      await migration(fixture.store, '0005_simplify_chapter.sql');
+      await migration(fixture.store, '0006_member_sync.sql');
+    },
   };
   await migrate(store);
   await verifyLive(store);

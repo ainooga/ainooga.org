@@ -54,3 +54,13 @@ This version requires migration 0005 and its matching Worker. Follow the [schema
 5. Complete the deferred newsletter, Turnstile voting, and restricted-poll checks after import. The `member` tag grants access to polls configured with that tag; explicit allowances are optional.
 
 If interrupted, rerun the same file. If the file was wrong, stop and inspect the affected records before a targeted correction; do not delete shared people or restore the whole database over newer activity. Database recovery procedures remain in [DATABASE.md](../DATABASE.md).
+
+## Scheduled Chattanooga sync
+
+`worker/wrangler.member-sync.toml` defines the separate Worker. Migration 0006 adds one state row for scheduling, the encrypted AIC session, and the current roster position. Each cron tick processes up to ten members. Writes and progress commit together per member; interrupted runs resume, while failures schedule a fresh attempt. The next run is a random 4 to 6 hours after completion or failure, subject to cron delivery delays.
+
+AIC name and role replace local values, including blanks. Contacts, company links, and tags follow the importer's additive rules. Local opt-outs, verification, newsletters, and members absent from the roster remain intact. There is no run-history or profile-staging table.
+
+Export the bot's AIC cookies to ignored `ai/cookies.json`. Set a random 64-hex-character `AIC_SESSION_KEY` in ignored `worker/.dev.vars`, migrate local D1, then run `pnpm member-sync:session --local --env-file worker/.dev.vars ai/cookies.json`. The command validates the bot identity and imports only encrypted AIC session cookies. No browser or Google password is needed by the Worker. Renewed cookies are saved automatically; import a fresh export if authentication expires or is revoked.
+
+Test with `pnpm member-sync:dev` and `curl --fail http://localhost:8787/__scheduled` for each chunk. Build with `pnpm member-sync:build`. For production, migrate D1, install `AIC_SESSION_KEY` as a secret on the sync Worker, and import cookies with `--remote --env-file <private-production.env>` using the same key. Set `crons=["* * * * *"]` and deploy with `pnpm exec wrangler deploy --config worker/wrangler.member-sync.toml`. The checked-in cron stays disabled. Inspect `next_run_at`, `last_finished_at`, `last_error`, and `cursor` in `member_sync_state`; times are Unix milliseconds.

@@ -8,8 +8,8 @@ interface MigrationStore extends SqlStore {
   applyMigrations(): void | Promise<void>;
 }
 
-export async function verifyLive(db: SqlStore): Promise<void> {
-  await verifyCurrentDefinitions(db);
+export async function verifyLive(db: SqlStore, allowPrevious = false): Promise<void> {
+  await verifyCurrentDefinitions(db, allowPrevious);
   if ((await db.query('PRAGMA foreign_key_check')).length > 0)
     throw new Error('Foreign-key check failed');
   const rows = await db.query('PRAGMA quick_check');
@@ -45,7 +45,7 @@ export async function migrate(db: MigrationStore): Promise<void> {
       await checkOrganizationNames(db);
       await reconcileLegacy(db);
     } else {
-      await verifyLive(db);
+      await verifyLive(db, true);
     }
   } else if (db.remote || names.length > 0) {
     throw new Error(
