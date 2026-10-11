@@ -1,7 +1,11 @@
 import type { MemberInput, ImportEvent } from './schemas.js';
 
 type Value = string | number | null;
-export function importSql(db: D1Database, input: MemberInput) {
+export function importSql(
+  db: D1Database,
+  input: MemberInput,
+  fence?: { sql: string; values: Value[] },
+) {
   const email = input.email.toLowerCase();
   const identity =
     "SELECT person_id FROM person_identifiers WHERE kind='email' AND normalized_value=?";
@@ -9,7 +13,8 @@ export function importSql(db: D1Database, input: MemberInput) {
   // Re-evaluated within the same batch as every write. A conflicting source
   // must never create even a partial person, event, or subscription.
   const allowed = `NOT EXISTS (${source} AND person_id != COALESCE((${identity}),-1))
-    AND NOT EXISTS (SELECT 1 FROM person_sources WHERE source=? AND source_key!=? AND person_id=(${identity}))`;
+    AND NOT EXISTS (SELECT 1 FROM person_sources WHERE source=? AND source_key!=? AND person_id=(${identity}))
+    ${fence ? `AND (${fence.sql})` : ''}`;
   const guard = [
     input.source,
     input.sourceKey,
@@ -17,6 +22,7 @@ export function importSql(db: D1Database, input: MemberInput) {
     input.source,
     input.sourceKey,
     email,
+    ...(fence?.values ?? []),
   ];
   const prepare = (sql: string, params: Value[] = []) => db.prepare(sql).bind(...params);
   const write = (sql: string, params: Value[] = []) =>

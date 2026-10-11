@@ -4,6 +4,8 @@ The API Worker uses Cloudflare D1. Migration `0005_simplify_chapter.sql` reduces
 
 Database tooling lives in the top-level `db/` directory: migration orchestration, preflight, backfill, verification, and size inspection. `migrations/` holds versioned SQL. Modules that use D1 keep their own adapters; the Worker adapter remains in `worker/src/db/`. Run the tooling from the repository root through the existing pnpm commands.
 
+Migration `0006_member_sync.sql` adds one singleton state table for [scheduled member sync](./members/IMPORT.md#scheduled-chattanooga-sync). It does not change member tables or the manual import API.
+
 ## Schema
 
 Versioned SQL in `migrations/` is authoritative. `db/schema-current.json` captures the resulting table, index, and view definitions for verification; update it with future schema migrations.

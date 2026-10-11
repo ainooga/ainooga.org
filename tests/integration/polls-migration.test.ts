@@ -18,6 +18,7 @@ it('keeps an existing voter session usable after the current migration', async (
   ]);
   await migration(f.store, '0004_poll_api.sql');
   await migration(f.store, '0005_simplify_chapter.sql');
+  await migration(f.store, '0006_member_sync.sql');
   await verifyLive(f.store);
   expect(
     await (

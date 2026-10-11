@@ -74,6 +74,7 @@ export async function authFixture(upgrade = true) {
   if (upgrade) {
     await migration(context.store, '0004_poll_api.sql');
     await migration(context.store, '0005_simplify_chapter.sql');
+    await migration(context.store, '0006_member_sync.sql');
   }
   const env: Env = {
     DB: context.db,

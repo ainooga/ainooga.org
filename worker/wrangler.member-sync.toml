@@ -1,0 +1,24 @@
+name = "ainooga-member-sync"
+main = "src/member-sync/index.ts"
+compatibility_date = "2026-06-24"
+workers_dev = false
+preview_urls = false
+
+[[d1_databases]]
+binding = "DB"
+database_name = "ainooga-d1"
+database_id = "3072a675-8a15-4019-8648-17a17ad1cadd"
+migrations_dir = "../migrations"
+
+[vars]
+AIC_BOT_EMAIL = "bot@ainooga.org"
+
+[triggers]
+# Enable ["* * * * *"] after the authentication and isolated-D1 rollout checks.
+crons = []
+
+[observability.logs]
+enabled = true
+head_sampling_rate = 1
+persist = true
+invocation_logs = false

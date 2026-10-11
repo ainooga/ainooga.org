@@ -35,6 +35,7 @@ it('fills missing legacy records, discards obsolete preferences and preserves ol
     { n: 2 },
   ]);
   await migration(f.store, '0005_simplify_chapter.sql');
+  await migration(f.store, '0006_member_sync.sql');
   await verifyLive(f.store);
   expect(await createDb(f.db).confirmSubscription('old-token')).toBe(1);
   expect(await createDb(f.db).confirmSubscription('old-token')).toBe(0);
