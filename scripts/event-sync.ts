@@ -1,4 +1,5 @@
 import { literal, type Row, type SqlStore } from '../db/types.js';
+import { WranglerError } from '../db/wrangler.js';
 import { EventFrontmatter, type ParsedDoc } from './types.js';
 
 type EventSnapshotType = { events: Row[]; links: Row[] };
@@ -158,9 +159,10 @@ export async function syncEvents(store: SqlStore, docs: ParsedDoc[], dryRun = fa
     )) {
       try {
         await store.execute(eventStatements(plan));
-      } catch {
+      } catch (error) {
+        const detail = error instanceof WranglerError ? ` ${error.message}` : '';
         throw new Error(
-          `${plan.file}: D1 write failed or could not be confirmed. Rerun sync to reconcile.`,
+          `${plan.file}: D1 write failed or could not be confirmed.${detail} Rerun sync to reconcile.`,
         );
       }
     }

@@ -2,6 +2,7 @@
 import { afterEach, beforeEach, expect, it } from 'vitest';
 import { authFixture } from '../helpers/auth';
 import { syncEvents } from '../../scripts/event-sync';
+import { WranglerError } from '../../db/wrangler';
 import type { ParsedDoc } from '../../scripts/types';
 
 let f: Awaited<ReturnType<typeof authFixture>>;
@@ -195,3 +196,26 @@ it('fails verification when the database changes the requested values', async ()
   ]);
   await expect(syncEvents(f.store, [event()])).rejects.toThrow('D1 read-back');
 });
+
+it.each([
+  [
+    new WranglerError('Wrangler returned invalid JSON.'),
+    ' Wrangler returned invalid JSON.',
+  ],
+  [new Error('SQL contained a private value'), ''],
+])(
+  'reports safe Wrangler diagnostics without exposing provider errors',
+  async (error, detail) => {
+    const failing = {
+      query: (sql: string) => f.store.query(sql),
+      execute: async () => {
+        throw error;
+      },
+    };
+    await expect(syncEvents(failing, [event()])).rejects.toThrow(
+      new Error(
+        `content/events/meeting.md: D1 write failed or could not be confirmed.${String(detail)} Rerun sync to reconcile.`,
+      ),
+    );
+  },
+);

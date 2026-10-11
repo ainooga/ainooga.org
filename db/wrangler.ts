@@ -6,6 +6,20 @@ import type { Row, SqlStore } from './types.js';
 export const persistence = resolve('worker/.wrangler/state');
 const config = resolve('worker/wrangler.toml');
 
+export class WranglerError extends Error {}
+
+export function parseWranglerOutput(output: string): unknown {
+  try {
+    // Remote imports print upload progress before the JSON even with --json.
+    const start = output.search(/^[ \t]*\[/m);
+    return JSON.parse(start < 0 ? output : output.slice(start)) as unknown;
+  } catch {
+    throw new WranglerError(
+      'Wrangler returned invalid JSON; the database operation may have completed.',
+    );
+  }
+}
+
 export class WranglerStore implements SqlStore {
   constructor(
     readonly remote: boolean,
@@ -26,7 +40,7 @@ export class WranglerStore implements SqlStore {
       );
     } catch {
       // Wrangler errors may echo SQL or private values. Do not print them.
-      throw new Error(
+      throw new WranglerError(
         'Wrangler operation failed. Check authentication/configuration and retry while maintenance remains active.',
       );
     }
@@ -75,26 +89,26 @@ export class WranglerStore implements SqlStore {
   }
 
   async query(sql: string): Promise<Row[]> {
-    const output: unknown = JSON.parse(this.withSql(sql));
+    const output = parseWranglerOutput(this.withSql(sql));
     if (!Array.isArray(output) || output.length !== 1)
-      throw new Error('Unexpected Wrangler query response');
+      throw new WranglerError('Unexpected Wrangler query response');
     const result = output[0] as { success?: boolean; results?: Row[] };
     if (result.success !== true || !Array.isArray(result.results))
-      throw new Error('Wrangler query failed');
+      throw new WranglerError('Wrangler query failed');
     return result.results;
   }
 
   async execute(statements: string[]): Promise<void> {
     if (statements.length === 0) return;
     // Remote file imports roll back on failure; they briefly pause D1 access.
-    const output: unknown = JSON.parse(
+    const output = parseWranglerOutput(
       this.withSql(`${statements.join(';\n')};`, this.atomicWrites),
     );
     if (
       !Array.isArray(output) ||
       output.some((item: { success?: boolean }) => item.success !== true)
     ) {
-      throw new Error(
+      throw new WranglerError(
         'Wrangler write failed; keep maintenance enabled and rerun verification',
       );
     }
