@@ -2,6 +2,11 @@
 title: "Where AI Fits (And Doesn't): A Local Business Panel Discussion"
 date: 2026-09-19T13:00:00-04:00
 endDate: 2026-09-19T15:30:00-04:00
+timezone: America/New_York
+links:
+  - platform: luma
+    externalId: evt-okBdiKdTzEIEo2t
+    url: https://luma.com/aic-ch-9-19
 location: Business Development Center (BDC), 100 Cherokee Blvd. Suite 100, Chattanooga, TN 37405
 organizer: ainooga-founders
 tags: [panel, discussion, business, ai]

@@ -7,7 +7,10 @@ export const persistence = resolve('worker/.wrangler/state');
 const config = resolve('worker/wrangler.toml');
 
 export class WranglerStore implements SqlStore {
-  constructor(readonly remote: boolean) {}
+  constructor(
+    readonly remote: boolean,
+    readonly atomicWrites = false,
+  ) {}
 
   private run(args: string[]): string {
     try {
@@ -29,10 +32,10 @@ export class WranglerStore implements SqlStore {
     }
   }
 
-  private withSql(sql: string): string {
+  private withSql(sql: string, atomic = false): string {
     // Remote --file uses bulk import and returns an import summary, not rows.
     // Use the query API for remote reads and the small backfill batches.
-    if (this.remote) {
+    if (this.remote && !atomic) {
       return this.run([
         'd1',
         'execute',
@@ -51,15 +54,16 @@ export class WranglerStore implements SqlStore {
     const file = resolve(directory, 'query.sql');
     try {
       writeFileSync(file, sql, { mode: 0o600 });
+      const target = this.remote
+        ? ['--remote']
+        : ['--local', '--persist-to', persistence];
       return this.run([
         'd1',
         'execute',
         'ainooga-d1',
         '--config',
         config,
-        '--local',
-        '--persist-to',
-        persistence,
+        ...target,
         '--file',
         file,
         '--json',
@@ -82,7 +86,10 @@ export class WranglerStore implements SqlStore {
 
   async execute(statements: string[]): Promise<void> {
     if (statements.length === 0) return;
-    const output: unknown = JSON.parse(this.withSql(`${statements.join(';\n')};`));
+    // Remote file imports roll back on failure; they briefly pause D1 access.
+    const output: unknown = JSON.parse(
+      this.withSql(`${statements.join(';\n')};`, this.atomicWrites),
+    );
     if (
       !Array.isArray(output) ||
       output.some((item: { success?: boolean }) => item.success !== true)

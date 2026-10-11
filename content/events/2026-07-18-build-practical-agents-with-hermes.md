@@ -2,6 +2,11 @@
 title: 'Workshop: Build Practical Agents with Hermes'
 date: 2026-07-18T13:00:00-04:00
 endDate: 2026-07-18T17:00:00-04:00
+timezone: America/New_York
+links:
+  - platform: luma
+    externalId: evt-FkpfxV6ftJabhSZ
+    url: https://luma.com/aic-ch-7-18
 location: Technology Training Room, Business Development Center (BDC), 100 Cherokee Blvd. Suite 100, Chattanooga, TN 37405
 organizer: ainooga-founders
 tags: [workshop, agents, hermes, hands-on]
