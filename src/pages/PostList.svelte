@@ -53,7 +53,7 @@
   {:else}
     <div class="post-list" style="margin-top: var(--space-xl)">
       {#each posts as post (post.slug)}
-        <a href="#/posts/{post.slug}" class="post-list__item card">
+        <a href="/posts/{post.slug}" class="post-list__item card">
           <time class="post-list__date"
             >{new Date(post.date).toLocaleDateString('en-US', {
               month: 'short',

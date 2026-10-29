@@ -104,7 +104,7 @@ export async function completeDiscord(
   const response = new Response(null, {
     status: 303,
     headers: {
-      Location: `${new URL(env.SITE_URL).origin}/#/polls/${encodeURIComponent(poll.slug)}`,
+      Location: `${new URL(env.SITE_URL).origin}/polls/${encodeURIComponent(poll.slug)}`,
     },
   });
   setCookie(response, env.SITE_URL, 'voter', token, 86400);

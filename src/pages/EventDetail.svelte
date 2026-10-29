@@ -77,7 +77,7 @@
       {@html event.bodyHtml}
     </div>
     <div style="margin-top: var(--space-2xl)">
-      <a href="#/events" class="btn btn-outline">&larr; All events</a>
+      <a href="/events" class="btn btn-outline">&larr; All events</a>
     </div>
   {/if}
 </div>

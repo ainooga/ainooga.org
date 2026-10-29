@@ -1,5 +1,12 @@
 <script lang="ts">
-  import { onMount } from 'svelte';
+  import { onMount, tick } from 'svelte';
+  import {
+    ROUTE_CHANGE_EVENT,
+    isSpaNavigation,
+    legacyHashPath,
+    parseRoute,
+    type Route,
+  } from '$lib/routing';
   import Home from './pages/Home.svelte';
   import Poll from './pages/Poll.svelte';
   import EventList from './pages/EventList.svelte';
@@ -12,51 +19,70 @@
   import About from './pages/About.svelte';
   import NotFound from './pages/NotFound.svelte';
 
-  type Route = {
-    page: string;
-    params: Record<string, string>;
-  };
-
   let route = $state<Route>({ page: '', params: {} });
 
-  function parseHash(): Route {
-    const hash = window.location.hash.replace(/^#/, '') || '/';
-    const parts = hash.split('/').filter(Boolean);
-
-    // /events/train-llm-from-scratch → { page: 'events/:slug', params: { slug: 'train-llm-from-scratch' } }
-    if (parts[0] === 'events' && parts[1]) {
-      return { page: 'events/:slug', params: { slug: parts[1] } };
-    }
-    if (parts[0] === 'posts' && parts[1]) {
-      return { page: 'posts/:slug', params: { slug: parts[1] } };
-    }
-    if (parts[0] === 'members' && parts[1]) {
-      return { page: 'members/:slug', params: { slug: parts[1] } };
-    }
-
-    if (
-      parts[0] === 'polls' &&
-      parts.length === 2 &&
-      /^[a-zA-Z0-9_-]{1,160}$/.test(parts[1] ?? '')
-    ) {
-      return { page: 'polls/:slug', params: { slug: parts[1]! } };
-    }
-
-    const page = parts[0] || 'home';
-    return { page, params: {} };
-  }
-
-  function onHashChange() {
-    route = parseHash();
+  async function onRouteChange() {
+    route = parseRoute(window.location.pathname);
+    window.dispatchEvent(new Event(ROUTE_CHANGE_EVENT));
+    await tick();
     // Focus management: move focus to main heading
     const h1 = document.querySelector('main h1');
     if (h1) (h1 as HTMLElement).focus();
   }
 
+  function navigate(path: string) {
+    window.history.pushState(null, '', path);
+    window.scrollTo(0, 0);
+    void onRouteChange();
+  }
+
+  function isPlainClick(event: MouseEvent): boolean {
+    return (
+      !event.defaultPrevented &&
+      event.button === 0 &&
+      !event.metaKey &&
+      !event.ctrlKey &&
+      !event.shiftKey &&
+      !event.altKey
+    );
+  }
+
+  function onClick(event: MouseEvent) {
+    const anchor = (event.target as Element | null)?.closest('a');
+    if (!anchor || !isPlainClick(event)) return;
+    if (
+      anchor.hasAttribute('download') ||
+      (anchor.target !== '' && anchor.target !== '_self')
+    ) {
+      return;
+    }
+    const target = new URL(anchor.href, window.location.href);
+    if (!isSpaNavigation(target, new URL(window.location.href))) return;
+    event.preventDefault();
+    navigate(target.pathname + target.search + target.hash);
+  }
+
+  function onHashChange() {
+    const legacy = legacyHashPath(window.location.hash);
+    if (legacy === null) return;
+    window.history.replaceState(null, '', legacy);
+    void onRouteChange();
+  }
+
+  function onPopState() {
+    void onRouteChange();
+  }
+
   onMount(() => {
-    onHashChange();
+    void onRouteChange();
+    document.addEventListener('click', onClick);
+    window.addEventListener('popstate', onPopState);
     window.addEventListener('hashchange', onHashChange);
-    return () => window.removeEventListener('hashchange', onHashChange);
+    return () => {
+      document.removeEventListener('click', onClick);
+      window.removeEventListener('popstate', onPopState);
+      window.removeEventListener('hashchange', onHashChange);
+    };
   });
 </script>
 

@@ -51,7 +51,7 @@
       style="margin-top: var(--space-xl); padding-bottom: var(--space-4xl)"
     >
       {#each members as member (member.slug)}
-        <a href="#/members/{member.slug}" class="member-card card">
+        <a href="/members/{member.slug}" class="member-card card">
           <div class="member-card__avatar">
             {member.title.charAt(0).toUpperCase()}
           </div>

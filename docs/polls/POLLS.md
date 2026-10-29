@@ -23,7 +23,7 @@ pnpm poll publish topic-vote
 pnpm poll invite topic-vote
 ```
 
-`validate` works offline. `create` saves a draft; check its settings and eligible-person count with `show` before publishing. Drafts are not visible on the voter page. Once published, the link is `https://ainooga.org/#/polls/topic-vote` or, locally, `http://localhost:5173/#/polls/topic-vote`. There is no public poll directory.
+`validate` works offline. `create` saves a draft; check its settings and eligible-person count with `show` before publishing. Drafts are not visible on the voter page. Once published, the link is `https://ainooga.org/polls/topic-vote` or, locally, `http://localhost:5173/polls/topic-vote`. There is no public poll directory.
 
 For production, use `pnpm poll --env-file .env.prod.local <command> ...` with `AINOOGA_API_URL=https://ainooga.org`. Existing shell variables override the env file. Deployment of the invitation endpoint must finish before using `invite`; it requires no migration or new secrets.
 

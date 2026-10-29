@@ -32,8 +32,7 @@ export function eventInvitationMessage(
   links: EventLinksType,
   siteUrl: string,
 ) {
-  const url = new URL('/', siteUrl);
-  url.hash = `/events/${event.slug}`;
+  const url = new URL(`/events/${event.slug}`, siteUrl);
   const introduction = event.inviteMessage ?? 'You are invited to join us.';
   const paragraphs = [introduction, event.title, schedule(event)];
   if (event.location) paragraphs.push(`Where: ${event.location}`);

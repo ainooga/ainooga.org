@@ -19,8 +19,7 @@ function escapeHtml(value: string): string {
 }
 
 function invitation(poll: PollRow, siteUrl: string) {
-  const url = new URL('/', siteUrl);
-  url.hash = `/polls/${poll.slug}`;
+  const url = new URL(`/polls/${poll.slug}`, siteUrl);
   const maximum =
     poll.max_selections === null ? 'with no maximum' : `up to ${poll.max_selections}`;
   const instructions =

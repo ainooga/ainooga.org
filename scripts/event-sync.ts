@@ -28,7 +28,7 @@ export function eventRecord(doc: ParsedDoc) {
       name: fields.title,
       starts_at: fields.date.toISOString(),
       location: fields.location,
-      ainooga_url: `https://ainooga.org/#/events/${doc.slug}`,
+      ainooga_url: `https://ainooga.org/events/${doc.slug}`,
       ...(fields.endDate === undefined ? {} : { ends_at: fields.endDate.toISOString() }),
       ...(fields.timezone === undefined ? {} : { timezone: fields.timezone }),
       ...(fields.capacity === undefined ? {} : { capacity: fields.capacity }),

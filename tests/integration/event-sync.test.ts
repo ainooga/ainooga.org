@@ -40,7 +40,7 @@ it('creates an event and reference, verifies writes, and leaves identical reruns
   expect(before[0]).toMatchObject({
     name: "Agent's workshop",
     starts_at: '2026-10-17T17:00:00.000Z',
-    ainooga_url: 'https://ainooga.org/#/events/meeting',
+    ainooga_url: 'https://ainooga.org/events/meeting',
   });
   expect(await links()).toEqual([
     {

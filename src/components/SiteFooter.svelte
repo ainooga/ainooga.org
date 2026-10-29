@@ -262,11 +262,11 @@
       <span class="site-footer__name">AI Nooga</span>
     </div>
     <nav class="site-footer__nav" aria-label="Footer navigation">
-      <a href="#/events">Events</a>
-      <a href="#/posts">Posts</a>
-      <a href="#/members">Members</a>
-      <a href="#/sponsor">Sponsor</a>
-      <a href="#/about">About</a>
+      <a href="/events">Events</a>
+      <a href="/posts">Posts</a>
+      <a href="/members">Members</a>
+      <a href="/sponsor">Sponsor</a>
+      <a href="/about">About</a>
     </nav>
 
     {#if subscribeState === 'success'}

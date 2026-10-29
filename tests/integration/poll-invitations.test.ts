@@ -59,7 +59,7 @@ it('invites the union of tag and explicit emails once, without exposing other re
     expect(message.bcc).toBeUndefined();
     expect(message.html).toContain('&lt;img src=x&gt; &amp; hackers');
     expect(message.html).not.toContain('<img');
-    expect(message.text).toContain('https://ainooga.test/#/polls/topics');
+    expect(message.text).toContain('https://ainooga.test/polls/topics');
     for (const address of ['alias@example.com', 'extra@example.com', 'voter@example.com'])
       expect(message.text + message.html).not.toContain(address);
   }

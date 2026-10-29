@@ -65,8 +65,8 @@
         artificial intelligence. We meet in person, in Chattanooga.
       </p>
       <div class="hero__actions">
-        <a href="#/events" class="btn btn-primary">View events</a>
-        <a href="#/about" class="btn btn-outline">About us</a>
+        <a href="/events" class="btn btn-primary">View events</a>
+        <a href="/about" class="btn btn-outline">About us</a>
       </div>
     </div>
   </div>
@@ -130,7 +130,7 @@
         <p class="error-msg">Could not load posts.</p>
       {:else}
         {#each posts as post (post.slug)}
-          <a href="#/posts/{post.slug}" class="post-card card">
+          <a href="/posts/{post.slug}" class="post-card card">
             <time class="post-card__date"
               >{new Date(post.date).toLocaleDateString('en-US', {
                 month: 'short',
@@ -147,7 +147,7 @@
       {/if}
     </div>
     <div style="text-align: center; margin-top: var(--space-xl)">
-      <a href="#/posts" class="btn btn-outline">All posts</a>
+      <a href="/posts" class="btn btn-outline">All posts</a>
     </div>
   </div>
 </section>
@@ -171,7 +171,7 @@
         <span class="sponsor-item__name">Enterprise Center</span>
         <span class="sponsor-item__tier">Platinum</span>
       </a>
-      <a href="#/sponsor" class="sponsor-item sponsor-item--cta">
+      <a href="/sponsor" class="sponsor-item sponsor-item--cta">
         <span class="sponsor-item__name">Your name here</span>
         <span class="sponsor-item__tier">Become a sponsor &rarr;</span>
       </a>

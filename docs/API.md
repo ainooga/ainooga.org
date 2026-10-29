@@ -40,7 +40,7 @@ All POST bodies below are strict JSON objects. Unknown fields are rejected. Orga
 | `POST /api/polls/{slug}/auth/email/request`     | `{ email, turnstileToken }`                              | `202`, `{ challengeId, message }`, browser challenge cookie                              |
 | `POST /api/polls/{slug}/auth/email/verify`      | `{ challengeId, code }` and challenge cookie             | Verified session cookie                                                                  |
 | `POST /api/polls/{slug}/auth/discord/start`     | `{ turnstileToken }`                                     | `{ url }` and challenge cookie; navigate the browser to the URL                          |
-| `GET /api/auth/discord/callback`                | Provider `state` and `code`, challenge cookie            | Verified session cookie and redirect to `/#/polls/{slug}`                                |
+| `GET /api/auth/discord/callback`                | Provider `state` and `code`, challenge cookie            | Verified session cookie and redirect to `/polls/{slug}`                                  |
 | `GET /api/polls/{slug}/session`                 | Session cookies                                          | `{ authenticated: false }` or `{ authenticated: true, personId, assurance, expiresAt }`  |
 | `POST /api/auth/logout`                         | Session/challenge cookies                                | Revokes presented and browser-challenge sessions, cancels pending logins; clears cookies |
 

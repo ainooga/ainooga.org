@@ -77,7 +77,7 @@
       {@html post.bodyHtml}
     </div>
     <div style="margin-top: var(--space-2xl)">
-      <a href="#/posts" class="btn btn-outline">&larr; All posts</a>
+      <a href="/posts" class="btn btn-outline">&larr; All posts</a>
     </div>
   {/if}
 </div>

@@ -95,7 +95,7 @@
       <div class="member-detail__bio">{member.bio}</div>
     {/if}
     <div style="margin-top: var(--space-2xl)">
-      <a href="#/members" class="btn btn-outline">&larr; All members</a>
+      <a href="/members" class="btn btn-outline">&larr; All members</a>
     </div>
   {/if}
 </div>

@@ -1,5 +1,6 @@
 <script lang="ts">
   import { onMount } from 'svelte';
+  import { ROUTE_CHANGE_EVENT } from '$lib/routing';
 
   const navItems = [
     { label: 'Events', path: '/events' },
@@ -10,41 +11,41 @@
   ];
 
   let scrolled = $state(false);
-  let currentHash = $state('');
+  let currentPath = $state('');
 
   function onScroll() {
     scrolled = window.scrollY > 20;
   }
 
-  function onHashChange() {
-    currentHash = window.location.hash;
+  function onRouteChange() {
+    currentPath = window.location.pathname;
   }
 
   onMount(() => {
-    currentHash = window.location.hash;
+    currentPath = window.location.pathname;
     window.addEventListener('scroll', onScroll, { passive: true });
-    window.addEventListener('hashchange', onHashChange);
+    window.addEventListener(ROUTE_CHANGE_EVENT, onRouteChange);
     return () => {
       window.removeEventListener('scroll', onScroll);
-      window.removeEventListener('hashchange', onHashChange);
+      window.removeEventListener(ROUTE_CHANGE_EVENT, onRouteChange);
     };
   });
 
   function isActive(path: string): boolean {
-    return currentHash === `#${path}` || currentHash.startsWith(`#${path}/`);
+    return currentPath === path || currentPath.startsWith(`${path}/`);
   }
 </script>
 
 <header class="site-header" class:site-header--scrolled={scrolled}>
   <div class="container site-header__inner">
-    <a href="#home" class="site-header__logo" aria-label="AI Nooga home">
+    <a href="/" class="site-header__logo" aria-label="AI Nooga home">
       <span class="site-header__mark">AI</span>
       <span class="site-header__name">AI Nooga</span>
     </a>
     <nav class="site-header__nav" aria-label="Main navigation">
       {#each navItems as item (item.path)}
         <a
-          href="#{item.path}"
+          href={item.path}
           class="site-header__link"
           class:site-header__link--active={isActive(item.path)}
         >

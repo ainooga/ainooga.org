@@ -91,7 +91,7 @@
     <p class="about__text" style="max-width: 480px; margin: 0 auto var(--space-lg)">
       Come to an event. Bring a friend. Bring a question. That's how a club works.
     </p>
-    <a href="#/events" class="btn btn-primary">View events</a>
+    <a href="/events" class="btn btn-primary">View events</a>
   </section>
 </div>
 

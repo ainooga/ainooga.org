@@ -25,7 +25,7 @@ Static SPA for a club. Content in markdown + frontmatter, compiled to JSON at bu
 ### SPA structure — Svelte 5
 
 - Svelte 5 with `$state`, `$derived`, `$effect`. No legacy Svelte 4 patterns.
-- Client-side routing via `svelte-spa-router`. Hash/pushstate, no SSR.
+- Client-side routing in `src/Router.svelte` + `src/lib/routing.ts`: path URLs (`/events/<slug>`) via pushState, no SSR. Never link with `#/`; legacy `#/...` URLs are rewritten to paths on load.
 - Progressive loading: list pages fetch index JSON only, detail pages fetch per-doc JSON on navigation.
 - Every route has loading skeleton, error state (with retry), and 404 handling.
 - Design tokens in `src/app.css` CSS custom properties. Semantic class names only — no Tailwind, no utility classes.
@@ -65,5 +65,6 @@ Static SPA for a club. Content in markdown + frontmatter, compiled to JSON at bu
 - All frontmatter validation errors are collected and reported together, not first-fail.
 - Image refs in markdown bodies and frontmatter are rewritten to processed paths during render stage.
 - Test files mirror source layout: `tests/unit/` for `scripts/*.ts`, `tests/components/` for `src/**/*.svelte`.
-- 404 handling at three levels: SPA router catch-all, fetch error states in detail pages, `static/404.html` for hosting fallback.
+- 404 handling at two levels: SPA router catch-all and fetch error states in detail pages. Do not add `static/404.html` or a `/* /index.html 200` rule — either breaks Cloudflare Pages' built-in SPA fallback (see `static/_redirects`).
+- Verify hosting behavior locally with `pnpm build && pnpm exec wrangler pages dev dist`.
 - No utility-first CSS (Tailwind). No raw values in component styles — always reference CSS custom properties.

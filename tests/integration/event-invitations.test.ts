@@ -175,7 +175,7 @@ it('previews escaped plain-text copy, local event links and the event timezone w
   expect(preview.text).toContain('1:00 PM');
   expect(preview.text).toContain('5:00 PM');
   expect(preview.text).toContain('(America/New_York)');
-  expect(preview.text).toContain('http://localhost:5173/#/events/meeting');
+  expect(preview.text).toContain('http://localhost:5173/events/meeting');
   expect(preview.html).toContain('Bring &lt;your laptop&gt; &amp; a task.<br><br>');
   expect(preview.html).toContain('https://luma.com/example?a=1&amp;b=2');
   expect(preview.html).not.toContain('<img');

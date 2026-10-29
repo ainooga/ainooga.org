@@ -24,7 +24,7 @@
 
 <a
   class="event-card"
-  href={href ?? `#/events/${slug ?? ''}`}
+  href={href ?? `/events/${slug ?? ''}`}
   class:event-card--past={date && isPast(date)}
 >
   <div class="event-card__meta">

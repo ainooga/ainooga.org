@@ -18,7 +18,7 @@ test.beforeEach(async ({ context }) => {
   });
 });
 async function enter(page: Page, slug: string, email = 'voter@example.com') {
-  await page.goto(`/#/polls/${slug}`);
+  await page.goto(`/polls/${slug}`);
   await page.getByLabel('Email', { exact: true }).fill(email);
   await page.getByRole('button', { name: 'Continue', exact: true }).click();
 }
@@ -141,7 +141,7 @@ test('two tabs require confirmation, preserve a cancelled draft, and restore foc
   await enter(page, 'browser-confirm');
   await page.getByLabel('Topic').fill('Preserved draft');
   const other = await context.newPage();
-  await other.goto('/#/polls/browser-confirm');
+  await other.goto('/polls/browser-confirm');
   await changeEmail(other, 'other@example.com');
   await expect(page.getByRole('dialog')).toHaveCount(0);
   const submit = page.getByRole('button', { name: 'Submit vote', exact: true });
@@ -172,7 +172,7 @@ test('No accepts a replacement email in the same dialog and handles an ineligibl
   await enter(page, 'browser-email');
   await page.getByRole('radio', { name: 'Robotics', exact: true }).check();
   const other = await context.newPage();
-  await other.goto('/#/polls/browser-email');
+  await other.goto('/polls/browser-email');
   await changeEmail(other, 'other@example.com');
   await page.getByRole('button', { name: 'Submit vote', exact: true }).click();
   const dialog = page.getByRole('dialog');
@@ -213,7 +213,7 @@ test('an accepted lost response cannot be retried as another voter without confi
   await page.getByRole('button', { name: 'Submit vote', exact: true }).click();
   await expect(page.getByRole('button', { name: 'Retry same vote' })).toBeVisible();
   const other = await context.newPage();
-  await other.goto(`/#/polls/${slug}`);
+  await other.goto(`/polls/${slug}`);
   await changeEmail(other, 'other@example.com');
   await page.getByRole('button', { name: 'Retry same vote' }).click();
   const dialog = page.getByRole('dialog');
@@ -235,7 +235,7 @@ test('a second identity change while the dialog is open requires another confirm
   await enter(page, 'browser-repeat-switch');
   await page.getByRole('radio', { name: 'Robotics', exact: true }).check();
   const other = await context.newPage();
-  await other.goto('/#/polls/browser-repeat-switch');
+  await other.goto('/polls/browser-repeat-switch');
   await changeEmail(other, 'other@example.com');
   await page.getByRole('button', { name: 'Submit vote', exact: true }).click();
   const dialog = page.getByRole('dialog');
@@ -286,7 +286,7 @@ test('confirmation warns before replacing the current voter’s existing editabl
   await enter(page, 'browser-existing-vote');
   await page.getByRole('radio', { name: 'Robotics', exact: true }).check();
   const other = await context.newPage();
-  await other.goto('/#/polls/browser-existing-vote');
+  await other.goto('/polls/browser-existing-vote');
   await changeEmail(other, 'other@example.com');
   await other.getByRole('radio', { name: 'Language models', exact: true }).check();
   await other.getByRole('button', { name: 'Submit vote', exact: true }).click();

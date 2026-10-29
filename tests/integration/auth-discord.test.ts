@@ -33,9 +33,7 @@ describe('Discord OAuth', () => {
     expect((await f.call(c.path)).status).toBe(400);
     const response = await f.call(c.path, undefined, c.browser);
     expect(response.status).toBe(303);
-    expect(response.headers.get('Location')).toBe(
-      'https://ainooga.test/#/polls/verified',
-    );
+    expect(response.headers.get('Location')).toBe('https://ainooga.test/polls/verified');
     expect(
       await (
         await f.call('/api/polls/verified/session', undefined, responseCookie(response))

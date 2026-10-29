@@ -8,7 +8,7 @@
     <p class="not-found__text">
       The page you're looking for doesn't exist or has been moved.
     </p>
-    <a href="#/" class="btn btn-primary">Go home</a>
+    <a href="/" class="btn btn-primary">Go home</a>
   </div>
 </div>
 
