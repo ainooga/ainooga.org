@@ -140,7 +140,9 @@ describe('handleContactSponsor', () => {
       { db, turnstile },
     );
     expect(res.status).toBe(201);
-    // Phone is cleaned
+    expect(db.requests[0].name).toBe('Alice');
     expect(db.requests[0].phone).toBe('5550123');
+    const body = await res.json();
+    expect(body.message).toBe("Thanks Alice! We'll call you back.");
   });
 });

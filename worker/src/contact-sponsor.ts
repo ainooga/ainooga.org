@@ -15,7 +15,8 @@ export async function handleContactSponsor(
     turnstile: TurnstileVerifier;
   },
 ): Promise<Response> {
-  if (!input.name.trim() || !input.phone.trim()) {
+  const name = input.name.trim();
+  if (!name || !input.phone.trim()) {
     return Response.json({ error: 'Name and phone number required.' }, { status: 400 });
   }
 
@@ -30,14 +31,14 @@ export async function handleContactSponsor(
   }
 
   await deps.db.insertContactRequest({
-    name: input.name,
+    name,
     phone: phoneClean,
     preferredDate: input.preferredDate,
     preferredTime: input.preferredTime,
   });
 
   return Response.json(
-    { message: `Thanks ${input.name}! We'll call you back.` },
+    { message: `Thanks ${name}! We'll call you back.` },
     { status: 201 },
   );
 }
