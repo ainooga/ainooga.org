@@ -46,66 +46,61 @@
   }
 </script>
 
-<div class="container-narrow member-detail">
-  {#if loading}
-    <div class="stack-lg" style="padding-top: var(--space-3xl)">
-      <Skeleton height="4rem" width="4rem" />
-      <Skeleton height="2rem" width="40%" />
-      <Skeleton height="10rem" />
-    </div>
-  {:else if error === 'notfound'}
-    <NotFound />
-  {:else if error === 'fetch'}
-    <div class="error-state">
+{#if error === 'notfound'}
+  <NotFound />
+{:else}
+  <div class="container-narrow page">
+    {#if loading}
+      <div class="stack-lg">
+        <Skeleton height="4rem" width="4rem" />
+        <Skeleton height="2rem" width="40%" />
+        <Skeleton height="10rem" />
+      </div>
+    {:else if error === 'fetch'}
       <p class="error-msg">
         Could not load member. <button onclick={load} class="link-btn">Retry</button>
       </p>
-    </div>
-  {:else if member}
-    <div class="member-detail__header">
-      <div class="member-detail__avatar">
-        {displayName.charAt(0).toUpperCase()}
+    {:else if member}
+      <div class="member-detail__header">
+        <div class="member-detail__avatar">
+          {displayName.charAt(0).toUpperCase()}
+        </div>
+        <h1 class="member-detail__name">{displayName}</h1>
+        {#if member.role}
+          <p class="member-detail__role">{member.role}</p>
+        {/if}
+        {#if member.tags && member.tags.length > 0}
+          <div class="cluster" style="margin-top: var(--space-sm)">
+            {#each member.tags as tag (tag)}
+              <span class="tag">{tag}</span>
+            {/each}
+          </div>
+        {/if}
       </div>
-      <h1 class="member-detail__name">{displayName}</h1>
-      {#if member.role}
-        <p class="member-detail__role">{member.role}</p>
-      {/if}
-      {#if member.tags && member.tags.length > 0}
-        <div class="cluster" style="margin-top: var(--space-sm)">
-          {#each member.tags as tag (tag)}
-            <span class="tag">{tag}</span>
+      {#if member.links}
+        <div class="member-detail__links" style="margin-top: var(--space-lg)">
+          {#each Object.entries(member.links) as [label, url] (label)}
+            <a
+              href={memberLink(label, url)}
+              class="member-detail__link"
+              target={label.toLowerCase() === 'email' ? undefined : '_blank'}
+              rel="noopener">{label}</a
+            >
           {/each}
         </div>
       {/if}
-    </div>
-    {#if member.links}
-      <div class="member-detail__links" style="margin-top: var(--space-lg)">
-        {#each Object.entries(member.links) as [label, url] (label)}
-          <a
-            href={memberLink(label, url)}
-            class="member-detail__link"
-            target={label.toLowerCase() === 'email' ? undefined : '_blank'}
-            rel="noopener">{label}</a
-          >
-        {/each}
+      {#if member.bio}
+        <hr class="divider" />
+        <div class="member-detail__bio">{member.bio}</div>
+      {/if}
+      <div style="margin-top: var(--space-2xl)">
+        <a href="/members" class="btn btn-outline">&larr; All members</a>
       </div>
     {/if}
-    {#if member.bio}
-      <hr class="divider" />
-      <div class="member-detail__bio">{member.bio}</div>
-    {/if}
-    <div style="margin-top: var(--space-2xl)">
-      <a href="/members" class="btn btn-outline">&larr; All members</a>
-    </div>
-  {/if}
-</div>
+  </div>
+{/if}
 
 <style>
-  .member-detail {
-    padding-top: var(--space-3xl);
-    padding-bottom: var(--space-4xl);
-  }
-
   .member-detail__avatar {
     width: 80px;
     height: 80px;
@@ -147,24 +142,5 @@
     font-size: var(--text-base);
     line-height: var(--leading-relaxed);
     color: var(--color-text);
-  }
-
-  .error-state {
-    text-align: center;
-    padding: var(--space-4xl) 0;
-  }
-
-  .error-msg {
-    color: var(--color-error);
-  }
-
-  .link-btn {
-    background: none;
-    border: none;
-    color: var(--color-accent);
-    cursor: pointer;
-    font-family: inherit;
-    font-size: inherit;
-    text-decoration: underline;
   }
 </style>

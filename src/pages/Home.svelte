@@ -181,7 +181,7 @@
 
 <style>
   .hero {
-    padding: var(--space-5xl) 0 var(--space-4xl);
+    padding: var(--space-5xl) 0 0;
   }
 
   .hero__content {
@@ -279,25 +279,7 @@
     letter-spacing: 0.05em;
   }
 
-  .error-msg {
-    color: var(--color-error);
-    font-size: var(--text-sm);
-  }
-
-  .link-btn {
-    background: none;
-    border: none;
-    color: var(--color-accent);
-    cursor: pointer;
-    font-family: inherit;
-    font-size: inherit;
-    text-decoration: underline;
-  }
-
   @media (max-width: 768px) {
-    .hero__title {
-      font-size: var(--text-4xl);
-    }
     .hero__subtitle {
       font-size: var(--text-lg);
     }

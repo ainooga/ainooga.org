@@ -391,7 +391,6 @@
   .site-footer {
     border-top: 1px solid var(--color-border-light);
     padding: var(--space-3xl) 0;
-    margin-top: var(--space-4xl);
   }
 
   .site-footer__inner {

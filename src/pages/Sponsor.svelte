@@ -135,8 +135,8 @@
   onMount(load);
 </script>
 
-<div class="container sponsor-page">
-  <p class="section__label" style="padding-top: var(--space-3xl)">Sponsorship</p>
+<div class="container page">
+  <p class="section__label">Sponsorship</p>
   <h1 class="page-title">Support AI Nooga</h1>
   <p class="sponsor-page__intro">
     AI Nooga is a volunteer-run club. Sponsorships from local businesses and benevolent
@@ -145,7 +145,7 @@
 
   <hr class="divider" />
 
-  <section class="section" style="padding-top: 0;">
+  <section>
     <p class="section__label">Why sponsor</p>
     <h2 class="section__title">Invest in Chattanooga's AI future</h2>
     <div class="sponsor-page__reasons">
@@ -175,7 +175,7 @@
 
   <hr class="divider" />
 
-  <section class="section" style="padding-top: 0;">
+  <section>
     <p class="section__label">Tiers</p>
     <h2 class="section__title">Sponsorship levels</h2>
     <div class="tier-list" style="margin-top: var(--space-lg)">
@@ -211,7 +211,7 @@
 
   <hr class="divider" />
 
-  <section class="section" style="padding-top: 0;">
+  <section>
     <p class="section__label">Current sponsors</p>
     <h2 class="section__title">Supported by</h2>
     {#if loading}
@@ -248,7 +248,7 @@
 
   <hr class="divider" />
 
-  <section class="section" style="padding-top: 0; padding-bottom: var(--space-4xl);">
+  <section>
     {#if formSubmitted}
       <div class="form-success">
         <h2 class="section__title">Thank you</h2>
@@ -329,17 +329,6 @@
 </div>
 
 <style>
-  .page-title {
-    font-family: var(--font-heading);
-    font-size: var(--text-5xl);
-    font-weight: 400;
-    margin: var(--space-sm) 0 var(--space-lg);
-  }
-
-  .sponsor-page {
-    padding-bottom: var(--space-4xl);
-  }
-
   .sponsor-page__intro {
     font-size: var(--text-lg);
     color: var(--color-text-secondary);
@@ -440,7 +429,6 @@
 
   .sponsor-cta {
     text-align: center;
-    padding: var(--space-2xl) 0;
   }
 
   .sponsor-cta p {
@@ -494,27 +482,14 @@
 
   .form-success {
     text-align: center;
-    padding: var(--space-3xl) 0;
   }
 
   .form-success p {
     color: var(--color-text-secondary);
   }
 
-  .error-msg {
-    color: var(--color-error);
-    font-size: var(--text-sm);
+  .contact-form .error-msg {
     margin-top: var(--space-sm);
-  }
-
-  .link-btn {
-    background: none;
-    border: none;
-    color: var(--color-accent);
-    cursor: pointer;
-    font-family: inherit;
-    font-size: inherit;
-    text-decoration: underline;
   }
 
   @media (max-width: 768px) {

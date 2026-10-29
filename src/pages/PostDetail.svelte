@@ -38,56 +38,51 @@
   onMount(load);
 </script>
 
-<div class="container-narrow post-detail">
-  {#if loading}
-    <div class="stack-lg" style="padding-top: var(--space-3xl)">
-      <Skeleton height="1rem" width="120px" />
-      <Skeleton height="2.5rem" width="80%" />
-      <Skeleton height="20rem" />
-    </div>
-  {:else if error === 'notfound'}
-    <NotFound />
-  {:else if error === 'fetch'}
-    <div class="error-state">
+{#if error === 'notfound'}
+  <NotFound />
+{:else}
+  <div class="container-narrow page">
+    {#if loading}
+      <div class="stack-lg">
+        <Skeleton height="1rem" width="120px" />
+        <Skeleton height="2.5rem" width="80%" />
+        <Skeleton height="20rem" />
+      </div>
+    {:else if error === 'fetch'}
       <p class="error-msg">
         Could not load post. <button onclick={load} class="link-btn">Retry</button>
       </p>
-    </div>
-  {:else if post}
-    <div class="post-detail__header">
-      <p class="section__label">
-        {new Date(post.date).toLocaleDateString('en-US', {
-          month: 'long',
-          day: 'numeric',
-          year: 'numeric',
-        })}
-      </p>
-      <h1 class="post-detail__title">{post.title}</h1>
-      {#if post.tags && post.tags.length > 0}
-        <div class="cluster" style="margin-top: var(--space-md)">
-          {#each post.tags as tag (tag)}
-            <span class="tag">{tag}</span>
-          {/each}
-        </div>
-      {/if}
-    </div>
-    <hr class="divider" />
-    <div class="post-detail__body">
-      <!-- eslint-disable-next-line svelte/no-at-html-tags -->
-      {@html post.bodyHtml}
-    </div>
-    <div style="margin-top: var(--space-2xl)">
-      <a href="/posts" class="btn btn-outline">&larr; All posts</a>
-    </div>
-  {/if}
-</div>
+    {:else if post}
+      <div class="post-detail__header">
+        <p class="section__label">
+          {new Date(post.date).toLocaleDateString('en-US', {
+            month: 'long',
+            day: 'numeric',
+            year: 'numeric',
+          })}
+        </p>
+        <h1 class="post-detail__title">{post.title}</h1>
+        {#if post.tags && post.tags.length > 0}
+          <div class="cluster" style="margin-top: var(--space-md)">
+            {#each post.tags as tag (tag)}
+              <span class="tag">{tag}</span>
+            {/each}
+          </div>
+        {/if}
+      </div>
+      <hr class="divider" />
+      <div class="post-detail__body">
+        <!-- eslint-disable-next-line svelte/no-at-html-tags -->
+        {@html post.bodyHtml}
+      </div>
+      <div style="margin-top: var(--space-2xl)">
+        <a href="/posts" class="btn btn-outline">&larr; All posts</a>
+      </div>
+    {/if}
+  </div>
+{/if}
 
 <style>
-  .post-detail {
-    padding-top: var(--space-3xl);
-    padding-bottom: var(--space-4xl);
-  }
-
   .post-detail__header {
     margin-bottom: var(--space-lg);
   }
@@ -154,24 +149,5 @@
     display: block;
     padding: var(--space-md);
     overflow-x: auto;
-  }
-
-  .error-state {
-    text-align: center;
-    padding: var(--space-4xl) 0;
-  }
-
-  .error-msg {
-    color: var(--color-error);
-  }
-
-  .link-btn {
-    background: none;
-    border: none;
-    color: var(--color-accent);
-    cursor: pointer;
-    font-family: inherit;
-    font-size: inherit;
-    text-decoration: underline;
   }
 </style>

@@ -26,7 +26,7 @@
   });
 </script>
 
-<div class="poll-page">
+<div class="poll-page container-narrow page">
   {#if page.phase === 'loading'}
     <h1 use:focus tabindex="-1">Loading poll…</h1>
     <Skeleton />

@@ -1,8 +1,8 @@
 <script lang="ts">
 </script>
 
-<div class="container about-page">
-  <p class="section__label" style="padding-top: var(--space-3xl)">About</p>
+<div class="container page">
+  <p class="section__label">About</p>
   <h1 class="page-title">AI Nooga</h1>
   <p class="about__intro">
     Chattanooga's AI club — education, policy, research, networking. We meet in person.
@@ -10,7 +10,7 @@
 
   <hr class="divider" />
 
-  <section class="about-section">
+  <section>
     <p class="section__label">Mission</p>
     <h2 class="about__heading">Making Chattanooga a hub for thoughtful AI</h2>
     <p class="about__text">
@@ -22,7 +22,7 @@
 
   <hr class="divider" />
 
-  <section class="about-section">
+  <section>
     <p class="section__label">Pillars</p>
     <h2 class="about__heading">What we do</h2>
     <div class="pillar-grid">
@@ -59,7 +59,7 @@
 
   <hr class="divider" />
 
-  <section class="about-section">
+  <section>
     <p class="section__label">Face to face</p>
     <h2 class="about__heading">Real connection, in real rooms</h2>
     <p class="about__text">
@@ -71,7 +71,7 @@
 
   <hr class="divider" />
 
-  <section class="about-section">
+  <section>
     <p class="section__label">Chattanooga</p>
     <h2 class="about__heading">Gig City, Scenic City</h2>
     <p class="about__text">
@@ -83,10 +83,7 @@
 
   <hr class="divider" />
 
-  <section
-    class="about-section"
-    style="text-align: center; padding: var(--space-3xl) 0 var(--space-4xl)"
-  >
+  <section style="text-align: center">
     <h2 class="about__heading">Join us</h2>
     <p class="about__text" style="max-width: 480px; margin: 0 auto var(--space-lg)">
       Come to an event. Bring a friend. Bring a question. That's how a club works.
@@ -96,26 +93,11 @@
 </div>
 
 <style>
-  .page-title {
-    font-family: var(--font-heading);
-    font-size: var(--text-5xl);
-    font-weight: 400;
-    margin: var(--space-sm) 0 var(--space-lg);
-  }
-
-  .about-page {
-    padding-bottom: var(--space-4xl);
-  }
-
   .about__intro {
     font-size: var(--text-lg);
     color: var(--color-text-secondary);
     line-height: var(--leading-relaxed);
     max-width: 600px;
-  }
-
-  .about-section {
-    padding: var(--space-2xl) 0;
   }
 
   .about__heading {

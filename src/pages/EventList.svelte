@@ -44,9 +44,8 @@
   onMount(load);
 </script>
 
-<h1 class="page-title container">Events</h1>
-
-<div class="container">
+<div class="container page">
+  <h1 class="page-title">Events</h1>
   {#if loading}
     <div class="stack-lg">
       <Skeleton height="2rem" width="200px" />
@@ -87,40 +86,12 @@
 </div>
 
 <style>
-  .page-title {
-    font-family: var(--font-heading);
-    font-size: var(--text-5xl);
-    font-weight: 400;
-    padding-top: var(--space-3xl);
-    margin-bottom: 0;
-  }
-
-  .events-section {
-    padding: var(--space-2xl) 0;
-  }
-
-  .events-section:last-child {
-    padding-bottom: var(--space-4xl);
-  }
-
-  .error-msg {
-    color: var(--color-error);
-    font-size: var(--text-sm);
-  }
-
-  .link-btn {
-    background: none;
-    border: none;
-    color: var(--color-accent);
-    cursor: pointer;
-    font-family: inherit;
-    font-size: inherit;
-    text-decoration: underline;
+  .events-section + .events-section {
+    margin-top: var(--space-2xl);
   }
 
   .empty-msg {
     color: var(--color-text-muted);
     text-align: center;
-    padding: var(--space-4xl) 0;
   }
 </style>

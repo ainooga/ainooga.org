@@ -40,54 +40,49 @@
   onMount(load);
 </script>
 
-<div class="container-narrow event-detail">
-  {#if loading}
-    <div class="stack-lg" style="padding-top: var(--space-3xl)">
-      <Skeleton height="1rem" width="120px" />
-      <Skeleton height="2.5rem" width="80%" />
-      <Skeleton height="1rem" width="50%" />
-      <Skeleton height="20rem" />
-    </div>
-  {:else if error === 'notfound'}
-    <NotFound />
-  {:else if error === 'fetch'}
-    <div class="error-state container">
+{#if error === 'notfound'}
+  <NotFound />
+{:else}
+  <div class="container-narrow page">
+    {#if loading}
+      <div class="stack-lg">
+        <Skeleton height="1rem" width="120px" />
+        <Skeleton height="2.5rem" width="80%" />
+        <Skeleton height="1rem" width="50%" />
+        <Skeleton height="20rem" />
+      </div>
+    {:else if error === 'fetch'}
       <p class="error-msg">
         Could not load event. <button onclick={load} class="link-btn">Retry</button>
       </p>
-    </div>
-  {:else if event}
-    <div class="event-detail__header">
-      <p class="section__label">
-        {formatEventRange(event.date, event.endDate)}
-      </p>
-      <h1 class="event-detail__title">{event.title}</h1>
-      <p class="event-detail__location">{event.location}</p>
-      {#if event.tags && event.tags.length > 0}
-        <div class="cluster" style="margin-top: var(--space-md)">
-          {#each event.tags as tag (tag)}
-            <span class="tag">{tag}</span>
-          {/each}
-        </div>
-      {/if}
-    </div>
-    <hr class="divider" />
-    <div class="event-detail__body">
-      <!-- eslint-disable-next-line svelte/no-at-html-tags -->
-      {@html event.bodyHtml}
-    </div>
-    <div style="margin-top: var(--space-2xl)">
-      <a href="/events" class="btn btn-outline">&larr; All events</a>
-    </div>
-  {/if}
-</div>
+    {:else if event}
+      <div class="event-detail__header">
+        <p class="section__label">
+          {formatEventRange(event.date, event.endDate)}
+        </p>
+        <h1 class="event-detail__title">{event.title}</h1>
+        <p class="event-detail__location">{event.location}</p>
+        {#if event.tags && event.tags.length > 0}
+          <div class="cluster" style="margin-top: var(--space-md)">
+            {#each event.tags as tag (tag)}
+              <span class="tag">{tag}</span>
+            {/each}
+          </div>
+        {/if}
+      </div>
+      <hr class="divider" />
+      <div class="event-detail__body">
+        <!-- eslint-disable-next-line svelte/no-at-html-tags -->
+        {@html event.bodyHtml}
+      </div>
+      <div style="margin-top: var(--space-2xl)">
+        <a href="/events" class="btn btn-outline">&larr; All events</a>
+      </div>
+    {/if}
+  </div>
+{/if}
 
 <style>
-  .event-detail {
-    padding-top: var(--space-3xl);
-    padding-bottom: var(--space-4xl);
-  }
-
   .event-detail__header {
     margin-bottom: var(--space-lg);
   }
@@ -178,24 +173,5 @@
     display: block;
     padding: var(--space-md);
     overflow-x: auto;
-  }
-
-  .error-state {
-    text-align: center;
-    padding: var(--space-4xl) 0;
-  }
-
-  .error-msg {
-    color: var(--color-error);
-  }
-
-  .link-btn {
-    background: none;
-    border: none;
-    color: var(--color-accent);
-    cursor: pointer;
-    font-family: inherit;
-    font-size: inherit;
-    text-decoration: underline;
   }
 </style>

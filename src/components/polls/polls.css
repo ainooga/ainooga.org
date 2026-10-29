@@ -1,7 +1,4 @@
 .poll-page {
-  max-width: var(--content-narrow);
-  margin: var(--space-3xl) auto;
-  padding: var(--space-xl);
   overflow-wrap: anywhere;
 }
 .poll-page h1,

@@ -36,9 +36,8 @@
   onMount(load);
 </script>
 
-<h1 class="page-title container">Posts</h1>
-
-<div class="container">
+<div class="container page">
+  <h1 class="page-title">Posts</h1>
   {#if loading}
     <div class="stack-lg">
       <Skeleton height="2rem" width="200px" />
@@ -51,7 +50,7 @@
       Could not load posts. <button onclick={load} class="link-btn">Retry</button>
     </p>
   {:else}
-    <div class="post-list" style="margin-top: var(--space-xl)">
+    <div class="post-list">
       {#each posts as post (post.slug)}
         <a href="/posts/{post.slug}" class="post-list__item card">
           <time class="post-list__date"
@@ -79,19 +78,10 @@
 </div>
 
 <style>
-  .page-title {
-    font-family: var(--font-heading);
-    font-size: var(--text-5xl);
-    font-weight: 400;
-    padding-top: var(--space-3xl);
-    margin-bottom: 0;
-  }
-
   .post-list {
     display: flex;
     flex-direction: column;
     gap: var(--space-md);
-    padding-bottom: var(--space-4xl);
   }
 
   .post-list__item {
@@ -118,20 +108,5 @@
     font-size: var(--text-sm);
     color: var(--color-text-secondary);
     line-height: var(--leading-relaxed);
-  }
-
-  .error-msg {
-    color: var(--color-error);
-    font-size: var(--text-sm);
-  }
-
-  .link-btn {
-    background: none;
-    border: none;
-    color: var(--color-accent);
-    cursor: pointer;
-    font-family: inherit;
-    font-size: inherit;
-    text-decoration: underline;
   }
 </style>

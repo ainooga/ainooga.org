@@ -1,7 +1,7 @@
 <script lang="ts">
 </script>
 
-<div class="not-found container">
+<div class="not-found container page">
   <div class="not-found__content">
     <span class="not-found__code">404</span>
     <h1 class="not-found__title">Page not found</h1>

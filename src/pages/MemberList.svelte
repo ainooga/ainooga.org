@@ -32,11 +32,10 @@
   onMount(load);
 </script>
 
-<h1 class="page-title container">Members</h1>
-
-<div class="container">
+<div class="container page">
+  <h1 class="page-title">Members</h1>
   {#if loading}
-    <div class="grid-3" style="margin-top: var(--space-xl)">
+    <div class="grid-3">
       {#each [1, 2, 3, 4, 5, 6] as _, i (i)}
         <div class="card"><Skeleton height="6rem" /></div>
       {/each}
@@ -46,10 +45,7 @@
       Could not load members. <button onclick={load} class="link-btn">Retry</button>
     </p>
   {:else}
-    <div
-      class="grid-3"
-      style="margin-top: var(--space-xl); padding-bottom: var(--space-4xl)"
-    >
+    <div class="grid-3">
       {#each members as member (member.slug)}
         <a href="/members/{member.slug}" class="member-card card">
           <div class="member-card__avatar">
@@ -72,14 +68,6 @@
 </div>
 
 <style>
-  .page-title {
-    font-family: var(--font-heading);
-    font-size: var(--text-5xl);
-    font-weight: 400;
-    padding-top: var(--space-3xl);
-    margin-bottom: 0;
-  }
-
   .member-card {
     display: flex;
     align-items: center;
@@ -106,20 +94,5 @@
     font-family: var(--font-heading);
     font-size: var(--text-base);
     font-weight: 400;
-  }
-
-  .error-msg {
-    color: var(--color-error);
-    font-size: var(--text-sm);
-  }
-
-  .link-btn {
-    background: none;
-    border: none;
-    color: var(--color-accent);
-    cursor: pointer;
-    font-family: inherit;
-    font-size: inherit;
-    text-decoration: underline;
   }
 </style>
