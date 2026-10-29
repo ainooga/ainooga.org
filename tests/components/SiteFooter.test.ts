@@ -24,6 +24,16 @@ class NullTurnstile implements TurnstileService {
 }
 
 /* ------------------------------------------------------------------ */
+/*  Helper: a FakeTurnstile that records removed widget ids            */
+/* ------------------------------------------------------------------ */
+class RemoveRecordingTurnstile extends FakeTurnstile {
+  removed: string[] = [];
+  override remove(widgetId: string): void {
+    this.removed.push(widgetId);
+  }
+}
+
+/* ------------------------------------------------------------------ */
 /*  Shared helpers                                                     */
 /* ------------------------------------------------------------------ */
 
@@ -494,18 +504,25 @@ describe('SiteFooter newsletter state machine', () => {
   /* ---------------------------------------------------------------- */
   describe('Timer cancels on unmount', () => {
     it('cleans up timers when component unmounts while in REVEALING', async () => {
-      const { unmount } = renderFooter(fake);
+      const recorder = new RemoveRecordingTurnstile();
+      const timersBefore = vi.getTimerCount();
+      const { unmount } = renderFooter(recorder);
       await fillAndSubmit('user@example.com');
 
-      // Unmount while in revealing
+      const widgetId = Array.from(recorder.callbacks.keys())[0];
+      expect(widgetId).toBeDefined();
+      expect(vi.getTimerCount()).toBe(timersBefore + 1); // inactivity timer
+      expect(recorder.removed).toEqual([]);
+
       unmount();
 
-      // Advance past the inactivity timeout — no crash
-      await vi.advanceTimersByTimeAsync(60_000);
+      // Teardown cleared the inactivity timer and removed the widget
+      expect(vi.getTimerCount()).toBe(timersBefore);
+      expect(recorder.removed).toEqual([widgetId]);
 
-      // No assertion needed beyond "no crash" — the timer was cleaned up
-      // by the $effect teardown
-      expect(true).toBe(true);
+      // Advancing past the inactivity timeout triggers nothing further
+      await vi.advanceTimersByTimeAsync(60_000);
+      expect(recorder.removed).toEqual([widgetId]);
     });
   });
 

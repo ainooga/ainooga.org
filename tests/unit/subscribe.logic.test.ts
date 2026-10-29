@@ -9,11 +9,18 @@ class FakeDbClient implements DbClient {
   > = new Map();
   private confirmations: Map<string, boolean> = new Map();
 
+  constructor(private insertError: Error | null = null) {}
+
+  tokenFor(email: string): string | undefined {
+    return this.subscribers.get(email)?.token;
+  }
+
   async insertSubscriber(
     email: string,
     name: string | null,
     token: string,
   ): Promise<boolean> {
+    if (this.insertError) throw this.insertError;
     const existing = this.subscribers.get(email);
     if (existing?.token) return false;
     this.subscribers.set(email, { email, name: existing?.name ?? name, token });
@@ -144,7 +151,10 @@ describe('handleSubscribe', () => {
     expect(email.sent[0].to).toBe('new@example.com');
     expect(email.sent[0].name).toBe('New User');
     expect(email.sent[0].siteUrl).toBe('https://ainooga.org');
-    expect(email.sent[0].token).toBeTruthy();
+    expect(email.sent[0].token).toMatch(
+      /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/,
+    );
+    expect(email.sent[0].token).toBe(db.tokenFor('new@example.com'));
   });
 
   it('accepts subscriber without name', async () => {
@@ -157,14 +167,16 @@ describe('handleSubscribe', () => {
     expect(email.sent[0].name).toBeNull();
   });
 
-  it('returns 500 context is handled by caller', async () => {
-    // Pure logic shouldn't throw on DB error — caller catches at handler level.
-    // Test that a failing turnstile returns 400 gracefully.
-    const turnstile = new FakeTurnstileVerifier(false);
-    const res = await handleSubscribe(
-      { email: 'test@example.com', turnstileToken: 'token' },
-      { db, email, turnstile, siteUrl: 'https://example.com' },
-    );
-    expect(res.status).toBe(400);
+  it('propagates DB insert errors to the caller without sending email', async () => {
+    const dbError = new Error('db down');
+    const failingDb = new FakeDbClient(dbError);
+    const turnstile = new FakeTurnstileVerifier(true);
+    await expect(
+      handleSubscribe(
+        { email: 'test@example.com', turnstileToken: 'token' },
+        { db: failingDb, email, turnstile, siteUrl: 'https://example.com' },
+      ),
+    ).rejects.toBe(dbError);
+    expect(email.sent).toEqual([]);
   });
 });

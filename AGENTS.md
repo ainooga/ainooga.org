@@ -60,6 +60,7 @@ Static SPA for a club. Content in markdown + frontmatter, compiled to JSON at bu
 - Error messages must be human-readable, point to the offending file + field. Use `zod-validation-error`.
 - No skipped tests, no soft assertions. Build stops on any failure.
 - Use table tests when cases are repetitive. Use fully functional fakes, not mocks.
+- Use the smallest fixture that proves the behavior, not prod-like data (e.g. paging: 5 items, page size 2). Short names, empty files where contents don't matter, tiny images.
 - `pnpm check` before push: lint (includes complexity gates) + type-check + test. No warnings tolerated.
 
 ## Key Patterns
