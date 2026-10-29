@@ -14,9 +14,9 @@
     <p class="section__label">Mission</p>
     <h2 class="about__heading">Making Chattanooga a hub for thoughtful AI</h2>
     <p class="about__text">
-      AI Nooga brings together people who want to understand AI deeply, shape how it's governed,
-      and build real relationships with the people doing the work. We're a club — not a company,
-      not a consultancy, not a conference series.
+      AI Nooga brings together people who want to understand AI deeply, shape how it's
+      governed, and build real relationships with the people doing the work. We're a club
+      — not a company, not a consultancy, not a conference series.
     </p>
   </section>
 
@@ -29,29 +29,29 @@
       <div class="pillar">
         <h3 class="pillar__title">Education</h3>
         <p class="pillar__text">
-          Hands-on workshops, study groups, and technical deep-dives. We demystify AI
-          for all skill levels — from curious beginners to experienced practitioners.
+          Hands-on workshops, study groups, and technical deep-dives. We demystify AI for
+          all skill levels — from curious beginners to experienced practitioners.
         </p>
       </div>
       <div class="pillar">
         <h3 class="pillar__title">Policy</h3>
         <p class="pillar__text">
-          AI policy is being written now. We engage with local and state government,
-          host policy salons, and write position papers to ensure thoughtful governance.
+          AI policy is being written now. We engage with local and state government, host
+          policy salons, and write position papers to ensure thoughtful governance.
         </p>
       </div>
       <div class="pillar">
         <h3 class="pillar__title">Research</h3>
         <p class="pillar__text">
-          Collaborative projects, journal clubs, and connections between academic researchers
-          and industry practitioners. We learn by doing and sharing.
+          Collaborative projects, journal clubs, and connections between academic
+          researchers and industry practitioners. We learn by doing and sharing.
         </p>
       </div>
       <div class="pillar">
         <h3 class="pillar__title">Networking</h3>
         <p class="pillar__text">
-          Socials, mixers, and mentorship pairings. AI is a team sport, and the best insights
-          happen face to face, over coffee or a whiteboard.
+          Socials, mixers, and mentorship pairings. AI is a team sport, and the best
+          insights happen face to face, over coffee or a whiteboard.
         </p>
       </div>
     </div>
@@ -63,9 +63,9 @@
     <p class="section__label">Face to face</p>
     <h2 class="about__heading">Real connection, in real rooms</h2>
     <p class="about__text">
-      AI Nooga is fundamentally an in-real-life club. The website exists to get you to events,
-      conversations, and relationships. We meet in Chattanooga — in rooms where you can see
-      the whites of someone's eyes while you argue about attention mechanisms.
+      AI Nooga is fundamentally an in-real-life club. The website exists to get you to
+      events, conversations, and relationships. We meet in Chattanooga — in rooms where
+      you can see the whites of someone's eyes while you argue about attention mechanisms.
     </p>
   </section>
 
@@ -75,15 +75,18 @@
     <p class="section__label">Chattanooga</p>
     <h2 class="about__heading">Gig City, Scenic City</h2>
     <p class="about__text">
-      Chattanooga has gigabit fiber, a thriving innovation district around The Enterprise Center,
-      world-class research nearby, and a culture that values doing things together in person.
-      AI Nooga is part of that story.
+      Chattanooga has gigabit fiber, a thriving innovation district around The Enterprise
+      Center, world-class research nearby, and a culture that values doing things together
+      in person. AI Nooga is part of that story.
     </p>
   </section>
 
   <hr class="divider" />
 
-  <section class="about-section" style="text-align: center; padding: var(--space-3xl) 0 var(--space-4xl)">
+  <section
+    class="about-section"
+    style="text-align: center; padding: var(--space-3xl) 0 var(--space-4xl)"
+  >
     <h2 class="about__heading">Join us</h2>
     <p class="about__text" style="max-width: 480px; margin: 0 auto var(--space-lg)">
       Come to an event. Bring a friend. Bring a question. That's how a club works.

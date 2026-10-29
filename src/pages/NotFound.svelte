@@ -5,7 +5,9 @@
   <div class="not-found__content">
     <span class="not-found__code">404</span>
     <h1 class="not-found__title">Page not found</h1>
-    <p class="not-found__text">The page you're looking for doesn't exist or has been moved.</p>
+    <p class="not-found__text">
+      The page you're looking for doesn't exist or has been moved.
+    </p>
     <a href="#/" class="btn btn-primary">Go home</a>
   </div>
 </div>

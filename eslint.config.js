@@ -13,7 +13,10 @@ export default [
   {
     rules: {
       'no-unused-vars': 'off',
-      '@typescript-eslint/no-unused-vars': ['error', { varsIgnorePattern: '^_', argsIgnorePattern: '^_' }],
+      '@typescript-eslint/no-unused-vars': [
+        'error',
+        { varsIgnorePattern: '^_', argsIgnorePattern: '^_' },
+      ],
     },
   },
   {
@@ -42,7 +45,7 @@ export default [
       '@typescript-eslint/no-floating-promises': 'error',
       'sonarjs/cognitive-complexity': ['error', 15],
       'sonarjs/no-nested-template-literals': 'off',
-      'complexity': ['error', 10],
+      complexity: ['error', 10],
       'max-depth': ['error', 5],
       'max-lines': ['error', 300],
       'max-lines-per-function': ['error', 50],
@@ -64,7 +67,7 @@ export default [
       '@typescript-eslint/no-floating-promises': 'error',
       'sonarjs/cognitive-complexity': ['error', 15],
       'sonarjs/no-nested-template-literals': 'off',
-      'complexity': ['error', 10],
+      complexity: ['error', 10],
       'max-depth': ['error', 5],
       'max-lines': ['error', 300],
       'max-lines-per-function': ['error', 50],
@@ -84,7 +87,7 @@ export default [
       'sonarjs/no-nested-template-literals': 'off',
       'sonarjs/slow-regex': 'off',
       'sonarjs/cognitive-complexity': ['error', 15],
-      'complexity': ['error', 10],
+      complexity: ['error', 10],
       'max-depth': ['error', 5],
       'max-lines': ['error', 300],
       'max-lines-per-function': ['error', 50],
