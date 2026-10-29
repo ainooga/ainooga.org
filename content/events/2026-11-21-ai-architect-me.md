@@ -1,6 +1,5 @@
 ---
 title: 'AI Architect Me!'
-subtitle: 'No problem too troublesome. No minion turned away.'
 date: 2026-11-21T13:00:00-05:00
 endDate: 2026-11-21T17:00:00-05:00
 timezone: America/New_York
