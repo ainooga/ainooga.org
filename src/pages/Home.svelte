@@ -181,7 +181,7 @@
 
 <style>
   .hero {
-    padding: var(--space-5xl) 0 0;
+    padding: var(--page-top) 0 0;
   }
 
   .hero__content {

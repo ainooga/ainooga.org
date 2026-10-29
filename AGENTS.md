@@ -30,9 +30,9 @@ Static SPA for a club. Content in markdown + frontmatter, compiled to JSON at bu
 - Progressive loading: list pages fetch index JSON only, detail pages fetch per-doc JSON on navigation.
 - Every route has loading skeleton, error state (with retry), and 404 handling.
 - Design tokens in `src/app.css` CSS custom properties. Semantic class names only — no Tailwind, no utility classes.
-- Page spacing: every routed page's root element gets the global `.page` class, which owns top/bottom padding. Inner content (skeletons, error states, last sections) adds no outer vertical padding, and the footer has no top margin. Sections separated by `<hr class="divider">` rely on the divider's margin alone. Home is the exception (full-bleed `.section` bands).
+- Page spacing: every routed page's root element gets the global `.page` class, which owns top/bottom padding. The top gap below the header is the `--page-top` token, shared by `.page` and the Home hero — change it there, not per page. Inner content (skeletons, error states, last sections) adds no outer vertical padding, and the footer has no top margin. Sections separated by `<hr class="divider">` rely on the divider's margin alone. Home is the exception (full-bleed `.section` bands).
 - Shared page elements live in `src/app.css`, not per-page `<style>`: `.page-title` (route h1, owns the gap below it), `.error-msg` + `.link-btn` (fetch-failure message with Retry). Only add scoped overrides for genuinely contextual differences.
-- Responsive sizing is done by redefining tokens (`--text-2xl`…`--text-6xl`, `--space-4xl`/`--space-5xl`) in the `max-width: 768px` media query in `app.css`. Don't add per-element mobile font-size overrides; pick the right token and it scales.
+- Responsive sizing is done by redefining tokens (`--text-2xl`…`--text-6xl`, `--space-2xl`…`--space-5xl`) in the `max-width: 768px` media query in `app.css`. Don't add per-element mobile font-size overrides; pick the right token and it scales.
 - Browser APIs (clipboard, localStorage, fetch, etc.) use service interface pattern: interface → browser impl + fake impl → injected via Svelte context.
 
 ### Testing

@@ -74,6 +74,7 @@
   --content-max: 1200px;
   --content-narrow: 720px;
   --header-h: 64px;
+  --page-top: var(--space-xl);
 }
 
 /* ---- Global reset ---- */
@@ -152,6 +153,8 @@ h4 {
     --text-4xl: 1.75rem;
     --text-5xl: 2rem;
     --text-6xl: 2.5rem;
+    --space-2xl: 2rem;
+    --space-3xl: 3rem;
     --space-4xl: 4rem;
     --space-5xl: 5rem;
   }
@@ -178,8 +181,8 @@ p:last-child {
 }
 
 .page {
-  padding-top: var(--space-3xl);
-  padding-bottom: var(--space-4xl);
+  padding-top: var(--page-top);
+  padding-bottom: var(--space-3xl);
 }
 
 .page-title {
@@ -316,7 +319,7 @@ p:last-child {
 
 /* ---- Section ---- */
 .section {
-  padding: var(--space-4xl) 0;
+  padding: var(--space-3xl) 0;
 }
 
 .section-alt {

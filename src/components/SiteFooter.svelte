@@ -390,7 +390,7 @@
 <style>
   .site-footer {
     border-top: 1px solid var(--color-border-light);
-    padding: var(--space-3xl) 0;
+    padding: var(--space-2xl) 0;
   }
 
   .site-footer__inner {

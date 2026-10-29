@@ -14,15 +14,12 @@
 
 <style>
   .not-found {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    min-height: 60vh;
     text-align: center;
   }
 
   .not-found__content {
     max-width: 400px;
+    margin: 0 auto;
   }
 
   .not-found__code {
