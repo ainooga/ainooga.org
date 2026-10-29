@@ -17,7 +17,6 @@
     "declaration": false,
     "sourceMap": true,
     "outDir": "./dist-types",
-    "baseUrl": ".",
     "paths": {
       "$lib/*": ["./src/lib/*"]
     },
