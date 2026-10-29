@@ -232,4 +232,6 @@ it('requires a valid site configuration and preserves navigation', () => {
   };
   content('content/site.yml', config);
   expect(parseSiteConfig()).toEqual(config);
+  writeFileSync('content/site.yml', 'title: Plain YAML\nurl: https://example.org\n');
+  expect(parseSiteConfig()).toEqual({ title: 'Plain YAML', url: 'https://example.org' });
 });

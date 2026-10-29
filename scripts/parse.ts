@@ -65,7 +65,8 @@ export function parseSiteConfig(): SiteConfigType {
     throw new Error('content/site.yml not found');
   }
   const raw = readFileSync(path, 'utf-8');
-  const parsed = matter(raw);
+  // site.yml is plain YAML; wrap it so gray-matter parses it as frontmatter.
+  const parsed = matter(raw.trimStart().startsWith('---') ? raw : `---\n${raw}\n---\n`);
   const result = SiteConfig.safeParse(parsed.data);
   if (!result.success) {
     const err = fromZodError(result.error, {

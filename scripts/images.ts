@@ -2,6 +2,7 @@ import sharp from 'sharp';
 import { mkdirSync, readFileSync } from 'node:fs';
 import { basename, dirname, extname, join } from 'node:path';
 import { globSync } from 'node:fs';
+import { OG_IMAGE } from './types.js';
 
 interface ImageConfig {
   sourcePath: string;
@@ -57,6 +58,14 @@ export async function processImage(
       outputs.push(outPath);
     }
   }
+
+  // Link-preview crawlers handle WebP/AVIF inconsistently; emit a JPEG at the OG card size.
+  const ogPath = join('static/images', `${name}-og.jpg`);
+  await sharp(sourcePath)
+    .resize(OG_IMAGE.width, OG_IMAGE.height, { fit: 'cover' })
+    .jpeg({ quality: 82 })
+    .toFile(ogPath);
+  outputs.push(ogPath);
 
   return { outputs };
 }

@@ -86,6 +86,7 @@ export function emitAll(docs: ProcessedDoc[]): void {
         ...doc.data,
         bodyHtml: doc.bodyHtml,
         images: doc.images,
+        ogImage: doc.ogImage,
       };
       if (type === 'events') {
         delete detail.inviteTags;

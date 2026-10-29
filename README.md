@@ -21,8 +21,9 @@ pnpm dev
 | Script               | What                                                   |
 | -------------------- | ------------------------------------------------------ |
 | `pnpm dev`           | Build content, then start dev server with hot reload   |
-| `pnpm build`         | Build content + SPA for production                     |
+| `pnpm build`         | Build content + SPA + preview pages for production     |
 | `pnpm build:content` | Build markdown content → JSON only                     |
+| `pnpm build:pages`   | Write per-route HTML with link-preview meta into dist/ |
 | `pnpm check`         | Full validation: lint + type-check + test + complexity |
 | `pnpm test`          | Run unit + component tests                             |
 | `pnpm test:e2e`      | Run Playwright E2E tests                               |

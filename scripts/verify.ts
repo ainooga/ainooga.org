@@ -69,6 +69,9 @@ function checkDocFile(
     if (typeof bodyHtml !== 'string' || bodyHtml === '') {
       warnings.push(`${docPath}: missing bodyHtml`);
     }
+    if (typeof doc.ogImage === 'string' && !existsSync(`static${doc.ogImage}`)) {
+      errors.push(`${docPath}: missing preview image static${doc.ogImage}`);
+    }
   } catch {
     errors.push(`Invalid JSON: ${docPath}`);
   }

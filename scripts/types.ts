@@ -131,6 +131,9 @@ export type SiteConfigType = z.infer<typeof SiteConfig>;
 
 export type ContentType = 'posts' | 'events' | 'members' | 'sponsors';
 
+/** Open Graph preview image size (1.91:1), emitted as `/images/<name>-og.jpg`. */
+export const OG_IMAGE = { width: 1200, height: 630 } as const;
+
 export interface ParsedDoc {
   type: ContentType;
   slug: string;
@@ -145,5 +148,6 @@ export interface ProcessedDoc {
   data: Record<string, unknown>;
   bodyHtml: string;
   images: { src: string; alt: string }[];
+  ogImage?: string;
   filePath: string;
 }

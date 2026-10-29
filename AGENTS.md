@@ -19,8 +19,9 @@ Static SPA for a club. Content in markdown + frontmatter, compiled to JSON at bu
 - Single entry: `npm run build:content` → `scripts/build.ts` orchestrates stages.
 - Stages: parse (gray-matter + Zod validate) → process images (sharp) → render (markdown → HTML, resolve image paths) → emit (write JSON) → verify (sanity checks).
 - All frontmatter validated against Zod schemas with `.strict()`. No `.default()`. No silent fallbacks. Build fails hard listing all errors.
-- Image processing: `.jpg/.png/.tiff` → `.webp` + `.avif` at defined sizes. GIF passthrough.
+- Image processing: `.jpg/.png/.tiff` → `.webp` + `.avif` at defined sizes, plus a 1200×630 `-og.jpg` for link previews. GIF passthrough.
 - No partial output on failure. Build either succeeds fully or fails.
+- Link previews: crawlers don't run JS, so after `vite build`, `pnpm build:pages` (`scripts/build-pages.ts` + `scripts/pages.ts`) writes `dist/<route>.html` copies of `index.html` with per-page title/description/OG/Twitter tags (replacing the `<!-- page-meta:start/end -->` block) and verifies each. `pnpm build` runs content → spa → pages.
 
 ### SPA structure — Svelte 5
 

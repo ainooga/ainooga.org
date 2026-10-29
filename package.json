@@ -6,9 +6,10 @@
   "scripts": {
     "dev": "pnpm run build:content && vite",
     "dev:all": "pnpm run build:content && (pnpm run worker:dev & sleep 2 && pnpm exec vite)",
-    "build": "npm run build:content && npm run build:spa",
+    "build": "npm run build:content && npm run build:spa && npm run build:pages",
     "build:content": "tsx scripts/build.ts",
     "build:spa": "vite build",
+    "build:pages": "tsx scripts/build-pages.ts",
     "preview": "vite preview",
     "lint": "eslint --max-warnings 0 src/ scripts/ db/ worker/src/",
     "format": "prettier --check src/ scripts/ db/ worker/src/ content/",
