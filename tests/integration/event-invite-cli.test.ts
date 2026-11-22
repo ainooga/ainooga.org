@@ -25,6 +25,7 @@ afterEach(async () => {
   if (directory) await rm(directory, { recursive: true, force: true });
 });
 
+// D1 setup and seven sequential CLI processes share this test's timeout.
 it('runs the real invitation CLI through HTTP and D1 for preview, delivery and partial failure', async () => {
   f = await authFixture();
   f.env.POLLS_READY = 'false';
@@ -169,4 +170,4 @@ it('runs the real invitation CLI through HTTP and D1 for preview, delivery and p
   expect(output).not.toContain(ORGANIZER_TOKEN);
   expect(output).not.toContain('voter@example.com');
   expect(output).not.toContain('Private provider details');
-});
+}, 15_000);
