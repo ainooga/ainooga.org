@@ -1,5 +1,6 @@
 <script lang="ts">
-  import { formatEventCardRange, formatTime, isPast } from '$lib/utils';
+  import { formatEventCardRange, formatTime } from '$lib/utils';
+  import { isPastEvent } from '$lib/events';
 
   let {
     title,
@@ -25,7 +26,7 @@
 <a
   class="event-card"
   href={href ?? `/events/${slug ?? ''}`}
-  class:event-card--past={date && isPast(date)}
+  class:event-card--past={date && isPastEvent(date, endDate)}
 >
   <div class="event-card__meta">
     {#if date}

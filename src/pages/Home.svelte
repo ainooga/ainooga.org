@@ -1,40 +1,31 @@
 <script lang="ts">
   import { onMount } from 'svelte';
-  import EventCard from '../components/EventCard.svelte';
+  import EventSchedule from '../components/EventSchedule.svelte';
   import Skeleton from '../components/Skeleton.svelte';
   import { fetchData } from '$lib/fetch.ts';
+  import type { EventIndexItem } from '$lib/events';
 
-  interface IndexItem {
+  interface PostIndexItem {
     slug: string;
     title: string;
     date: string;
     excerpt?: string;
-    tags: string[];
-    path: string;
-    location?: string;
-    endDate?: string;
   }
 
-  interface ContentIndex {
-    items: IndexItem[];
-  }
-
-  let events = $state<IndexItem[]>([]);
-  let posts = $state<IndexItem[]>([]);
+  let events = $state<EventIndexItem[]>([]);
+  let posts = $state<PostIndexItem[]>([]);
   let loading = $state(true);
   let error = $state<string | null>(null);
 
   async function load() {
     try {
       const [eventsData, postsData] = await Promise.all([
-        fetchData<ContentIndex>('/data/events/index.json'),
-        fetchData<ContentIndex>('/data/posts/index.json'),
+        fetchData<{ items: EventIndexItem[] }>('/data/events/index.json'),
+        fetchData<{ items: PostIndexItem[] }>('/data/posts/index.json'),
       ]);
 
-      // Upcoming events first, then past
-      events = [...eventsData.items].sort(
-        (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime(),
-      );
+      events = eventsData.items;
+      error = null;
 
       // Most recent posts first
       posts = [...postsData.items]
@@ -72,13 +63,11 @@
   </div>
 </section>
 
-<!-- Featured event -->
+<!-- Events -->
 <section class="section">
   <div class="container">
-    <p class="section__label">Upcoming</p>
-    <h2 class="section__title">Next event</h2>
     {#if loading}
-      <div class="stack" style="gap: var(--space-md)">
+      <div class="stack">
         <Skeleton height="1.5rem" width="60%" />
         <Skeleton height="1rem" width="40%" />
         <Skeleton height="4rem" />
@@ -88,31 +77,8 @@
         Could not load events. <button onclick={load} class="link-btn">Retry</button>
       </p>
     {:else}
-      {#each events as event (event.slug)}
-        <EventCard {...event} />
-      {/each}
+      <EventSchedule {events} layout="list" />
     {/if}
-  </div>
-</section>
-
-<!-- All events -->
-<section class="section section-alt">
-  <div class="container">
-    <p class="section__label">Events</p>
-    <h2 class="section__title">All events</h2>
-    <div class="grid-2" style="margin-top: var(--space-xl)">
-      {#if loading}
-        {#each [1, 2, 3] as _, i (i)}
-          <div class="card"><Skeleton height="6rem" /></div>
-        {/each}
-      {:else if error}
-        <p class="error-msg">Could not load events.</p>
-      {:else}
-        {#each events as event (event.slug)}
-          <EventCard {...event} />
-        {/each}
-      {/if}
-    </div>
   </div>
 </section>
 

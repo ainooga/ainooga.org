@@ -144,10 +144,6 @@ export function formatEventCardRange(dateStr: string, endDateStr?: string): stri
   return `${startPart} – ${endPart}`;
 }
 
-export function isPast(iso: string): boolean {
-  return new Date(iso) < new Date();
-}
-
 export function slugify(text: string): string {
   return text
     .toLowerCase()

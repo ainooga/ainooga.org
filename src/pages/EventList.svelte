@@ -1,39 +1,21 @@
 <script lang="ts">
   import { onMount } from 'svelte';
-  import EventCard from '../components/EventCard.svelte';
+  import EventSchedule from '../components/EventSchedule.svelte';
   import Skeleton from '../components/Skeleton.svelte';
   import { fetchData } from '$lib/fetch.ts';
+  import type { EventIndexItem } from '$lib/events';
 
-  interface IndexItem {
-    slug: string;
-    title: string;
-    date: string;
-    excerpt?: string;
-    tags: string[];
-    path: string;
-    location?: string;
-    endDate?: string;
-  }
-
-  interface ContentIndex {
-    items: IndexItem[];
-  }
-
-  let upcoming = $state<IndexItem[]>([]);
-  let past = $state<IndexItem[]>([]);
+  let events = $state<EventIndexItem[]>([]);
   let loading = $state(true);
   let error = $state<string | null>(null);
 
   async function load() {
     try {
-      const data = await fetchData<ContentIndex>('/data/events/index.json');
-      const now = new Date();
-      upcoming = data.items
-        .filter((e) => new Date(e.date) >= now)
-        .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
-      past = data.items
-        .filter((e) => new Date(e.date) < now)
-        .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+      const data = await fetchData<{ items: EventIndexItem[] }>(
+        '/data/events/index.json',
+      );
+      events = data.items;
+      error = null;
     } catch (err) {
       error = err instanceof Error ? err.message : 'Failed to load';
     } finally {
@@ -57,41 +39,6 @@
       Could not load events. <button onclick={load} class="link-btn">Retry</button>
     </p>
   {:else}
-    {#if upcoming.length > 0}
-      <section class="events-section">
-        <p class="section__label">Upcoming</p>
-        <div class="grid-2" style="margin-top: var(--space-md)">
-          {#each upcoming as event (event.slug)}
-            <EventCard {...event} />
-          {/each}
-        </div>
-      </section>
-    {/if}
-
-    {#if past.length > 0}
-      <section class="events-section">
-        <p class="section__label">Past</p>
-        <div class="grid-2" style="margin-top: var(--space-md)">
-          {#each past as event (event.slug)}
-            <EventCard {...event} />
-          {/each}
-        </div>
-      </section>
-    {/if}
-
-    {#if upcoming.length === 0 && past.length === 0}
-      <p class="empty-msg">No events yet. Check back soon.</p>
-    {/if}
+    <EventSchedule {events} layout="grid" />
   {/if}
 </div>
-
-<style>
-  .events-section + .events-section {
-    margin-top: var(--space-2xl);
-  }
-
-  .empty-msg {
-    color: var(--color-text-muted);
-    text-align: center;
-  }
-</style>
