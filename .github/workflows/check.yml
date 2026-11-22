@@ -5,6 +5,8 @@ on:
   pull_request:
     branches: [master]
   workflow_dispatch:
+  schedule:
+    - cron: '23 5 * * 1'
 
 permissions:
   contents: read
@@ -21,10 +23,19 @@ jobs:
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - run: pnpm events validate
-      - run: pnpm check
+      - run: pnpm lint
+      - run: pnpm type-check
       - run: pnpm exec playwright install --with-deps chromium
-      - run: pnpm test:e2e:polls
-      - run: pnpm build:spa
+      - run: pnpm test:local
+      # Always run capacity: no incomplete path allow-list can bypass SQL changes.
+      - run: pnpm test:capacity
+      - run: pnpm build
+      - run: pnpm smoke:artifact
+      - uses: actions/upload-artifact@v4
+        with:
+          name: deployment-dist
+          path: dist/
+          if-no-files-found: error
 
   sync-events:
     needs: check

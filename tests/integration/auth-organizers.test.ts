@@ -4,12 +4,15 @@ import { authFixture, ORGANIZER_TOKEN, SITE } from '../helpers/auth';
 import { handleAuth } from '../../worker/src/auth/router';
 import worker from '../../worker/src/index';
 
+import { fileDatabase } from '../helpers/file-database';
+
+const open = fileDatabase();
 let f: Awaited<ReturnType<typeof authFixture>>;
 beforeEach(async () => {
-  f = await authFixture();
+  f = await authFixture(true, open);
 });
 afterEach(async () => {
-  await f.dispose();
+  await f?.dispose();
 });
 const auth = { Authorization: `Bearer ${ORGANIZER_TOKEN}` };
 

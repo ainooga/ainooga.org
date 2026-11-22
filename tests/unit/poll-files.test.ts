@@ -7,7 +7,7 @@ import { readEligibility, readPoll } from '../../scripts/polls/files';
 import { runPollCommand } from '../../scripts/polls/commands';
 import { PollClient } from '../../scripts/polls/client';
 import { ballotSchema, pollSchema } from '../../worker/src/polls/schemas';
-import { pollInput, submission } from '../helpers/polls';
+import { pollInput, submission } from '../helpers/poll-data';
 let directory: string | undefined;
 afterEach(async () => {
   if (directory) await rm(directory, { recursive: true, force: true });
@@ -109,17 +109,37 @@ it('preserves legacy UUID-shaped ballot request IDs and rejects malformed IDs', 
     false,
   );
 });
-it('sends one empty-body invitation request for the entire poll', async () => {
+it('uploads parsed poll content and voter identifiers to their authoring endpoints', async () => {
+  directory = undefined;
   const calls: unknown[] = [];
-  expect(
-    await runPollCommand(['invite', 'topics'], {
-      async request(...args) {
-        calls.push(args);
-        return { recipients: 7, accepted: 7, failed: 0 };
-      },
-    }),
-  ).toEqual({ recipients: 7, accepted: 7, failed: 0 });
-  expect(calls).toEqual([['/topics/invite', 'POST', {}]]);
+  const api = {
+    async request(...args: unknown[]) {
+      calls.push(args);
+      return { status: 'draft' };
+    },
+  };
+  expect(await runPollCommand(['create', 'docs/polls/topic-vote.md'], api)).toEqual({
+    status: 'draft',
+  });
+  const path = await file('- kind: email\n  value: voter@example.com\n');
+  expect(await runPollCommand(['allowlist', 'add', 'topics', path], api)).toEqual({
+    processed: 1,
+  });
+  expect(calls).toEqual([
+    [
+      '',
+      'POST',
+      expect.objectContaining({
+        slug: 'topic-vote',
+        description: expect.stringContaining('**up to two**'),
+      }),
+    ],
+    [
+      '/topics/allowlist',
+      'POST',
+      { action: 'add', identifiers: [{ kind: 'email', value: 'voter@example.com' }] },
+    ],
+  ]);
 });
 it.each([
   'http://example.com',

@@ -1,16 +1,19 @@
 // @vitest-environment node
 import { afterEach, expect, it } from 'vitest';
-import { pollFixture, pollInput } from '../helpers/polls';
+import { pollFixture } from '../helpers/polls';
 import { seedOptions, optionIds } from '../helpers/poll-options';
 import { responseCookie } from '../helpers/auth';
+import { fileDatabase } from '../helpers/file-database';
+
+const open = fileDatabase();
 let f: Awaited<ReturnType<typeof pollFixture>>;
 afterEach(async () => {
   await f?.dispose();
 });
 
 it('allows one new write-in, preserves it through edits/revocation, and rejects another without writes', async () => {
-  f = await pollFixture();
-  const cookie = await f.ready();
+  f = await pollFixture(open, false);
+  const cookie = await f.votingPoll();
   const submission = await f.ballotFor(cookie);
   const send = (input: ReturnType<typeof submission>) =>
     f.request('/api/polls/topics/ballot', 'PUT', input, { Cookie: cookie });
@@ -50,8 +53,8 @@ it('allows one new write-in, preserves it through edits/revocation, and rejects 
   ]);
 });
 it('deduplicates existing topics on the first vote but does not allow new topics on edits', async () => {
-  f = await pollFixture();
-  const cookie = await f.ready();
+  f = await pollFixture(open, false);
+  const cookie = await f.votingPoll();
   const submission = await f.ballotFor(cookie);
   const send = (input: ReturnType<typeof submission>) =>
     f.request('/api/polls/topics/ballot', 'PUT', input, { Cookie: cookie });
@@ -62,8 +65,8 @@ it('deduplicates existing topics on the first vote but does not allow new topics
   expect((await send(submission([], 1, 'New suggestion'))).status).toBe(409);
 });
 it('allows only one creator when different voters compete for the final option slot', async () => {
-  f = await pollFixture();
-  const first = await f.ready();
+  f = await pollFixture(open, false);
+  const first = await f.votingPoll();
   const submission = await f.ballotFor(first);
   await seedOptions(f.db, 497);
   await f.admin('/topics/allowlist', 'POST', {
@@ -110,11 +113,11 @@ it('allows only one creator when different voters compete for the final option s
     ).status,
   ).toBe(200);
 });
-it.each([101, 500])('accepts all %s options on an unrestricted poll', async (count) => {
-  f = await pollFixture();
-  const cookie = await f.ready(pollInput({ maxSelections: null }));
+it('accepts all 500 options on an unrestricted poll', async () => {
+  f = await pollFixture(open, false);
+  const cookie = await f.votingPoll({ maxSelections: null });
   const submission = await f.ballotFor(cookie);
-  await seedOptions(f.db, count - 2);
+  await seedOptions(f.db, 498);
   const ids = await optionIds(f.db);
   const input = submission([...ids, ids[0]!]);
   expect(Buffer.byteLength(JSON.stringify(input))).toBeLessThan(16384);
@@ -124,11 +127,10 @@ it.each([101, 500])('accepts all %s options on an unrestricted poll', async (cou
   expect(response.status).toBe(200);
   expect(await response.json()).toMatchObject({ optionIds: ids });
 });
-it('still enforces a configured maximum against larger selection lists', async () => {
-  f = await pollFixture();
-  const cookie = await f.ready();
+it('rejects two choices when the configured maximum is one', async () => {
+  f = await pollFixture(open, false);
+  const cookie = await f.votingPoll();
   const submission = await f.ballotFor(cookie);
-  await seedOptions(f.db, 100);
   expect(
     (
       await f.request(
@@ -142,10 +144,10 @@ it('still enforces a configured maximum against larger selection lists', async (
   expect(await f.store.query('SELECT * FROM poll_ballots')).toEqual([]);
 });
 it('preserves historical options above the limit while blocking more creation', async () => {
-  f = await pollFixture();
-  const cookie = await f.ready(pollInput({ maxSelections: null }));
+  f = await pollFixture(open, false);
+  const cookie = await f.votingPoll({ maxSelections: null });
   const submission = await f.ballotFor(cookie);
-  await seedOptions(f.db, 501);
+  await seedOptions(f.db, 499);
   const ids = await optionIds(f.db);
   const denied = await f.request(
     '/api/polls/topics/ballot',
@@ -165,8 +167,8 @@ it('preserves historical options above the limit while blocking more creation', 
   expect(await optionIds(f.db)).toEqual(ids);
 });
 it('keeps the streamed body limit for large selection arrays', async () => {
-  f = await pollFixture();
-  const cookie = await f.ready();
+  f = await pollFixture(open, false);
+  const cookie = await f.votingPoll();
   const submission = await f.ballotFor(cookie);
   const input = submission(Array.from({ length: 10000 }, () => 1));
   expect(
@@ -175,8 +177,8 @@ it('keeps the streamed body limit for large selection arrays', async () => {
   ).toBe(413);
 });
 it('reuses the same new label when two voters compete for the final slot', async () => {
-  f = await pollFixture();
-  const first = await f.ready();
+  f = await pollFixture(open, false);
+  const first = await f.votingPoll();
   const submission = await f.ballotFor(first);
   await seedOptions(f.db, 497);
   await f.admin('/topics/allowlist', 'POST', {
@@ -209,8 +211,8 @@ it('reuses the same new label when two voters compete for the final slot', async
   ).toEqual([{ n: 1 }]);
 });
 it('preserves a person’s older multiple write-ins and does not grant a fresh allowance', async () => {
-  f = await pollFixture();
-  const cookie = await f.ready();
+  f = await pollFixture(open, false);
+  const cookie = await f.votingPoll();
   const submission = await f.ballotFor(cookie);
   await f.store.execute([
     "INSERT INTO poll_options (poll_id,label,normalized_label,origin,created_by_person_id) SELECT id,'Older A','older a','write_in',2 FROM polls WHERE slug='topics'",

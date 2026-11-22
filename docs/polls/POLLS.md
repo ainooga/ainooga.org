@@ -79,4 +79,4 @@ Follow [poll setup and deployment](../API.md#poll-setup-and-deployment) for migr
 
 Write-in descriptions use the existing `poll_options.description` column, so this update needs no additional migration or secrets. Deploy the Worker before the SPA so the new description field is accepted. Older clients can still omit that field.
 
-Validate changes with `pnpm check`, `pnpm build:spa`, and `pnpm test:e2e:polls`. The browser suite uses disposable local D1 and fake external services. Detailed request formats and limits live in the [API reference](../API.md#poll-api).
+Run `pnpm test:local` for contract, D1, and browser checks together, or `pnpm test:e2e` for the single two-tab voting journey. The browser uses disposable local D1 and fake external services. CI checks the production artifact separately with `pnpm build && pnpm smoke:artifact`. Detailed request formats and limits live in the [API reference](../API.md#poll-api).

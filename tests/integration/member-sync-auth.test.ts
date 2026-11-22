@@ -7,6 +7,9 @@ import { SessionCookies } from '../../worker/src/member-sync/session';
 import { decryptSession, encryptSession } from '../../worker/src/member-sync/session';
 import type { SyncEnvType } from '../../worker/src/member-sync/session';
 
+import { fileDatabase } from '../helpers/file-database';
+
+const open = fileDatabase();
 let f: Awaited<ReturnType<typeof authFixture>>;
 afterEach(async () => {
   await f?.dispose();
@@ -18,7 +21,7 @@ const env = {
 } as SyncEnvType;
 
 it('uses an imported session, saves rotation, and stops when the session is revoked', async () => {
-  f = await authFixture();
+  f = await authFixture(true, open, false);
   const lease = (await claim(f.db, () => Date.parse('2026-10-10T12:00:00Z')))!;
   await f.db
     .prepare('UPDATE member_sync_state SET session_ciphertext=?')
@@ -68,7 +71,7 @@ it('uses an imported session, saves rotation, and stops when the session is revo
 });
 
 it('rejects missing credentials and redacts transient source failures', async () => {
-  f = await authFixture();
+  f = await authFixture(true, open, false);
   const lease = (await claim(f.db, () => Date.parse('2026-10-10T12:00:00Z')))!;
   let calls = 0;
   const deps = {
@@ -105,7 +108,7 @@ it('rejects missing credentials and redacts transient source failures', async ()
 });
 
 it('rejects an expired or wrong-account session before member requests', async () => {
-  f = await authFixture();
+  f = await authFixture(true, open, false);
   const lease = (await claim(f.db, () => Date.parse('2026-10-10T12:00:00Z')))!;
   await f.db
     .prepare('UPDATE member_sync_state SET session_ciphertext=?')

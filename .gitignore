@@ -8,6 +8,7 @@ static/images/
 
 # SPA bundle output (Vite)
 dist/
+coverage/
 
 # Environment
 .env

@@ -1,58 +1,8 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { handleSubscribe } from '../../worker/src/subscribe';
-import type { DbClient, EmailSender, TurnstileVerifier } from '../../worker/src/types';
+import type { EmailSender, TurnstileVerifier } from '../../worker/src/types';
 
-class FakeDbClient implements DbClient {
-  private subscribers: Map<
-    string,
-    { email: string; name: string | null; token: string }
-  > = new Map();
-  private confirmations: Map<string, boolean> = new Map();
-
-  constructor(private insertError: Error | null = null) {}
-
-  tokenFor(email: string): string | undefined {
-    return this.subscribers.get(email)?.token;
-  }
-
-  async insertSubscriber(
-    email: string,
-    name: string | null,
-    token: string,
-  ): Promise<boolean> {
-    if (this.insertError) throw this.insertError;
-    const existing = this.subscribers.get(email);
-    if (existing?.token) return false;
-    this.subscribers.set(email, { email, name: existing?.name ?? name, token });
-    this.confirmations.set(token, false);
-    return true;
-  }
-
-  async findSubscriberByEmail(email: string): Promise<Record<string, unknown> | null> {
-    const sub = this.subscribers.get(email);
-    return sub ? { id: 1, email: sub.email } : null;
-  }
-
-  async invalidateConfirmation(token: string): Promise<void> {
-    if (this.confirmations.get(token) !== false) return;
-    this.confirmations.delete(token);
-    for (const subscriber of this.subscribers.values()) {
-      if (subscriber.token === token) subscriber.token = '';
-    }
-  }
-
-  async confirmSubscription(token: string): Promise<number> {
-    if (this.confirmations.has(token) && !this.confirmations.get(token)) {
-      this.confirmations.set(token, true);
-      return 1;
-    }
-    return 0;
-  }
-
-  async insertContactRequest(): Promise<void> {
-    // noop for subscribe tests
-  }
-}
+import { NewsletterClaims } from '../helpers/newsletter-claims';
 
 class FakeEmailSender implements EmailSender {
   public sent: Array<{
@@ -81,11 +31,11 @@ class FakeTurnstileVerifier implements TurnstileVerifier {
 }
 
 describe('handleSubscribe', () => {
-  let db: FakeDbClient;
+  let db: NewsletterClaims;
   let email: FakeEmailSender;
 
   beforeEach(() => {
-    db = new FakeDbClient();
+    db = new NewsletterClaims();
     email = new FakeEmailSender();
   });
 
@@ -134,7 +84,7 @@ describe('handleSubscribe', () => {
     expect(res.status).toBe(200);
     const body = await res.json();
     expect(body.message).toBe('A subscription request already exists for this address.');
-    expect(email.sent.length).toBe(0);
+    expect(email.sent).toHaveLength(0);
   });
 
   it('returns 201 and sends confirmation for new subscriber', async () => {
@@ -147,14 +97,39 @@ describe('handleSubscribe', () => {
     const body = await res.json();
     expect(body.message).toBe('Check your email to confirm.');
 
-    expect(email.sent.length).toBe(1);
+    expect(email.sent).toHaveLength(1);
     expect(email.sent[0].to).toBe('new@example.com');
     expect(email.sent[0].name).toBe('New User');
     expect(email.sent[0].siteUrl).toBe('https://ainooga.org');
     expect(email.sent[0].token).toMatch(
       /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/,
     );
-    expect(email.sent[0].token).toBe(db.tokenFor('new@example.com'));
+    expect(email.sent[0].token).toBe(db.pending.get('new@example.com'));
+  });
+
+  it('invalidates exactly the claimed token on mail failure before allowing retry', async () => {
+    const input = { email: 'retry@example.com', turnstileToken: 'proof' };
+    const deps = {
+      db,
+      email,
+      turnstile: new FakeTurnstileVerifier(true),
+      siteUrl: 'https://example.com',
+    };
+    const attempted: string[] = [];
+    const failingMail: EmailSender = {
+      async sendConfirmation(_to, _name, token) {
+        attempted.push(token);
+        throw new Error('delivery unavailable');
+      },
+    };
+    await expect(
+      handleSubscribe(input, { ...deps, email: failingMail }),
+    ).rejects.toMatchObject({ status: 503 });
+    expect(attempted).toHaveLength(1);
+    expect(db.invalidated).toEqual(attempted);
+    expect((await handleSubscribe(input, deps)).status).toBe(201);
+    expect(email.sent).toHaveLength(1);
+    expect(email.sent[0].token).not.toBe(attempted[0]);
   });
 
   it('accepts subscriber without name', async () => {
@@ -169,7 +144,12 @@ describe('handleSubscribe', () => {
 
   it('propagates DB insert errors to the caller without sending email', async () => {
     const dbError = new Error('db down');
-    const failingDb = new FakeDbClient(dbError);
+    const failingDb = {
+      async insertSubscriber() {
+        throw dbError;
+      },
+      invalidateConfirmation: db.invalidateConfirmation.bind(db),
+    };
     const turnstile = new FakeTurnstileVerifier(true);
     await expect(
       handleSubscribe(

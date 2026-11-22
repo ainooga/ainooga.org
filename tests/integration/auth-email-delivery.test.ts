@@ -3,13 +3,16 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { authFixture, emailChallenge } from '../helpers/auth';
 import { deferred } from '../helpers/background';
 
+import { fileDatabase } from '../helpers/file-database';
+
+const open = fileDatabase();
 let f: Awaited<ReturnType<typeof authFixture>>;
 beforeEach(async () => {
-  f = await authFixture();
+  f = await authFixture(true, open);
 });
 afterEach(async () => {
   vi.useRealTimers();
-  await f.dispose();
+  await f?.dispose();
 });
 
 const verify = (id: string, browser: string) =>

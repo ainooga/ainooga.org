@@ -171,12 +171,12 @@ Run `pnpm check` for lint, both TypeScript targets, handler/component tests, and
 
 ## Capacity review: 2026-10-04
 
-The measurements below are historical, from schema 0004. The fixture now targets 0005; rerun it on actual Miniflare/D1 for a current measurement:
+The measurements below are historical, from schema 0004. The capacity fixture now applies the current migration set. CI runs it separately from the local hook; rerun it on Miniflare/D1 for a current local measurement:
 
 ```sh
-pnpm exec vitest run tests/integration/capacity.test.ts
+pnpm test:capacity
 # Optional table/index breakdown; requires /usr/bin/sqlite3 with dbstat support:
-AINOOGA_CAPACITY_INDEXES=1 pnpm exec vitest run tests/integration/capacity.test.ts
+AINOOGA_CAPACITY_INDEXES=1 pnpm test:capacity
 ```
 
 The original measurement applied all four migrations available at that time. The fixture contains 200 synthetic members with email, phone, LinkedIn-style identifiers, profiles, provenance, memberships, two invitation opt-outs and 198 unknown invitation preferences. It adds 10 events, provider links, and 734 participation records. Membership creates no newsletter consent or organizer grant. Legacy tables remain present but empty; existing production legacy rows are additional storage.

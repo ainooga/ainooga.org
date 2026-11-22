@@ -1,6 +1,9 @@
 // @vitest-environment node
 import { afterEach, expect, it } from 'vitest';
 import { pollFixture, pollInput } from '../helpers/polls';
+import { fileDatabase } from '../helpers/file-database';
+
+const open = fileDatabase();
 let f: Awaited<ReturnType<typeof pollFixture>>;
 afterEach(async () => {
   await f?.dispose();
@@ -11,13 +14,13 @@ const ids = (action: 'add' | 'remove', ...values: string[]) => ({
 });
 
 it('uses live tag eligibility and removes only explicit allowances', async () => {
-  f = await pollFixture();
+  f = await pollFixture(open);
   await f.store.execute([
     "INSERT INTO person_tags VALUES (2,'chapter'),(2,'volunteer'),(3,'chapter')",
   ]);
-  expect(
-    (await f.create(pollInput({ eligibleTags: ['chapter', 'volunteer'] }))).status,
-  ).toBe(201);
+  const created = await f.create(pollInput({ eligibleTags: ['chapter', 'volunteer'] }));
+  expect(created.status).toBe(201);
+  expect(await created.json()).toMatchObject({ status: 'draft' });
   expect(
     (await f.admin('/topics/allowlist', 'POST', ids('add', 'Voter@Example.com'))).status,
   ).toBe(200);
@@ -50,7 +53,7 @@ it('uses live tag eligibility and removes only explicit allowances', async () =>
   });
 });
 it('creates unverified people idempotently without membership, consent or access grants', async () => {
-  f = await pollFixture();
+  f = await pollFixture(open);
   await f.create();
   const input = ids('add', 'New@Example.com', 'new@example.com');
   await Promise.all([
@@ -80,7 +83,7 @@ it('creates unverified people idempotently without membership, consent or access
   ).toBe(400);
 });
 it('rejects invalid publication and preserves drafts on duplicate create', async () => {
-  f = await pollFixture();
+  f = await pollFixture(open);
   await f.create(pollInput({ eligibleTags: ['missing'] }));
   expect((await f.admin('/topics/publish', 'POST')).status).toBe(409);
   expect(await (await f.admin('/topics')).json()).toMatchObject({
@@ -96,7 +99,7 @@ it('rejects invalid publication and preserves drafts on duplicate create', async
   expect((await f.admin('/topics/publish', 'POST')).status).toBe(409);
 });
 it('freezes published rules, permits text edits, and archives terminally', async () => {
-  f = await pollFixture();
+  f = await pollFixture(open);
   await f.ready();
   expect(
     (await f.admin('/topics', 'PUT', pollInput({ title: 'New title' }))).status,
@@ -111,7 +114,9 @@ it('freezes published rules, permits text edits, and archives terminally', async
     { startsAt: '2026-09-28T12:00:00.000Z' },
   ])
     expect((await f.admin('/topics', 'PUT', pollInput(patch))).status).toBe(409);
-  expect((await f.admin('/topics/archive', 'POST')).status).toBe(200);
+  const archived = await f.admin('/topics/archive', 'POST', {});
+  expect(archived.status).toBe(200);
+  expect(await archived.json()).toMatchObject({ status: 'archived' });
   expect((await f.admin('/topics/publish', 'POST')).status).toBe(409);
   expect((await f.admin('/topics', 'PUT', pollInput())).status).toBe(409);
   expect(

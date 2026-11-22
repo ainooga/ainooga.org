@@ -3,12 +3,15 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { authFixture, ORGANIZER_TOKEN } from '../helpers/auth';
 import { authDependencies } from '../../worker/src/auth/providers';
 
+import { fileDatabase } from '../helpers/file-database';
+
+const open = fileDatabase();
 let f: Awaited<ReturnType<typeof authFixture>>;
 beforeEach(async () => {
-  f = await authFixture();
+  f = await authFixture(true, open);
 });
 afterEach(async () => {
-  await f.dispose();
+  await f?.dispose();
 });
 
 class WindowLimiter {

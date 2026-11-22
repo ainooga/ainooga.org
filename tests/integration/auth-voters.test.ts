@@ -8,12 +8,15 @@ import {
 } from '../helpers/auth';
 import { cleanupAuth } from '../../worker/src/auth/cleanup';
 
+import { fileDatabase } from '../helpers/file-database';
+
+const open = fileDatabase();
 let f: Awaited<ReturnType<typeof authFixture>>;
 beforeEach(async () => {
-  f = await authFixture();
+  f = await authFixture(true, open);
 });
 afterEach(async () => {
-  await f.dispose();
+  await f?.dispose();
 });
 const verifyPath = '/api/polls/verified/auth/email/verify';
 

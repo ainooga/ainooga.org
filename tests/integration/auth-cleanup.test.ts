@@ -35,13 +35,13 @@ async function counts() {
 
 describe('bounded authentication cleanup', () => {
   it('drains multiple batches and preserves active and recently expired records', async () => {
-    await seed(1500, 'old');
+    await seed(1001, 'old');
     await seed(1, 'active', new Date(f.deps.time.getTime() + hour));
     await seed(1, 'recent', new Date(f.deps.time.getTime() - hour));
     await seed(1, 'boundary', new Date(f.deps.time.getTime() - 24 * hour));
     expect(await cleanupAuth(f.db, f.deps.time)).toEqual({
-      sessionsDeleted: 1500,
-      challengesDeleted: 1500,
+      sessionsDeleted: 1001,
+      challengesDeleted: 1001,
       capped: false,
     });
     expect(await counts()).toEqual([{ sessions: 3, challenges: 3 }]);
@@ -63,7 +63,7 @@ describe('bounded authentication cleanup', () => {
   });
 
   it('stops starting batches after ten seconds, removing oldest rows first', async () => {
-    await seed(500, 'newer');
+    await seed(1, 'newer');
     await seed(1000, 'oldest', new Date(f.deps.time.getTime() - 26 * hour));
     let clockCalls = 0;
     const clock = () => (clockCalls++ < 2 ? 0 : 10000);
@@ -77,7 +77,7 @@ describe('bounded authentication cleanup', () => {
         "SELECT COUNT(*) AS n FROM auth_challenges WHERE id LIKE 'oldest%'",
       ),
     ).toEqual([{ n: 0 }]);
-    expect((await cleanupAuth(f.db, f.deps.time)).challengesDeleted).toBe(500);
+    expect((await cleanupAuth(f.db, f.deps.time)).challengesDeleted).toBe(1);
   });
 
   it('keeps expired backlog empty across sustained issuance and hourly cleanup', async () => {

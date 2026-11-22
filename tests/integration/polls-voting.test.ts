@@ -2,6 +2,9 @@
 import { afterEach, expect, it } from 'vitest';
 import { pollFixture, pollInput } from '../helpers/polls';
 import { responseCookie } from '../helpers/auth';
+import { fileDatabase } from '../helpers/file-database';
+
+const open = fileDatabase();
 let f: Awaited<ReturnType<typeof pollFixture>>;
 afterEach(async () => {
   await f?.dispose();
@@ -18,8 +21,8 @@ it.each([
   [1, null, [], 409],
   [1, 1, [0, 0], 200],
 ] as const)('enforces min=%s max=%s selections=%s', async (min, max, indexes, status) => {
-  f = await pollFixture();
-  const cookie = await f.ready(pollInput({ minSelections: min, maxSelections: max }));
+  f = await pollFixture(open, false);
+  const cookie = await f.votingPoll({ minSelections: min, maxSelections: max });
   const submission = await f.ballotFor(cookie);
   const options = (
     (await (await f.admin('/topics')).json()) as { optionRecords: { id: number }[] }
@@ -41,8 +44,8 @@ it.each([
   ['2026-10-30T11:59:59.999Z', 200],
   ['2026-10-30T12:00:00.000Z', 409],
 ])('checks voting boundary %s', async (now, status) => {
-  f = await pollFixture();
-  await f.ready();
+  f = await pollFixture(open, false);
+  await f.votingPoll();
   await f.setTime(now);
   // Refresh the session at this time so the test isolates the poll window, not session expiry.
   const login = await f.request('/api/polls/topics/auth/honor', 'POST', {
@@ -67,8 +70,8 @@ it.each([
 ] as const)(
   'checks edit policy %s deadline=%s now=%s',
   async (allowEdits, editDeadline, now, status) => {
-    f = await pollFixture();
-    const cookie = await f.ready(pollInput({ allowEdits, editDeadline }));
+    f = await pollFixture(open, false);
+    const cookie = await f.votingPoll({ allowEdits, editDeadline });
     const submission = await f.ballotFor(cookie);
     expect(
       (
@@ -98,8 +101,8 @@ it.each([
 it.each(['before_vote', 'after_vote', 'never'] as const)(
   'enforces %s results before/after voting and after close',
   async (visibility) => {
-    f = await pollFixture();
-    let cookie = await f.ready(pollInput({ resultsVisibility: visibility }));
+    f = await pollFixture(open, false);
+    let cookie = await f.votingPoll({ resultsVisibility: visibility });
     const submission = await f.ballotFor(cookie);
     const results = () =>
       f.request('/api/polls/topics/results', 'GET', undefined, { Cookie: cookie });
@@ -120,8 +123,8 @@ it.each(['before_vote', 'after_vote', 'never'] as const)(
   },
 );
 it('retains write-ins on edits and accepted ballots after eligibility removal', async () => {
-  f = await pollFixture();
-  const cookie = await f.ready();
+  f = await pollFixture(open, false);
+  const cookie = await f.votingPoll();
   const submission = await f.ballotFor(cookie);
   const options = (
     (await (await f.admin('/topics')).json()) as { optionRecords: { id: number }[] }
@@ -187,8 +190,8 @@ it('retains write-ins on edits and accepted ballots after eligibility removal', 
   ).toMatchObject({ revision: 3 });
 });
 it('rejects foreign options, disabled write-ins and invalid write-in lengths without writes', async () => {
-  f = await pollFixture();
-  const cookie = await f.ready(pollInput({ allowWriteIns: false }));
+  f = await pollFixture(open, false);
+  const cookie = await f.votingPoll({ allowWriteIns: false });
   const submission = await f.ballotFor(cookie);
   await f.create(pollInput({ slug: 'foreign' }));
   const foreign = (

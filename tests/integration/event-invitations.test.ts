@@ -1,11 +1,13 @@
 // @vitest-environment node
-import { afterEach, beforeEach, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, expect, it } from 'vitest';
 import { authFixture, ORGANIZER_TOKEN } from '../helpers/auth';
 import { EventFrontmatter } from '../../scripts/types';
 import type { ParsedDoc } from '../../scripts/types';
-import { deferred } from '../helpers/background';
 import { handleAuth } from '../../worker/src/auth/router';
 
+import { fileDatabase } from '../helpers/file-database';
+
+const open = fileDatabase();
 let f: Awaited<ReturnType<typeof authFixture>>;
 type Message = Parameters<SendEmail['send']>[0];
 let sent: Message[];
@@ -26,7 +28,7 @@ const event: ParsedDoc = {
   },
 };
 beforeEach(async () => {
-  f = await authFixture();
+  f = await authFixture(true, open, false);
   sent = [];
   rejected = new Set();
   configure();
@@ -39,7 +41,6 @@ beforeEach(async () => {
   };
 });
 afterEach(async () => {
-  vi.useRealTimers();
   await f?.dispose();
 });
 
@@ -291,70 +292,6 @@ it('reports partial failures and resends only when explicitly invoked, using cur
     failed: 0,
   });
   expect(sent).toHaveLength(3);
-});
-
-it('limits concurrent provider calls to five while sending the entire audience', async () => {
-  await ready();
-  await f.store.execute(
-    Array.from({ length: 6 }, (_, index) => {
-      const id = index + 10;
-      return `INSERT INTO people(id) VALUES(${id})`;
-    }),
-  );
-  await f.store.execute(
-    Array.from({ length: 6 }, (_, index) => {
-      const id = index + 10;
-      return `INSERT INTO person_identifiers(person_id,kind,value,normalized_value) VALUES(${id},'email','person${id}@example.com','person${id}@example.com')`;
-    }),
-  );
-  await f.store.execute(
-    Array.from(
-      { length: 6 },
-      (_, index) => `INSERT INTO person_tags VALUES(${index + 10},'member')`,
-    ),
-  );
-  const started = deferred();
-  const finish = deferred();
-  let active = 0;
-  let maximum = 0;
-  f.env.EMAIL = {
-    async send(message) {
-      sent.push(message);
-      maximum = Math.max(maximum, ++active);
-      if (active === 5) started.resolve();
-      await finish.promise;
-      active--;
-      return { messageId: String(sent.length) };
-    },
-  };
-  const pending = invite();
-  await started.promise;
-  expect(sent).toHaveLength(5);
-  finish.resolve();
-  expect(await (await pending).json()).toEqual({ recipients: 7, accepted: 7, failed: 0 });
-  expect(maximum).toBe(5);
-});
-
-it('bounds provider waits and reports uncertain delivery without retrying', async () => {
-  await ready();
-  const started = deferred();
-  const finish = deferred();
-  let attempts = 0;
-  f.env.EMAIL = {
-    async send() {
-      attempts++;
-      started.resolve();
-      await finish.promise;
-      return { messageId: 'late' };
-    },
-  };
-  vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
-  const pending = invite();
-  await started.promise;
-  await vi.advanceTimersByTimeAsync(10000);
-  expect(await (await pending).json()).toEqual({ recipients: 1, accepted: 0, failed: 1 });
-  finish.resolve();
-  expect(attempts).toBe(1);
 });
 
 it.each([

@@ -1,9 +1,28 @@
 // @vitest-environment node
-import { afterEach, expect, it } from 'vitest';
+import { afterEach, expect, it, vi } from 'vitest';
+import { BrowserPollService } from '../../src/lib/polls/api';
+import { PollError } from '../../src/lib/polls/types';
+import { handleAuth } from '../../worker/src/auth/router';
 import { pollFixture, pollInput, submission } from '../helpers/polls';
-import { responseCookie, verifiedLogin } from '../helpers/auth';
+import { responseCookie, SITE, verifiedLogin } from '../helpers/auth';
+import { fileDatabase } from '../helpers/file-database';
+
+const open = fileDatabase();
 let f: Awaited<ReturnType<typeof pollFixture>>;
-afterEach(async () => f?.dispose());
+afterEach(async () => {
+  vi.unstubAllGlobals();
+  await f?.dispose();
+});
+// In-process transport: supply the current cookie, not a manufactured response.
+function voterClient(cookie: string) {
+  vi.stubGlobal('fetch', (path: string, init: RequestInit) => {
+    const request = new Request(new URL(path, SITE), init);
+    request.headers.set('Origin', SITE);
+    request.headers.set('Cookie', cookie);
+    return handleAuth(request, f.env, f.deps, f.deps);
+  });
+  return new BrowserPollService();
+}
 async function detail(cookie: string, slug = 'topics') {
   const response = await f.request(`/api/polls/${slug}`, 'GET', undefined, {
     Cookie: cookie,
@@ -23,7 +42,7 @@ async function login(email: string) {
   );
 }
 it('binds a draft to its session and rejects a replacement identity without writes', async () => {
-  f = await pollFixture();
+  f = await pollFixture(open);
   const first = await f.ready();
   const original = await detail(first);
   expect(original.sessionContext).toMatch(/^[a-f0-9]{64}$/);
@@ -33,35 +52,36 @@ it('binds a draft to its session and rejects a replacement identity without writ
     identifiers: [{ kind: 'email', value: 'other@example.com' }],
   });
   const second = await login('other@example.com');
-  const current = await detail(second);
+  const api = voterClient(second);
+  const current = await api.detail('topics');
   expect(current.sessionContext).not.toBe(original.sessionContext);
   const input = {
-    ...submission('0'.repeat(64), [], 0, 'Draft'),
+    requestId: crypto.randomUUID(),
     sessionContext: original.sessionContext,
+    expectedRevision: 0,
+    optionIds: [],
+    writeIn: 'Draft',
   };
-  const rejected = await f.request('/api/polls/topics/ballot', 'PUT', input, {
-    Cookie: second,
-  });
-  expect(rejected.status).toBe(409);
-  expect(await rejected.json()).toMatchObject({ code: 'session_changed' });
+  const rejected = api.submit('topics', input);
+  await expect(rejected).rejects.toBeInstanceOf(PollError);
+  await expect(rejected).rejects.toMatchObject({ status: 409, code: 'session_changed' });
   for (const table of ['poll_ballots', 'poll_ballot_choices'])
     expect(await f.store.query(`SELECT * FROM ${table}`)).toEqual([]);
   expect(
     await f.store.query("SELECT * FROM poll_options WHERE origin='write_in'"),
   ).toEqual([]);
-  const accepted = await f.request(
-    '/api/polls/topics/ballot',
-    'PUT',
-    { ...input, sessionContext: current.sessionContext },
-    { Cookie: second },
-  );
-  expect(accepted.status).toBe(200);
+  const accepted = await api.submit('topics', {
+    ...input,
+    sessionContext: current.sessionContext,
+  });
+  expect(accepted).toMatchObject({ revision: 1, optionIds: [expect.any(Number)] });
+  expect((await api.detail('topics')).ballot).toEqual(accepted);
   expect(await f.store.query('SELECT person_id FROM poll_ballots')).toEqual([
     { person_id: 3 },
   ]);
 });
 it('requires a well-formed marker and never accepts it as a cookie credential', async () => {
-  f = await pollFixture();
+  f = await pollFixture(open);
   const cookie = await f.ready();
   const current = await detail(cookie);
   for (const sessionContext of [undefined, 'bad', '0'.repeat(64)]) {
@@ -79,7 +99,7 @@ it('requires a well-formed marker and never accepts it as a cookie credential', 
   ).toBe(401);
 });
 it('changes the marker across polls and re-entry, with a stable marker for the same session', async () => {
-  f = await pollFixture();
+  f = await pollFixture(open);
   const cookie = await f.ready();
   const original = await detail(cookie);
   expect((await detail(cookie)).sessionContext).toBe(original.sessionContext);
@@ -104,7 +124,7 @@ it('changes the marker across polls and re-entry, with a stable marker for the s
 });
 
 it('scopes one verified session to each poll and exposes only its own identifier', async () => {
-  f = await pollFixture();
+  f = await pollFixture(open);
   await f.ready();
   await f.ready(pollInput({ slug: 'another' }));
   const cookie = responseCookie(await verifiedLogin(f));
@@ -122,7 +142,7 @@ it('scopes one verified session to each poll and exposes only its own identifier
   expect(await f.store.query('SELECT * FROM poll_ballots')).toEqual([]);
 });
 it('returns a Discord username or its numeric fallback without exposing a linked email', async () => {
-  f = await pollFixture();
+  f = await pollFixture(open);
   await f.ready();
   await f.db
     .prepare(

@@ -35,23 +35,17 @@ export function uiPoll(overrides: Partial<PollDetail> = {}): PollDetail {
     ...overrides,
   };
 }
+export function savedTopic(
+  label: string,
+  description: string | null = null,
+): PollDetail['options'][number] {
+  return { id: 3, label, description, origin: 'write_in', position: 2 };
+}
 export class FakePollRuntime implements PollRuntime {
   openDialog(element: HTMLDialogElement) {
-    const previous = document.activeElement;
-    const parent = element.parentElement;
+    // jsdom exposes dialog state only. Chromium owns modality, Escape and focus.
     element.setAttribute('open', '');
-    return () => {
-      element.removeAttribute('open');
-      queueMicrotask(() => {
-        const target =
-          previous instanceof HTMLElement &&
-          previous !== document.body &&
-          previous.isConnected
-            ? previous
-            : parent?.querySelector<HTMLElement>('button:not(:disabled)');
-        target?.focus();
-      });
-    };
+    return () => element.removeAttribute('open');
   }
   focus(element: HTMLElement) {
     element.focus();
@@ -79,19 +73,21 @@ export class FakePollRuntime implements PollRuntime {
 export class FakePollService implements PollService {
   authenticated = false;
   private sequence = 0;
-  private ballots = new Map<string, Ballot | null>();
-  switchVoter(email: string) {
-    this.ballots.set(this.poll.voter.value, this.poll.ballot);
+  switchVoter(email: string, ballot: Ballot | null = null) {
     this.poll = {
       ...this.poll,
       voter: { kind: 'email', value: email },
       sessionContext: (++this.sequence).toString(16).padStart(64, '0'),
-      ballot: this.ballots.get(email) ?? null,
+      ballot,
     };
   }
   poll = uiPoll();
   submissions: Submission[] = [];
-  identifiers: GuestIdentifier[] = [];
+  identifyCalls: { identifier: GuestIdentifier; token: string }[] = [];
+  get identifiers() {
+    return this.identifyCalls.map((call) => call.identifier);
+  }
+  identifiedEmail = 'voter@example.com';
   failSubmit: PollError | null = null;
   failIdentify: PollError | null = null;
   failDetail: PollError | null = null;
@@ -105,28 +101,33 @@ export class FakePollService implements PollService {
       throw new PollError(401, 'login_required', 'Enter an eligible email.');
     return JSON.parse(JSON.stringify(this.poll)) as PollDetail;
   }
-  async identify(_slug: string, identifier: GuestIdentifier, _token: string) {
-    this.identifiers.push(identifier);
+  async identify(_slug: string, identifier: GuestIdentifier, token: string) {
+    this.identifyCalls.push({ identifier, token });
     if (this.failIdentify !== null) throw this.failIdentify;
-    const value = identifier.value.trim().toLowerCase();
-    if (!['voter@example.com', 'other@example.com', 'chapter.user'].includes(value))
-      throw new PollError(403, 'ineligible', 'Not eligible');
-    this.switchVoter(value === 'chapter.user' ? 'voter@example.com' : value);
+    this.switchVoter(this.identifiedEmail);
     this.authenticated = true;
   }
   async results(): Promise<PollResults> {
     this.resultsCalls++;
-    if (this.poll.resultsVisibility === 'never')
-      throw new PollError(403, 'hidden_results', 'Hidden');
-    return {
-      eligibleCount: 2,
-      ballotCount: this.poll.ballot === null ? 0 : 1,
-      options: this.poll.options.map((o) => ({
-        id: o.id,
-        label: o.label,
-        votes: Number(this.poll.ballot?.optionIds.includes(o.id) ?? false),
-      })),
+    return this.result;
+  }
+  result: PollResults = { eligibleCount: 2, ballotCount: 0, options: [] };
+  // Script the option returned by the server; never resolve/deduplicate write-ins here.
+  savedWriteIn: PollDetail['options'][number] | null = null;
+  private accept(input: Submission): Ballot {
+    const optionIds = [...input.optionIds];
+    if (this.savedWriteIn !== null) {
+      this.poll.options.push(this.savedWriteIn);
+      optionIds.push(this.savedWriteIn.id);
+      this.savedWriteIn = null;
+    }
+    this.poll.ballot = {
+      revision: (this.poll.ballot?.revision ?? 0) + 1,
+      optionIds,
+      submittedAt: new Date(UI_TIME).toISOString(),
+      updatedAt: new Date(UI_TIME).toISOString(),
     };
+    return { ...this.poll.ballot, optionIds: [...this.poll.ballot.optionIds] };
   }
   async submit(_slug: string, input: Submission) {
     this.submissions.push(JSON.parse(JSON.stringify(input)) as Submission);
@@ -137,31 +138,7 @@ export class FakePollService implements PollService {
     }
     if (input.sessionContext !== this.poll.sessionContext)
       throw new PollError(409, 'session_changed', 'Your voter identity changed.');
-    const ids = [...input.optionIds];
-    if (input.writeIn !== null) {
-      if (this.poll.ballot !== null)
-        throw new PollError(
-          409,
-          'write_in_first_vote_only',
-          'Write-ins are only allowed on your first vote.',
-        );
-      const id = this.poll.options.length + 1;
-      this.poll.options.push({
-        id,
-        label: input.writeIn,
-        description: input.writeInDescription ?? null,
-        origin: 'write_in',
-        position: id,
-      });
-      ids.push(id);
-    }
-    this.poll.ballot = {
-      revision: input.expectedRevision + 1,
-      optionIds: ids,
-      submittedAt: new Date(UI_TIME).toISOString(),
-      updatedAt: new Date(UI_TIME).toISOString(),
-    };
-    return { ...this.poll.ballot, optionIds: [...this.poll.ballot.optionIds] };
+    return this.accept(input);
   }
   async logout() {
     this.authenticated = false;

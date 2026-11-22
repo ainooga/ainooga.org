@@ -1,12 +1,15 @@
 // @vitest-environment node
 import { afterEach, beforeEach, expect, it } from 'vitest';
-import { pollFixture, pollInput } from '../helpers/polls';
+import { pollFixture } from '../helpers/polls';
+import { seedVotingPoll } from '../helpers/voting-poll';
+import { fileDatabase } from '../helpers/file-database';
 import { responseCookie, ORGANIZER_TOKEN } from '../helpers/auth';
 
+const open = fileDatabase();
 let f: Awaited<ReturnType<typeof pollFixture>>;
 beforeEach(async () => {
-  f = await pollFixture();
-  await f.ready(pollInput());
+  f = await pollFixture(open);
+  await seedVotingPoll(f.db);
   await f.db
     .prepare("UPDATE person_identifiers SET display_label=' Chapter.User ' WHERE id=4")
     .run();

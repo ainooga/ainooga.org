@@ -4,13 +4,16 @@ import { pollFixture, pollInput } from '../helpers/polls';
 import { ORGANIZER_TOKEN } from '../helpers/auth';
 import { deferred } from '../helpers/background';
 
+import { fileDatabase } from '../helpers/file-database';
+
+const open = fileDatabase();
 let f: Awaited<ReturnType<typeof pollFixture>>;
 type Message = Parameters<SendEmail['send']>[0];
 let sent: Message[];
 let rejected: Set<string>;
 
 beforeEach(async () => {
-  f = await pollFixture();
+  f = await pollFixture(open);
   sent = [];
   rejected = new Set();
   f.env.EMAIL = {

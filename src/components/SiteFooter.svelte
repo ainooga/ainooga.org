@@ -1,7 +1,7 @@
 <script lang="ts">
   import { apiPost } from '$lib/api';
   import { getTurnstileService } from '$lib/context';
-  import { whenTurnstileReady } from '$lib/turnstile.js';
+  import { onDestroy } from 'svelte';
   import type { TurnstileWidgetCallbacks } from '$lib/turnstile.js';
 
   const year = new Date().getFullYear();
@@ -29,6 +29,7 @@
   let turnstileRenderKey = $state(0);
 
   let inactivityTimer: ReturnType<typeof setTimeout> | null = null;
+  let scriptPoll: ReturnType<typeof setInterval> | null = null;
   let scriptLoadTimer: ReturnType<typeof setTimeout> | null = null;
 
   const turnstile = getTurnstileService();
@@ -87,6 +88,10 @@
   }
 
   function clearScriptLoadTimer() {
+    if (scriptPoll !== null) {
+      clearInterval(scriptPoll);
+      scriptPoll = null;
+    }
     if (scriptLoadTimer !== null) {
       clearTimeout(scriptLoadTimer);
       scriptLoadTimer = null;
@@ -97,22 +102,26 @@
 
   function renderTurnstile() {
     if (!turnstileContainer) return;
-    const id = turnstile.render(turnstileContainer, callbacks);
-    if (id) {
-      turnstileWidgetId = id;
-      clearScriptLoadTimer();
-    } else {
-      // Turnstile script hasn't loaded yet
+    const container = turnstileContainer;
+    // Ignore queued callbacks from a widget that was removed and replaced.
+    const current = () => container === turnstileContainer;
+    const handlers: TurnstileWidgetCallbacks = {
+      onToken: (token) => current() && callbacks.onToken?.(token),
+      onError: () => current() && callbacks.onError?.(),
+      onTimeout: () => current() && callbacks.onTimeout?.(),
+      onExpired: () => current() && callbacks.onExpired?.(),
+    };
+    const attempt = () => {
+      const id = turnstile.render(container, handlers);
+      if (id) turnstileWidgetId = id;
+      return !!id;
+    };
+    if (!attempt()) {
       startScriptLoadTimer();
-      whenTurnstileReady().then(() => {
-        if (subscribeState === 'revealing' && !turnstileWidgetId && turnstileContainer) {
-          const retryId = turnstile.render(turnstileContainer, callbacks);
-          if (retryId) {
-            turnstileWidgetId = retryId;
-            clearScriptLoadTimer();
-          }
-        }
-      });
+      scriptPoll = setInterval(() => {
+        if (!current() || subscribeState !== 'revealing' || attempt())
+          clearScriptLoadTimer();
+      }, 100);
     }
   }
 
@@ -144,7 +153,7 @@
         (result.data as Record<string, string> | undefined)?.message ??
         'Check your email to confirm.';
     } else if (result.networkError) {
-      // Token was never sent — preserve widget for retry
+      // Delivery is unknown. Retry the same proof; the server may reject a spent one.
       subscribeState = 'error_network';
       subscribeMessage = 'Network error. Check your connection.';
     } else {
@@ -172,18 +181,6 @@
     e.preventDefault();
     subscribeMessage = '';
 
-    // If we're in an error_validation state and the email changed,
-    // re-enter revealing (reuse existing widget if it's still valid)
-    if (subscribeState === 'error_validation') {
-      subscribeState = 'revealing';
-      startInactivityTimer();
-      if (!turnstileWidgetId && turnstileContainer) {
-        renderTurnstile();
-      }
-      return;
-    }
-
-    // From idle, or from error states that require fresh reveal
     if (turnstileWidgetId) {
       destroyWidget();
     }
@@ -200,15 +197,14 @@
     startInactivityTimer();
   }
 
-  function retryNetwork() {
-    // Token was never sent to backend — widget and container are intact.
-    // Read the existing token and retry the submission directly.
+  function retryWithWidget() {
+    // A lost response can leave the old proof; a reset widget may already have a fresh one.
     const token = turnstileWidgetId ? turnstile.getResponse(turnstileWidgetId) : '';
     if (token) {
       subscribeState = 'submitting';
       submitToBackend(token);
     } else {
-      // No token available (shouldn't happen in error_network, but handle gracefully)
+      // No proof yet (or it expired); wait for the widget callback.
       subscribeState = 'revealing';
       startInactivityTimer();
     }
@@ -216,13 +212,6 @@
 
   // retryTurnstile is reused for error_load, error_turnstile, error_timeout,
   // and error_server — all need a fresh widget with a clean slate.
-
-  function retryVerification() {
-    // Widget was already reset in onBackendError. Container is intact.
-    // Return to REVEALING and wait for the user to complete the new challenge.
-    subscribeState = 'revealing';
-    startInactivityTimer();
-  }
 
   /* ---- Success: reset back to idle ---- */
 
@@ -243,15 +232,10 @@
 
   /* ---- Cleanup on unmount ---- */
 
-  $effect(() => {
-    return () => {
-      clearInactivityTimer();
-      clearScriptLoadTimer();
-      if (turnstileWidgetId) {
-        turnstile.remove(turnstileWidgetId);
-        turnstileWidgetId = null;
-      }
-    };
+  onDestroy(() => {
+    clearInactivityTimer();
+    clearScriptLoadTimer();
+    if (turnstileWidgetId) turnstile.remove(turnstileWidgetId);
   });
 </script>
 
@@ -352,7 +336,7 @@
             <button
               type="button"
               class="btn btn-outline btn-sm"
-              onclick={retryVerification}
+              onclick={retryWithWidget}
             >
               Try again
             </button>
@@ -375,7 +359,7 @@
             <p class="site-footer__subscribe-msg error">
               Network error. Check your connection.
             </p>
-            <button type="button" class="btn btn-outline btn-sm" onclick={retryNetwork}
+            <button type="button" class="btn btn-outline btn-sm" onclick={retryWithWidget}
               >Retry</button
             >
           </div>

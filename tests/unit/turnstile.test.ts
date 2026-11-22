@@ -1,5 +1,6 @@
-import { describe, it, expect, afterEach } from 'vitest';
-import { BrowserTurnstile } from '../../src/lib/turnstile';
+import { describe, it, expect, afterEach, vi } from 'vitest';
+import { NewsletterWidget } from '../helpers/newsletter-widget';
+import { BrowserTurnstile, FakeTurnstile } from '../../src/lib/turnstile';
 
 type Turnstile = NonNullable<Window['turnstile']>;
 type RenderParams = Parameters<Turnstile['render']>[1];
@@ -119,3 +120,40 @@ describe('BrowserTurnstile', () => {
     expect(stand.removes).toEqual(['w3']);
   });
 });
+
+function widgetHarness(driver: 'script' | 'fake') {
+  if (driver === 'fake') {
+    const fake = new FakeTurnstile();
+    return { service: fake, challenge: fake };
+  }
+  const challenge = new NewsletterWidget();
+  window.turnstile = challenge;
+  return { service: new BrowserTurnstile('key'), challenge };
+}
+
+it.each(['script', 'fake'] as const)(
+  '%s scopes proof, expiry, reset and removal to each widget',
+  (driver) => {
+    const { service, challenge } = widgetHarness(driver);
+    const onToken = vi.fn();
+    const onExpired = vi.fn();
+    const a = service.render(document.createElement('div'), { onToken, onExpired })!;
+    const b = service.render(document.createElement('div'))!;
+    expect(service.getResponse(a)).toBe('');
+    challenge.solve(a, 'first');
+    challenge.solve(b, 'other');
+    expect(service.getResponse(a)).toBe('first');
+    challenge.expire(a);
+    expect(service.getResponse(a)).toBe('');
+    expect(onExpired).toHaveBeenCalledOnce();
+    challenge.solve(a, 'second');
+    service.reset(a);
+    expect(service.getResponse(a)).toBe('');
+    challenge.solve(a, 'third');
+    service.remove(a);
+    challenge.solve(a, 'removed');
+    expect(onToken.mock.calls).toEqual([['first'], ['second'], ['third']]);
+    expect(service.getResponse(a)).toBe('');
+    expect(service.getResponse(b)).toBe('other');
+  },
+);

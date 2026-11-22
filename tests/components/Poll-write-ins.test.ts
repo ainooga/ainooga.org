@@ -2,7 +2,7 @@ import { afterEach, expect, it } from 'vitest';
 import { cleanup, fireEvent, render, screen } from '@testing-library/svelte';
 import Poll from '../../src/pages/Poll.svelte';
 import { POLL_SERVICES } from '../../src/lib/polls/context';
-import { FakePollRuntime, FakePollService } from '../helpers/poll-ui';
+import { FakePollRuntime, FakePollService, savedTopic } from '../helpers/poll-ui';
 
 afterEach(cleanup);
 function setup() {
@@ -16,6 +16,7 @@ function setup() {
 it('saves a topic and plain-text description, then hides the fields during editing', async () => {
   const api = setup();
   const description = '<img src=x onerror=alert(1)> **plain text**';
+  api.savedWriteIn = savedTopic('AI gardens', description);
   await fireEvent.input(await screen.findByLabelText('Topic'), {
     target: { value: ' AI gardens ' },
   });
@@ -37,7 +38,13 @@ it('saves a topic and plain-text description, then hides the fields during editi
   await fireEvent.click(screen.getByRole('radio', { name: 'Robotics' }));
   await fireEvent.click(screen.getByRole('button', { name: 'Save changes' }));
   await screen.findByRole('button', { name: 'Edit vote' });
-  expect(api.submissions[1]).toMatchObject({ writeIn: null });
+  expect(document.querySelector('.poll-ballot li')?.textContent).toBe('Robotics');
+  expect(api.submissions).toHaveLength(2);
+  expect(api.submissions[1]).toMatchObject({
+    expectedRevision: 1,
+    optionIds: [1],
+    writeIn: null,
+  });
   expect(api.submissions[1]?.writeInDescription ?? null).toBeNull();
 });
 

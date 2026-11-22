@@ -5,6 +5,9 @@ import { syncEvents } from '../../scripts/event-sync';
 import { WranglerError } from '../../db/wrangler';
 import type { ParsedDoc } from '../../scripts/types';
 
+import { fileDatabase } from '../helpers/file-database';
+
+const open = fileDatabase();
 let f: Awaited<ReturnType<typeof authFixture>>;
 function event(slug = 'meeting', externalId = 'evt-example'): ParsedDoc {
   return {
@@ -28,7 +31,7 @@ function event(slug = 'meeting', externalId = 'evt-example'): ParsedDoc {
 const rows = () => f.store.query('SELECT * FROM events ORDER BY id');
 const links = () => f.store.query('SELECT * FROM event_links ORDER BY event_id,platform');
 beforeEach(async () => {
-  f = await authFixture();
+  f = await authFixture(true, open, false);
 });
 afterEach(async () => {
   await f?.dispose();

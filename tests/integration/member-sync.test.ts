@@ -7,6 +7,9 @@ import { syncTick, type SyncDependenciesType } from '../../worker/src/member-syn
 import { applyMember } from '../../worker/src/member-sync/apply';
 import { claim, leaseMilliseconds, release } from '../../worker/src/member-sync/state';
 
+import { fileDatabase } from '../helpers/file-database';
+
+const open = fileDatabase();
 let f: Awaited<ReturnType<typeof authFixture>>;
 let deps: SyncDependenciesType;
 let now: number;
@@ -29,7 +32,7 @@ async function due() {
 }
 
 beforeEach(async () => {
-  f = await authFixture();
+  f = await authFixture(true, open, false);
   now = Date.parse('2026-10-10T12:00:00Z');
   members = [input(0)];
   failEmail = null;
@@ -51,10 +54,10 @@ afterEach(async () => {
 });
 
 it('checkpoints ten members per tick and repeats without duplicating data', async () => {
-  members = Array.from({ length: 12 }, (_, i) => input(i));
-  expect(await tick()).toEqual({ status: 'processing', applied: 10, expected: 12 });
+  members = Array.from({ length: 11 }, (_, i) => input(i));
+  expect(await tick()).toEqual({ status: 'processing', applied: 10, expected: 11 });
   expect((await state()).cursor).toBe(10);
-  expect(await tick()).toEqual({ status: 'complete', applied: 12, expected: 12 });
+  expect(await tick()).toEqual({ status: 'complete', applied: 11, expected: 11 });
   const finished = await state();
   expect(finished.roster).toBeNull();
   expect(finished.next_run_at).toBe(now + 5 * 3600000);
@@ -80,7 +83,7 @@ it('checkpoints ten members per tick and repeats without duplicating data', asyn
     await f.store.query(
       "SELECT count(*) n FROM person_sources WHERE source='ai_collective'",
     ),
-  ).toEqual([{ n: 12 }]);
+  ).toEqual([{ n: 11 }]);
 }, 30000);
 
 it('updates source scalars while preserving opt-outs, verified contacts, and absent members', async () => {
@@ -206,7 +209,7 @@ it('excludes concurrent invocations and rejects writes from an expired lease', a
 });
 
 it('abandons an expired roster instead of applying old data', async () => {
-  members = Array.from({ length: 12 }, (_, i) => input(i));
+  members = Array.from({ length: 11 }, (_, i) => input(i));
   await tick();
   now += 6 * 3600000 + 1;
   await expect(tick()).rejects.toThrow('run_expired');

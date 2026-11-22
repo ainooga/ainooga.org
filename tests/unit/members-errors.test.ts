@@ -2,8 +2,10 @@
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import { mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
+import { createServer } from 'node:http';
+import { close, listen } from '../cli/cli-startup';
 import { join } from 'node:path';
-import { memberInput } from '../helpers/members';
+import { memberInput } from '../helpers/member-data';
 import { MemberClient } from '../../scripts/members/client';
 import { runMemberCommand } from '../../scripts/members/commands';
 
@@ -106,6 +108,24 @@ it.each([401, 429, 503])(
     expect(requests).toBe(4);
   },
 );
+
+it('does not follow an import redirect with the member data or credential', async () => {
+  const calls: unknown[] = [];
+  const server = createServer((req, res) => {
+    calls.push([req.url, req.headers.authorization]);
+    if (req.url !== '/redirected') res.writeHead(307, { Location: '/redirected' });
+    res.end('{}');
+  });
+  try {
+    const client = new MemberClient(token, await listen(server));
+    await expect(client.request(memberInput(), false)).rejects.toThrow(
+      'redirects are refused',
+    );
+    expect(calls).toEqual([['/api/admin/members/import', `Bearer ${token}`]]);
+  } finally {
+    await close(server);
+  }
+});
 
 it.each(['network', 'response'] as const)(
   'explains %s failures without disclosing private diagnostics',

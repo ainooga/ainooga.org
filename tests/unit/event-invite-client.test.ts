@@ -1,6 +1,7 @@
 // @vitest-environment node
 import { afterEach, expect, it } from 'vitest';
 import { EventClient } from '../../scripts/events/client';
+import { commandOptions, runInvitation } from '../../scripts/events/commands';
 
 const originalFetch = globalThis.fetch;
 const token = 'a'.repeat(64);
@@ -40,6 +41,58 @@ it.each([
   } catch (error) {
     expect(String(error)).not.toContain('secret');
   }
+});
+
+function eventDoc(status: string) {
+  return {
+    type: 'events' as const,
+    slug: 'meeting',
+    filePath: 'meeting.md',
+    body: '',
+    frontmatter: {
+      ...fields,
+      date: new Date(fields.date),
+      status,
+      organizer: 'Chapter',
+      tags: [],
+    },
+  };
+}
+
+it('refuses remote invite mode, missing files and drafts before delivery', () => {
+  expect(() => commandOptions(['invite', 'meeting', '--remote'])).toThrow('Usage:');
+  const invoke = (docs: ReturnType<typeof eventDoc>[]) =>
+    runInvitation(commandOptions(['invite', 'meeting']), { docs, errors: [] }, () => {
+      throw new Error('Unexpected API access');
+    });
+  expect(() => invoke([])).toThrow('Event not found: meeting');
+  expect(() => invoke([eventDoc('draft')])).toThrow(/meeting\.md.*status/s);
+});
+
+it('routes dry-run invitations to preview and reports 401 without the private response body', async () => {
+  const http = new HttpFake();
+  globalThis.fetch = http.fetch;
+  const client = new EventClient(token, 'https://ainooga.test');
+  const options = commandOptions(['invite', 'meeting', '--dry-run']);
+  const preview = {
+    recipients: 1,
+    subject: 'Meeting',
+    text: 'Preview',
+    html: '<p>Preview</p>',
+  };
+  http.responses.push(
+    Response.json(preview),
+    new Response('Private provider details', { status: 401 }),
+  );
+  const send = () =>
+    runInvitation(options, { docs: [eventDoc('published')], errors: [] }, () => client);
+  expect(await send()).toEqual(preview);
+  await expect(send()).rejects.toThrow(
+    /^API request failed \(HTTP 401\)\. Check the token, event state, and invitation tags\.$/,
+  );
+  expect(http.calls.map((call) => call.url)).toEqual(
+    Array(2).fill('https://ainooga.test/api/admin/events/meeting/invite/preview'),
+  );
 });
 
 it('validates tokens and slugs before making requests', async () => {

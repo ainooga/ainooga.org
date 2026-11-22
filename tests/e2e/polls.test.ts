@@ -1,302 +1,161 @@
-import { test, expect, type Page } from '@playwright/test';
+import {
+  test,
+  expect,
+  type Page,
+  type BrowserContext,
+  type Locator,
+} from '@playwright/test';
 
-const fakeWidget = `const widgets = new Map(); let next = 0;
-window.turnstile = {
-  render(element, options) {
-    const id = String(++next); widgets.set(id, options);
-    setTimeout(() => options.callback('browser-test-proof'), 0); return id;
-  },
-  reset(id) { setTimeout(() => widgets.get(id)?.callback('browser-test-proof'), 0); },
-  remove(id) { widgets.delete(id); },
-  getResponse() { return 'browser-test-proof'; }
+import { withPollServer } from '../helpers/poll-browser-server';
+
+const poll = '/api/polls/topics';
+const path = '/polls/topics';
+const ballot = `${poll}/ballot`;
+const a = 'a@example.com';
+const b = 'b@example.com';
+const challenge = 'https://challenges.cloudflare.com/turnstile/v0/api.js';
+const widget = `window.turnstile = {
+  render(_, options) { queueMicrotask(() => options.callback('local-proof')); return 'local'; },
+  getResponse() { return 'local-proof'; }, remove() {}, reset() {}
 };`;
-test.beforeEach(async ({ context }) => {
-  await context.route('https://**/*', async (route) => {
-    if (route.request().url().includes('challenges.cloudflare.com/turnstile/'))
-      await route.fulfill({ contentType: 'application/javascript', body: fakeWidget });
-    else await route.abort();
+
+test.use({
+  baseURL: async ({}, use) => {
+    await withPollServer(use);
+  },
+});
+
+async function observeBallots(context: BrowserContext, origin: string) {
+  const bodies: Buffer[] = [];
+  let acceptedStatus: number | undefined;
+  await context.routeWebSocket('**/*', (socket) => socket.close());
+  await context.route('**/*', async (route) => {
+    const req = route.request();
+    if (req.url() === challenge)
+      return route.fulfill({ contentType: 'application/javascript', body: widget });
+    if (new URL(req.url()).origin !== origin) return route.abort('blockedbyclient');
+    if (req.method() === 'PUT') {
+      expect(new URL(req.url()).pathname).toBe(ballot);
+      bodies.push(req.postDataBuffer()!);
+      if (bodies.length === 1) {
+        const accepted = await route.fetch({ maxRedirects: 0 });
+        acceptedStatus = accepted.status();
+        await accepted.dispose();
+        return route.abort('connectionreset');
+      }
+    }
+    // Let Chromium send the actual shared cookie (including fetch credentials policy).
+    return route.continue();
   });
-});
-async function enter(page: Page, slug: string, email = 'voter@example.com') {
-  await page.goto(`/polls/${slug}`);
-  await page.getByLabel('Email', { exact: true }).fill(email);
-  await page.getByRole('button', { name: 'Continue', exact: true }).click();
+  return { bodies, accepted: () => acceptedStatus };
 }
-test('email entry, write-in, editing, another voter and logout through real D1', async ({
-  page,
-}) => {
-  const errors: string[] = [];
-  page.on('pageerror', (error) => errors.push(error.message));
-  await enter(page, 'browser-vote');
-  await page.getByLabel('Topic').fill('Browser write-in');
-  await page.getByLabel('Description (optional)').fill('A topic from the browser');
-  await page.getByRole('button', { name: 'Submit vote', exact: true }).click();
-  await expect(page.getByText('Your vote is saved.', { exact: true })).toBeVisible();
-  await expect(
-    page.getByText('1 accepted ballots. 2 people are currently eligible.', {
-      exact: true,
-    }),
-  ).toBeVisible();
-  await page.getByRole('button', { name: 'Edit vote', exact: true }).click();
-  await expect(page.getByLabel('Topic', { exact: true })).toHaveCount(0);
-  await expect(page.getByLabel('Description (optional)')).toHaveCount(0);
-  await expect(page.getByText('A topic from the browser', { exact: true })).toBeVisible();
-  await page.getByRole('radio', { name: 'Robotics', exact: true }).check();
-  await page.getByRole('button', { name: 'Save changes', exact: true }).click();
-  await expect(
-    page.getByRole('button', { name: 'Edit vote', exact: true }),
-  ).toBeVisible();
-  await expect(page.locator('.poll-ballot li')).toHaveText('Robotics');
-  await page.getByRole('button', { name: 'Use another email' }).click();
-  await expect(page.getByLabel('Email', { exact: true })).toBeVisible();
-  expect((await page.request.get('/api/polls/browser-vote')).status()).toBe(401);
-  await page.getByLabel('Email', { exact: true }).fill('other@example.com');
-  await page.getByRole('button', { name: 'Continue', exact: true }).click();
-  await expect(
-    page.getByRole('radio', {
-      name: 'Browser write-in (write-in) A topic from the browser',
-      exact: true,
-    }),
-  ).toBeVisible();
-  await page
-    .getByRole('radio', {
-      name: 'Browser write-in (write-in) A topic from the browser',
-      exact: true,
-    })
-    .check();
-  await page.getByRole('button', { name: 'Submit vote', exact: true }).click();
-  await expect(
-    page.getByText('2 accepted ballots. 2 people are currently eligible.', {
-      exact: true,
-    }),
-  ).toBeVisible();
-  expect(errors).toEqual([]);
-});
-test('Discord fallback, sorry page and keyboard entry', async ({ page }) => {
-  await enter(page, 'browser-username', 'missing@example.com');
-  await page.getByLabel('Discord username', { exact: true }).fill('unknown');
-  await page.getByRole('button', { name: 'Continue', exact: true }).click();
-  await expect(page.getByRole('link', { name: 'contact@ainooga.org' })).toHaveAttribute(
-    'href',
-    'mailto:contact@ainooga.org',
-  );
-  await page.getByRole('button', { name: 'Try again', exact: true }).click();
-  await page.getByLabel('Email', { exact: true }).fill('missing@example.com');
-  await page.getByRole('button', { name: 'Continue', exact: true }).click();
-  await page.getByLabel('Discord username', { exact: true }).fill(' CHAPTER.USER ');
-  await page.getByRole('button', { name: 'Continue', exact: true }).focus();
+
+async function identify(page: Page, email: string) {
+  const field = page.getByLabel('Email', { exact: true });
+  await field.pressSequentially(email);
+  const next = page.getByRole('button', { name: 'Continue', exact: true });
+  await expect(next).toBeEnabled();
+  await field.press('Tab');
+  await expect(next).toBeFocused();
   await page.keyboard.press('Enter');
   await expect(page.getByRole('heading', { name: 'Next talk' })).toBeVisible();
-});
-test('a lost accepted response retries the same ballot without incrementing its revision', async ({
-  page,
-}) => {
-  await enter(page, 'browser-retry');
-  let dropped = false;
-  const payloads: string[] = [];
-  await page.route('**/api/polls/browser-retry/ballot', async (route) => {
-    if (route.request().method() !== 'PUT') {
-      await route.continue();
-      return;
-    }
-    payloads.push(route.request().postData()!);
-    if (!dropped) {
-      dropped = true;
-      expect((await route.fetch()).status()).toBe(200);
-      await route.abort('connectionreset');
-    } else await route.continue();
-  });
-  await page.getByRole('radio', { name: 'Robotics', exact: true }).check();
-  await page.getByRole('button', { name: 'Submit vote', exact: true }).click();
-  await page.getByRole('button', { name: 'Retry same vote', exact: true }).click();
-  await expect(page.getByText('Your vote is saved.', { exact: true })).toBeVisible();
-  expect(payloads).toHaveLength(2);
-  expect(payloads[0]).toBe(payloads[1]);
-  expect(
-    await (await page.request.get('/api/polls/browser-retry/ballot')).json(),
-  ).toMatchObject({ revision: 1 });
-});
-test('multiple choice and hidden results remain restricted', async ({ page }) => {
-  await enter(page, 'browser-multi');
-  await page.getByRole('checkbox', { name: 'Robotics', exact: true }).check();
-  await page.getByRole('checkbox', { name: 'Language models', exact: true }).check();
-  await page.getByRole('button', { name: 'Submit vote', exact: true }).click();
-  await expect(page.getByText('Your vote is saved.', { exact: true })).toBeVisible();
-  await expect(
-    page.getByText('Results are not shared with voters for this poll.'),
-  ).toBeVisible();
-  expect((await page.request.get('/api/polls/browser-multi/results')).status()).toBe(403);
-});
-
-async function changeEmail(page: Page, email: string) {
-  await page.getByRole('button', { name: 'Use another email' }).click();
-  await page.getByLabel('Email', { exact: true }).fill(email);
-  await page.getByRole('button', { name: 'Continue', exact: true }).click();
-  await expect(page.getByRole('heading', { name: 'Next talk' })).toBeVisible();
+  const detail = await get(page, poll);
+  expect(detail.voter).toEqual({ kind: 'email', value: email });
+  expect(detail.sessionContext).toMatch(/^[a-f0-9]{64}$/);
+  return detail.sessionContext as string;
 }
-test('two tabs require confirmation, preserve a cancelled draft, and restore focus', async ({
-  page,
-  context,
-}) => {
-  await enter(page, 'browser-confirm');
-  await page.getByLabel('Topic').fill('Preserved draft');
-  const other = await context.newPage();
-  await other.goto('/polls/browser-confirm');
-  await changeEmail(other, 'other@example.com');
-  await expect(page.getByRole('dialog')).toHaveCount(0);
-  const submit = page.getByRole('button', { name: 'Submit vote', exact: true });
-  await submit.click();
-  const dialog = page.getByRole('dialog');
-  await expect(dialog).toContainText(
-    'You switched to other@example.com after starting this. Do you want to submit as other@example.com?',
-  );
-  expect(
-    await (await other.request.get('/api/polls/browser-confirm/ballot')).json(),
-  ).toBeNull();
-  await dialog.getByRole('button', { name: 'Yes', exact: true }).focus();
-  await page.keyboard.press('Escape');
-  await expect(dialog).toHaveCount(0);
-  await expect(submit).toBeFocused();
-  await expect(page.getByLabel('Topic')).toHaveValue('Preserved draft');
-  await submit.click();
-  await dialog.getByRole('button', { name: 'Yes', exact: true }).click();
-  await expect(page.locator('.poll-ballot li')).toHaveText('Preserved draft');
-  expect(
-    await (await other.request.get('/api/polls/browser-confirm/ballot')).json(),
-  ).toMatchObject({ revision: 1 });
-});
-test('No accepts a replacement email in the same dialog and handles an ineligible email', async ({
-  page,
-  context,
-}) => {
-  await enter(page, 'browser-email');
-  await page.getByRole('radio', { name: 'Robotics', exact: true }).check();
-  const other = await context.newPage();
-  await other.goto('/polls/browser-email');
-  await changeEmail(other, 'other@example.com');
-  await page.getByRole('button', { name: 'Submit vote', exact: true }).click();
-  const dialog = page.getByRole('dialog');
-  await dialog.getByRole('button', { name: 'No', exact: true }).click();
-  const email = dialog.getByLabel('What email should this vote use?');
-  await email.fill('missing@example.com');
-  await dialog.getByRole('button', { name: 'Submit as this email' }).click();
-  await expect(dialog.getByRole('alert')).toContainText('cannot access');
-  expect(
-    await (await page.request.get('/api/polls/browser-email/ballot')).json(),
-  ).toBeNull();
-  await email.fill('voter@example.com');
-  await dialog.getByRole('button', { name: 'Submit as this email' }).click();
-  await expect(dialog).toHaveCount(0);
-  await expect(page.locator('.poll-ballot li')).toHaveText('Robotics');
-  expect(
-    await (await page.request.get('/api/polls/browser-email/session')).json(),
-  ).toMatchObject({ personId: 2 });
-});
-test('an accepted lost response cannot be retried as another voter without confirmation', async ({
-  page,
-  context,
-}) => {
-  const slug = 'browser-context-retry';
-  await enter(page, slug);
-  let dropped = false;
-  const payloads: string[] = [];
-  await page.route(`**/api/polls/${slug}/ballot`, async (route) => {
-    if (route.request().method() !== 'PUT') return route.continue();
-    payloads.push(route.request().postData()!);
-    if (!dropped) {
-      dropped = true;
-      expect((await route.fetch()).status()).toBe(200);
-      await route.abort('connectionreset');
-    } else await route.continue();
+async function get(page: Page, url: string) {
+  const response = await page.request.get(url, { maxRedirects: 0 });
+  expect(response.status()).toBe(200);
+  return response.json();
+}
+async function put(page: Page, button: Locator, status: number) {
+  await expect(button).toBeEnabled();
+  const [response] = await Promise.all([
+    page.waitForResponse(
+      (r) => new URL(r.url()).pathname === ballot && r.request().method() === 'PUT',
+    ),
+    button.press('Enter'),
+  ]);
+  expect(response.status()).toBe(status);
+  if (status === 409)
+    expect(await response.json()).toMatchObject({ code: 'session_changed' });
+}
+function submission(body: Buffer, sessionContext: string) {
+  const parsed = JSON.parse(body.toString());
+  expect(parsed).toEqual({
+    sessionContext,
+    expectedRevision: 0,
+    optionIds: [1],
+    writeIn: null,
+    requestId: expect.any(String),
   });
-  await page.getByRole('radio', { name: 'Robotics', exact: true }).check();
-  await page.getByRole('button', { name: 'Submit vote', exact: true }).click();
-  await expect(page.getByRole('button', { name: 'Retry same vote' })).toBeVisible();
+  return parsed.requestId as string;
+}
+
+test('a lost accepted vote requires deliberate confirmation before writing as another voter', async ({
+  page,
+  context,
+  baseURL,
+}) => {
+  const { bodies, accepted } = await observeBallots(context, baseURL!);
+  await page.goto(path);
+  const original = await identify(page, a);
+  const robotics = page.getByRole('radio', { name: 'Robotics', exact: true });
+  const submit = page.getByRole('button', { name: 'Submit vote', exact: true });
+  const retry = page.getByRole('button', { name: 'Retry same vote', exact: true });
+  await robotics.check();
+  await expect(submit).toBeEnabled();
+  await submit.press('Enter');
+  await expect(retry).toBeVisible();
+  expect(accepted()).toBe(200);
+  const first = submission(bodies[0]!, original);
+  expect(await get(page, ballot)).toMatchObject({ revision: 1, optionIds: [1] });
+
   const other = await context.newPage();
-  await other.goto(`/polls/${slug}`);
-  await changeEmail(other, 'other@example.com');
-  await page.getByRole('button', { name: 'Retry same vote' }).click();
-  const dialog = page.getByRole('dialog');
-  await expect(dialog).toBeVisible();
-  expect(payloads[1]).toBe(payloads[0]);
-  expect(await (await other.request.get(`/api/polls/${slug}/ballot`)).json()).toBeNull();
-  await dialog.getByRole('button', { name: 'Yes', exact: true }).click();
+  await other.goto(path);
   await expect(
-    page.getByText('2 accepted ballots. 2 people are currently eligible.', {
+    other.getByText('1 accepted ballots. 2 people are currently eligible.', {
       exact: true,
     }),
   ).toBeVisible();
-  expect(JSON.parse(payloads[2]!).requestId).not.toBe(JSON.parse(payloads[0]!).requestId);
-});
-test('a second identity change while the dialog is open requires another confirmation', async ({
-  page,
-  context,
-}) => {
-  await enter(page, 'browser-repeat-switch');
-  await page.getByRole('radio', { name: 'Robotics', exact: true }).check();
-  const other = await context.newPage();
-  await other.goto('/polls/browser-repeat-switch');
-  await changeEmail(other, 'other@example.com');
-  await page.getByRole('button', { name: 'Submit vote', exact: true }).click();
+  await other.getByRole('button', { name: 'Use another email' }).click();
+  const current = await identify(other, b);
+  expect(current).not.toBe(original);
+  await put(page, retry, 409);
+  expect(bodies[1]).toEqual(bodies[0]);
+  expect(await get(other, ballot)).toBeNull();
   const dialog = page.getByRole('dialog');
-  await expect(dialog).toContainText('other@example.com');
-  await changeEmail(other, 'voter@example.com');
-  await dialog.getByRole('button', { name: 'Yes', exact: true }).click();
-  await expect(dialog).toContainText('You switched to voter@example.com');
-  expect(
-    await (await other.request.get('/api/polls/browser-repeat-switch/ballot')).json(),
-  ).toBeNull();
-  await dialog.getByRole('button', { name: 'Yes', exact: true }).click();
-  await expect(page.locator('.poll-ballot li')).toHaveText('Robotics');
-});
-test('accepted write-ins cannot be invisibly edited after a failed detail reload', async ({
-  page,
-}) => {
-  const slug = 'browser-write-in-reload';
-  await enter(page, slug);
-  await page.getByLabel('Topic').fill('Visible after reload');
-  let fail = true;
-  let writes = 0;
-  page.on('request', (request) => {
-    if (request.method() === 'PUT') writes++;
-  });
-  await page.route(`**/api/polls/${slug}`, async (route) => {
-    if (fail) await route.abort('connectionreset');
-    else await route.continue();
-  });
-  await page.getByRole('button', { name: 'Submit vote', exact: true }).click();
+  const modal = page.locator('dialog:modal');
+  await expect(modal).toContainText(`Do you want to submit as ${b}?`);
+  await page.locator('header a[href="/"]').focus();
+  expect(await modal.evaluate((el) => el.contains(document.activeElement))).toBe(true);
+
+  await page.keyboard.press('Escape');
+  await expect(dialog).toHaveCount(0);
+  await expect(submit).toBeEnabled();
+  await expect(submit).toBeFocused();
+  await expect(retry).toHaveCount(0);
+  await expect(robotics).toBeChecked();
+  expect(await get(other, ballot)).toBeNull();
+  await put(page, submit, 409);
+  const third = submission(bodies[2]!, original);
+  expect(third).not.toBe(first);
+  await expect(modal).toContainText(`Do you want to submit as ${b}?`);
+  expect(await get(other, ballot)).toBeNull();
+
+  await put(page, dialog.getByRole('button', { name: 'Yes', exact: true }), 200);
+  const fourth = submission(bodies[3]!, current);
+  expect(new Set([first, third, fourth]).size).toBe(3);
+  await other.reload();
   await expect(
-    page.getByText('Your vote is saved, but its choices could not be loaded.'),
-  ).toBeVisible();
-  await expect(page.getByRole('button', { name: 'Edit vote', exact: true })).toHaveCount(
-    0,
-  );
-  fail = false;
-  await page.getByRole('button', { name: 'Reload saved vote' }).click();
-  await expect(page.locator('.poll-ballot li')).toHaveText('Visible after reload');
+    other.getByRole('region', { name: 'Your ballot' }).getByRole('listitem'),
+  ).toHaveText('Robotics');
   await expect(
-    page.getByRole('button', { name: 'Edit vote', exact: true }),
+    other.getByText('2 accepted ballots. 2 people are currently eligible.', {
+      exact: true,
+    }),
   ).toBeVisible();
-  expect(writes).toBe(1);
-});
-test('confirmation warns before replacing the current voter’s existing editable ballot', async ({
-  page,
-  context,
-}) => {
-  await enter(page, 'browser-existing-vote');
-  await page.getByRole('radio', { name: 'Robotics', exact: true }).check();
-  const other = await context.newPage();
-  await other.goto('/polls/browser-existing-vote');
-  await changeEmail(other, 'other@example.com');
-  await other.getByRole('radio', { name: 'Language models', exact: true }).check();
-  await other.getByRole('button', { name: 'Submit vote', exact: true }).click();
-  await expect(other.locator('.poll-ballot li')).toHaveText('Language models');
-  await page.getByRole('button', { name: 'Submit vote', exact: true }).click();
-  const dialog = page.getByRole('dialog');
-  await expect(dialog).toContainText('replace this voter’s existing vote');
-  await dialog.getByRole('button', { name: 'Yes', exact: true }).click();
-  await expect(page.locator('.poll-ballot li')).toHaveText('Robotics');
-  expect(
-    await (await other.request.get('/api/polls/browser-existing-vote/ballot')).json(),
-  ).toMatchObject({ revision: 2 });
+  expect(await get(other, ballot)).toMatchObject({ revision: 1, optionIds: [1] });
+  expect(bodies).toHaveLength(4);
 });

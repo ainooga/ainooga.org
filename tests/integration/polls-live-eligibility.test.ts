@@ -3,13 +3,16 @@ import { afterEach, expect, it } from 'vitest';
 import { pollFixture, pollInput } from '../helpers/polls';
 import { responseCookie } from '../helpers/auth';
 
+import { fileDatabase } from '../helpers/file-database';
+
+const open = fileDatabase();
 let f: Awaited<ReturnType<typeof pollFixture>>;
 afterEach(async () => {
   await f?.dispose();
 });
 
 it('grants and removes tag-based access live while retaining accepted ballots', async () => {
-  f = await pollFixture();
+  f = await pollFixture(open);
   await f.store.execute(["INSERT INTO person_tags VALUES(2,'member')"]);
   await f.create(pollInput({ eligibleTags: ['member'] }));
   expect((await f.admin('/topics/publish', 'POST')).status).toBe(200);
@@ -62,7 +65,7 @@ it('grants and removes tag-based access live while retaining accepted ballots', 
 });
 
 it('keeps concurrent explicit additions and rejects obsolete revoke actions', async () => {
-  f = await pollFixture();
+  f = await pollFixture(open);
   await f.create();
   const responses = await Promise.all(
     ['voter@example.com', 'other@example.com'].map((value) =>
@@ -88,7 +91,7 @@ it('keeps concurrent explicit additions and rejects obsolete revoke actions', as
 });
 
 it('round-trips plain-text descriptions alongside string choices and freezes them on publish', async () => {
-  f = await pollFixture();
+  f = await pollFixture(open);
   const options = ['Robotics', { label: 'Language models', description: '<b>Text</b>' }];
   const cookie = await f.ready(pollInput({ options }));
   expect(await (await f.admin('/topics')).json()).toMatchObject({ options });

@@ -3,7 +3,7 @@ import { afterEach, expect, it } from 'vitest';
 import { mkdtemp, writeFile, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { memberInput } from '../helpers/members';
+import { memberInput } from '../helpers/member-data';
 import { readMembers, validateFile } from '../../scripts/members/files';
 import { runMemberCommand } from '../../scripts/members/commands';
 import { MemberClient, type MemberApi } from '../../scripts/members/client';
@@ -57,7 +57,11 @@ it('validates offline and stops import before writes when any preview conflicts 
       return { actions: [], conflicts: ['identity_conflict'] };
     },
   };
-  expect(await runMemberCommand(['validate', path], api)).toMatchObject({ members: 2 });
+  expect(await runMemberCommand(['validate', path], api)).toMatchObject({
+    members: 2,
+    events: 1,
+    registrations: 2,
+  });
   expect(calls).toEqual([]);
   expect(await runMemberCommand(['preview', path], api)).toMatchObject({ conflicts: 2 });
   await expect(runMemberCommand(['import', path], api)).rejects.toThrow('rows 1, 2');
@@ -70,6 +74,20 @@ it('validates offline and stops import before writes when any preview conflicts 
   );
   await expect(runMemberCommand(['unknown', path], api)).rejects.toThrow('Usage:');
   await expect(runMemberCommand([], api)).rejects.toThrow('Usage:');
+  await writeFile(
+    path,
+    JSON.stringify([memberInput(), { ...memberInput(), email: 'invalid' }]),
+  );
+  const attempted: boolean[] = [];
+  await expect(
+    runMemberCommand(['import', path], {
+      async request(_member, preview) {
+        attempted.push(preview);
+        throw new Error('Unexpected API call');
+      },
+    }),
+  ).rejects.toThrow('1.email');
+  expect(attempted).toEqual([]);
 });
 
 it.each([

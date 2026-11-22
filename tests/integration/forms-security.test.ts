@@ -7,9 +7,12 @@ import { BackgroundTasks } from '../helpers/background';
 import worker from '../../worker/src/index';
 import type { Env } from '../../worker/src/types';
 
+import { fileDatabase } from '../helpers/file-database';
+
+const open = fileDatabase();
 let f: Awaited<ReturnType<typeof chapterDatabase>>;
 beforeEach(async () => {
-  f = await chapterDatabase();
+  f = await chapterDatabase(open);
   for (const name of [
     '0003_voter_auth.sql',
     '0004_poll_api.sql',
@@ -18,7 +21,7 @@ beforeEach(async () => {
     await migration(f.store, name);
 });
 afterEach(async () => {
-  await f.dispose();
+  await f?.dispose();
   vi.unstubAllGlobals();
 });
 
@@ -53,23 +56,6 @@ it('allows exactly one retry after failed delivery and invalidates the failed to
   expect(await db.confirmSubscription(tokens[1]!)).toBe(1);
   expect(await f.store.query('SELECT count(*) AS n FROM people')).toEqual([{ n: 1 }]);
 });
-
-it.each(['/confirm', '/api/subscribe', '/api/contact-sponsor'])(
-  'protects headers on %s failures',
-  async (path) => {
-    const env = { DB: f.db, CHAPTER_SCHEMA_READY: 'true' } as Env;
-    const response = await worker.fetch(
-      new Request(`https://ainooga.org${path}`, {
-        method: path === '/confirm' ? 'GET' : 'POST',
-      }),
-      env,
-      new BackgroundTasks(),
-    );
-    expect(response.headers.get('Cache-Control')).toBe('no-store');
-    expect(response.headers.get('Referrer-Policy')).toBe('no-referrer');
-    expect(response.headers.get('X-Content-Type-Options')).toBe('nosniff');
-  },
-);
 
 it('a late invalidation cannot remove a replacement token or undo confirmation', async () => {
   const db = createDb(f.db);

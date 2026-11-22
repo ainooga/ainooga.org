@@ -3,13 +3,16 @@ import { afterEach, expect, it } from 'vitest';
 import { pollFixture, pollInput } from '../helpers/polls';
 import { ORGANIZER_TOKEN, SITE } from '../helpers/auth';
 import { handleAuth } from '../../worker/src/auth/router';
+import { fileDatabase } from '../helpers/file-database';
+
+const open = fileDatabase();
 let f: Awaited<ReturnType<typeof pollFixture>>;
 afterEach(async () => {
   await f?.dispose();
 });
 
 it('requires organizer tokens on every management path and preserves readiness isolation', async () => {
-  f = await pollFixture();
+  f = await pollFixture(open);
   await f.create();
   for (const [suffix, method] of [
     ['', 'POST'],
@@ -35,7 +38,7 @@ it('requires organizer tokens on every management path and preserves readiness i
   }
 });
 it('gates new routes only, rejects foreign origins and limits requests', async () => {
-  f = await pollFixture();
+  f = await pollFixture(open);
   f.env.POLLS_READY = 'false';
   expect((await f.admin()).status).toBe(503);
   expect((await f.request('/api/polls/honor/access')).status).toBe(503);
@@ -60,7 +63,7 @@ it('gates new routes only, rejects foreign origins and limits requests', async (
   expect((await f.admin()).status).toBe(429);
 });
 it('exposes only login requirements anonymously and never another voter identity', async () => {
-  f = await pollFixture();
+  f = await pollFixture(open);
   const cookie = await f.ready();
   const submission = await f.ballotFor(cookie);
   expect(await (await f.request('/api/polls/topics/access')).json()).toEqual({
@@ -119,7 +122,7 @@ it('exposes only login requirements anonymously and never another voter identity
   ).toBe(403);
 });
 it('omits unconfigured Discord and bounds/validates organizer JSON', async () => {
-  f = await pollFixture();
+  f = await pollFixture(open);
   f.env.DISCORD_CLIENT_ID = undefined;
   expect(await (await f.request('/api/polls/verified/access')).json()).toEqual({
     identityMode: 'verified',

@@ -3,12 +3,15 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { authFixture, emailChallenge, responseCookie } from '../helpers/auth';
 import { deferred, pauseBatch } from '../helpers/background';
 
+import { fileDatabase } from '../helpers/file-database';
+
+const open = fileDatabase();
 let f: Awaited<ReturnType<typeof authFixture>>;
 beforeEach(async () => {
-  f = await authFixture();
+  f = await authFixture(true, open);
 });
 afterEach(async () => {
-  await f.dispose();
+  await f?.dispose();
 });
 
 async function attempt(kind: 'email' | 'discord') {

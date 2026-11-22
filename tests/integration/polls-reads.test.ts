@@ -1,6 +1,9 @@
 // @vitest-environment node
 import { afterEach, expect, it } from 'vitest';
 import { pollFixture, pollInput } from '../helpers/polls';
+import { fileDatabase } from '../helpers/file-database';
+
+const open = fileDatabase();
 let f: Awaited<ReturnType<typeof pollFixture>>;
 afterEach(async () => {
   await f?.dispose();
@@ -71,7 +74,7 @@ function keysOf(value: unknown): string[] {
 }
 
 it('does not aggregate results for the poll read', async () => {
-  f = await pollFixture();
+  f = await pollFixture(open);
   const cookie = await f.ready();
   const read = meterReads();
   const before = await read('/api/polls/topics', cookie);
@@ -83,7 +86,7 @@ it('does not aggregate results for the poll read', async () => {
   expect(after.rows).toBe(before.rows);
 });
 it('reads neither results nor options for the ballot read', async () => {
-  f = await pollFixture();
+  f = await pollFixture(open);
   const cookie = await f.ready();
   const read = meterReads();
   const before = await read('/api/polls/topics/ballot', cookie);
@@ -99,8 +102,18 @@ it('reads neither results nor options for the ballot read', async () => {
 it.each(['never', 'after_vote'] as const)(
   'does not reveal or aggregate denied %s results',
   async (resultsVisibility) => {
-    f = await pollFixture();
+    f = await pollFixture(open);
     const cookie = await f.ready(pollInput({ resultsVisibility }));
+    if (resultsVisibility === 'never') {
+      const ballot = await f.ballotFor(cookie);
+      const vote = await f.request(
+        '/api/polls/topics/ballot',
+        'PUT',
+        ballot([], 0, 'Draft'),
+        { Cookie: cookie },
+      );
+      expect(vote.status).toBe(200);
+    }
     const read = meterReads();
     const before = await read('/api/polls/topics/results', cookie);
     await otherBallots();
@@ -117,7 +130,7 @@ it.each(['never', 'after_vote'] as const)(
   },
 );
 it('computes permitted results over every ballot', async () => {
-  f = await pollFixture();
+  f = await pollFixture(open);
   const cookie = await f.ready();
   const submission = await f.ballotFor(cookie);
   const vote = await f.request(

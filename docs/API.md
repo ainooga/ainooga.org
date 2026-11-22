@@ -190,7 +190,7 @@ For local setup, follow [authentication configuration](#configuration-and-deploy
 
 Production needs migration `0005_simplify_chapter.sql` and the matching Worker. Follow the [schema simplification rollout](./DATABASE.md#schema-simplification-rollout), which pauses forms and authentication during the incompatible change. Existing readiness secrets are reused. Deploy the compatible Worker before the SPA, refresh open pages, and validate entry, voting, retries, results, and logout on a controlled poll with real Turnstile. Email delivery and Discord OAuth are not required for unverified entry.
 
-Run `pnpm check`, `pnpm build:spa`, and `pnpm test:e2e:polls`. The browser suite uses disposable local D1 and fake external services, with no production changes. Install Chromium once with `pnpm exec playwright install chromium`.
+Run `pnpm test:local` for Node, component, D1, and browser correctness checks. `pnpm test:e2e` runs the single two-tab poll journey against disposable local D1 and fake external services. Install Chromium once with `pnpm exec playwright install chromium`. Validate the production artifact separately with `pnpm build && pnpm smoke:artifact`.
 
 ## Security review and member-import gate
 

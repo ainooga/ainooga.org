@@ -6,30 +6,40 @@ Static SPA. Content in markdown, compiled to JSON at build. Svelte 5, served fro
 
 ## Prerequisites
 
-- Node.js >= 20
-- pnpm >= 9
+- Node.js >= 22.13
+- pnpm 11.7.0 (project-pinned)
+- Chromium installed by Playwright for the Git hook below. On Linux, use `pnpm exec playwright install --with-deps chromium` if system libraries are missing.
 
 ## Quick start
 
 ```bash
+pnpm install --frozen-lockfile
 pnpm run setup
+pnpm exec playwright install chromium
 pnpm dev
 ```
 
+On Linux/macOS, pre-commit runs staged lint and image checks, then all local correctness tests in parallel against a snapshot of the staged changes. No production data or credentials are needed. CI separately measures D1 capacity and builds and checks the deployable site artifact.
+
 ## Scripts
 
-| Script               | What                                                   |
-| -------------------- | ------------------------------------------------------ |
-| `pnpm dev`           | Build content, then start dev server with hot reload   |
-| `pnpm build`         | Build content + SPA + preview pages for production     |
-| `pnpm build:content` | Build markdown content → JSON only                     |
-| `pnpm build:pages`   | Write per-route HTML with link-preview meta into dist/ |
-| `pnpm check`         | Full validation: lint + type-check + test + complexity |
-| `pnpm test`          | Run unit + component tests                             |
-| `pnpm test:e2e`      | Run Playwright E2E tests                               |
-| `pnpm lint`          | ESLint check                                           |
-| `pnpm format`        | Prettier check                                         |
-| `pnpm format:write`  | Format all files                                       |
+| Script                | What                                                   |
+| --------------------- | ------------------------------------------------------ |
+| `pnpm dev`            | Build content, then start dev server with hot reload   |
+| `pnpm build`          | Build content + SPA + preview pages for production     |
+| `pnpm build:content`  | Build markdown content → JSON only                     |
+| `pnpm build:pages`    | Write per-route HTML with link-preview meta into dist/ |
+| `pnpm check`          | Lint, type-check, and run Vitest projects              |
+| `pnpm test`           | Run all local Vitest projects (no browser)             |
+| `pnpm test:local`     | Run fast, D1, and Chromium lanes in parallel           |
+| `pnpm test:fast`      | Run Node and component contracts without D1            |
+| `pnpm test:db`        | Run D1 contracts                                       |
+| `pnpm test:e2e`       | Run the single two-tab voting journey                  |
+| `pnpm test:capacity`  | Run the separate D1 workload check                     |
+| `pnpm smoke:artifact` | Check the production artifact after `pnpm build`       |
+| `pnpm lint`           | ESLint check                                           |
+| `pnpm format`         | Prettier check                                         |
+| `pnpm format:write`   | Format all files                                       |
 
 ## Content
 

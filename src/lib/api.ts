@@ -2,7 +2,7 @@ interface ApiResponse<T> {
   ok: boolean;
   data?: T;
   error?: string;
-  /** True when fetch threw (network failure, DNS, timeout, CORS) — token was never sent. */
+  /** No usable response arrived; the server may already have accepted the request. */
   networkError?: boolean;
 }
 

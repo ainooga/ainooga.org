@@ -2,6 +2,7 @@ import { invitationSchema } from './schemas.js';
 import type { Env } from '../types.js';
 import type { AuthDependencies } from '../auth/types.js';
 import { jsonBody, reject } from '../auth/http.js';
+import { deliverInvitations } from './delivery.js';
 import { eventInvitationMessage } from './message.js';
 
 export async function adminEvents(request: Request, deps: AuthDependencies, env: Env) {
@@ -49,39 +50,4 @@ async function invitationRecipients(db: D1Database, tags: string[]) {
     .bind(JSON.stringify(tags))
     .all<{ email: string }>();
   return result.results.map((row) => row.email);
-}
-
-async function send(
-  email: SendEmail,
-  message: Parameters<SendEmail['send']>[0],
-): Promise<void> {
-  let timer: ReturnType<typeof setTimeout> | undefined;
-  try {
-    await Promise.race([
-      email.send(message),
-      new Promise<never>((_resolve, fail) => {
-        timer = setTimeout(() => fail(new Error('Invitation send timed out')), 10000);
-      }),
-    ]);
-  } finally {
-    if (timer !== undefined) clearTimeout(timer);
-  }
-}
-
-async function deliverInvitations(
-  email: SendEmail,
-  recipients: string[],
-  message: ReturnType<typeof eventInvitationMessage>,
-) {
-  const summary = { recipients: recipients.length, accepted: 0, failed: 0 };
-  for (let offset = 0; offset < recipients.length; offset += 5) {
-    const outcomes = await Promise.allSettled(
-      recipients.slice(offset, offset + 5).map((to) => send(email, { ...message, to })),
-    );
-    for (const outcome of outcomes) {
-      if (outcome.status === 'fulfilled') summary.accepted++;
-      else summary.failed++;
-    }
-  }
-  return summary;
 }

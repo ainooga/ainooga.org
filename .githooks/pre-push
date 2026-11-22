@@ -1,7 +1,6 @@
 #!/usr/bin/env bash
-set -e
-
-# Pre-push hook: full check suite
-echo "Running pre-push checks..."
-npm run check
-echo "All checks passed."
+set -euo pipefail
+pnpm lint
+pnpm type-check
+pnpm test:local
+# CI builds and checks the deployable artifact once, separately from local correctness.

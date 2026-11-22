@@ -37,11 +37,24 @@ it('prompts again if the cookie changes while confirmation is open', async () =>
   const { api, form } = await setup();
   api.switchVoter('other@example.com');
   await form.submit();
+  const approvedContext = api.poll.sessionContext;
   api.switchVoter('voter@example.com');
   await form.identity.confirm();
+  expect(api.submissions).toHaveLength(2);
+  expect(api.submissions[1]!.sessionContext).toBe(approvedContext);
   expect(form.identity.open).toBe(true);
   expect(form.identity.target?.voter.value).toBe('voter@example.com');
   expect(api.poll.ballot).toBeNull();
+  await form.identity.confirm();
+  expect(form.identity.open).toBe(false);
+  expect(api.submissions).toHaveLength(3);
+  expect(api.submissions[2]).toMatchObject({
+    sessionContext: api.poll.sessionContext,
+    expectedRevision: 0,
+    writeIn: 'Keep my draft',
+  });
+  expect(new Set(api.submissions.map((input) => input.requestId)).size).toBe(3);
+  expect(api.poll.ballot?.revision).toBe(1);
 });
 it('keeps the draft on cancellation and failed replacement email entry', async () => {
   const { api, form } = await setup();
@@ -53,11 +66,15 @@ it('keeps the draft on cancellation and failed replacement email entry', async (
   expect(form.pending).toBeNull();
   await form.submit();
   form.identity.stage = 'email';
+  api.failIdentify = new PollError(403, 'ineligible', 'Not eligible');
   await form.identity.enterEmail('missing@example.com', 'proof');
   expect(form.identity.stage).toBe('email');
   expect(form.identity.message).toContain('Not eligible');
   expect(api.poll.ballot).toBeNull();
+  expect(api.submissions).toHaveLength(2);
+  api.failIdentify = null;
   await form.identity.enterEmail(' VOTER@EXAMPLE.COM ', 'fresh');
+  expect(api.identifiers.at(-1)).toEqual({ kind: 'email', value: 'voter@example.com' });
   expect(api.poll.voter.value).toBe('voter@example.com');
   expect(api.poll.ballot?.revision).toBe(1);
 });

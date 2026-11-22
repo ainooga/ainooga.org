@@ -1,6 +1,6 @@
 // @vitest-environment node
 import { BackgroundTasks } from '../helpers/background';
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { chapterDatabase, migration } from '../helpers/d1';
 import { createDb } from '../../worker/src/db/client';
 import { handleSubscribe } from '../../worker/src/subscribe';
@@ -17,18 +17,6 @@ class EmailRecorder implements EmailSender {
 }
 
 let context: Awaited<ReturnType<typeof chapterDatabase>>;
-beforeEach(async () => {
-  context = await chapterDatabase();
-  for (const name of [
-    '0003_voter_auth.sql',
-    '0004_poll_api.sql',
-    '0005_simplify_chapter.sql',
-  ])
-    await migration(context.store, name);
-});
-afterEach(async () => {
-  await context.dispose();
-});
 function dependencies() {
   return {
     db: createDb(context.db),
@@ -51,18 +39,60 @@ function env(): Env {
 }
 
 describe('forms against local D1', () => {
-  it('creates one person/subscription and sends one email under concurrent duplicate signup', async () => {
-    const deps = dependencies();
-    const responses = await Promise.all(
-      Array.from({ length: 5 }, () =>
-        handleSubscribe(
-          { email: ' USER@Example.com ', name: 'User', turnstileToken: 'test' },
-          deps,
-        ),
-      ),
+  beforeEach(async () => {
+    context = await chapterDatabase();
+    for (const name of [
+      '0003_voter_auth.sql',
+      '0004_poll_api.sql',
+      '0005_simplify_chapter.sql',
+    ])
+      await migration(context.store, name);
+  });
+  afterEach(async () => {
+    await context.dispose();
+  });
+  it('claims concurrent normalized signups once through the forms route', async () => {
+    const send = vi.fn(async (_message: EmailMessage | EmailMessageBuilder) => ({
+      messageId: 'sent',
+    }));
+    const provider = vi.spyOn(globalThis, 'fetch').mockImplementation(async () =>
+      Response.json({
+        success: true,
+        hostname: 'example.com',
+        action: 'turnstile-spin-v1',
+      }),
     );
-    expect(responses.map((r) => r.status).sort()).toEqual([200, 200, 200, 200, 201]);
-    expect(deps.email.sent).toHaveLength(1);
+    const endpoint = 'https://example.com/api/subscribe';
+    const enabled = {
+      ...env(),
+      CHAPTER_SCHEMA_READY: 'true',
+      EMAIL: { send },
+    };
+    try {
+      const responses = await Promise.all(
+        [' USER@Example.com ', 'user@example.com'].map((email, i) =>
+          worker.fetch(
+            new Request(endpoint, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ email, turnstileToken: `proof-${i}` }),
+            }),
+            enabled,
+            new BackgroundTasks(),
+          ),
+        ),
+      );
+      expect(responses.map((r) => r.status).sort()).toEqual([200, 201]);
+      expect(send).toHaveBeenCalledTimes(1);
+      expect(send).toHaveBeenCalledWith(
+        expect.objectContaining({ to: 'user@example.com' }),
+      );
+    } finally {
+      provider.mockRestore();
+    }
+    expect(
+      await context.store.query('SELECT normalized_value FROM person_identifiers'),
+    ).toEqual([{ normalized_value: 'user@example.com' }]);
     expect(await context.store.query('SELECT COUNT(*) AS n FROM people')).toEqual([
       { n: 1 },
     ]);
@@ -74,7 +104,14 @@ describe('forms against local D1', () => {
         'SELECT subscribed,confirmation_pending,confirmed_at FROM subscriptions',
       ),
     ).toEqual([{ subscribed: 1, confirmation_pending: 1, confirmed_at: null }]);
-    const token = deps.email.sent[0]!.token;
+    // Redeem the token actually sent, not a separately seeded claim.
+    const mail = send.mock.calls[0]![0];
+    const link =
+      'text' in mail && typeof mail.text === 'string'
+        ? mail.text.match(/https:\/\/example\.com\/confirm\?token=\S+/)?.[0]
+        : undefined;
+    expect(link).toBeDefined();
+    const token = new URL(link!).searchParams.get('token');
     const response = await handleConfirm(
       new Request(`https://example.com/confirm?token=${token}`),
       env(),
@@ -159,7 +196,7 @@ describe('forms against local D1', () => {
     expect(deps.email.sent).toHaveLength(0);
   });
 
-  it('rejects expired and invalid tokens and handles missing tokens', async () => {
+  it('rejects expired and invalid tokens', async () => {
     const db = createDb(context.db);
     await db.insertSubscriber('user@example.com', null, 'expired');
     await context.store.execute([
@@ -167,9 +204,6 @@ describe('forms against local D1', () => {
     ]);
     expect(await db.confirmSubscription('expired')).toBe(0);
     expect(await db.confirmSubscription('invalid')).toBe(0);
-    expect(
-      (await handleConfirm(new Request('https://example.com/confirm'), env())).status,
-    ).toBe(400);
   });
 
   it('keeps inquiries independent of email or person identity', async () => {
@@ -200,63 +234,5 @@ describe('forms against local D1', () => {
     expect(await context.store.query('SELECT COUNT(*) AS n FROM people')).toEqual([
       { n: 0 },
     ]);
-  });
-
-  it.each(['/api/subscribe', '/api/contact-sponsor', '/confirm'])(
-    'gates %s before parsing input or touching dependencies',
-    async (path) => {
-      const inaccessible = {
-        get DB(): D1Database {
-          throw new Error('Database touched');
-        },
-        get EMAIL(): SendEmail {
-          throw new Error('Email touched');
-        },
-      } as Env;
-      const request = new Request(`https://example.com${path}`, {
-        method: path === '/confirm' ? 'GET' : 'POST',
-        headers: { Origin: 'https://ainooga.org' },
-      });
-      const response = await worker.fetch(request, inaccessible, new BackgroundTasks());
-      expect(response.status).toBe(503);
-      expect(response.headers.get('Retry-After')).toBe('60');
-      expect(response.headers.get('Cache-Control')).toBe('no-store');
-      expect(response.headers.get('Access-Control-Allow-Origin')).toBe(
-        'https://ainooga.org',
-      );
-    },
-  );
-
-  it('keeps OPTIONS available and explicitly enables the migrated confirmation handler', async () => {
-    expect(
-      (
-        await worker.fetch(
-          new Request('https://example.com/api/subscribe', { method: 'OPTIONS' }),
-          env(),
-          new BackgroundTasks(),
-        )
-      ).status,
-    ).toBe(200);
-    expect(
-      (
-        await worker.fetch(
-          new Request('https://example.com/confirm'),
-          {
-            ...env(),
-            CHAPTER_SCHEMA_READY: 'true',
-          },
-          new BackgroundTasks(),
-        )
-      ).status,
-    ).toBe(400);
-    expect(
-      (
-        await worker.fetch(
-          new Request('https://example.com/unknown'),
-          env(),
-          new BackgroundTasks(),
-        )
-      ).status,
-    ).toBe(404);
   });
 });

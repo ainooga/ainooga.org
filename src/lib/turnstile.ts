@@ -123,7 +123,19 @@ export class FakeTurnstile implements TurnstileService {
   callbacks = new Map<string, TurnstileWidgetCallbacks>();
   actions = new Map<string, string>();
 
-  constructor(private siteKey = 'fake-key') {}
+  private tokens = new Map<string, string>();
+
+  solve(widgetId: string, token: string): void {
+    if (!this.tokens.has(widgetId)) return;
+    this.tokens.set(widgetId, token);
+    this.callbacks.get(widgetId)?.onToken?.(token);
+  }
+
+  expire(widgetId: string): void {
+    if (!this.tokens.has(widgetId)) return;
+    this.reset(widgetId);
+    this.callbacks.get(widgetId)?.onExpired?.();
+  }
 
   render(
     _element: HTMLElement,
@@ -133,18 +145,21 @@ export class FakeTurnstile implements TurnstileService {
     const id = `fake-widget-${++this.counter}`;
     if (callbacks) this.callbacks.set(id, callbacks);
     this.actions.set(id, action ?? 'turnstile-spin-v1');
+    this.tokens.set(id, '');
     return id;
   }
 
-  getResponse(_widgetId: string): string {
-    return 'fake-turnstile-token';
+  getResponse(widgetId: string): string {
+    return this.tokens.get(widgetId) ?? '';
   }
 
-  reset(_widgetId: string): void {
-    /* noop */
+  reset(widgetId: string): void {
+    if (this.tokens.has(widgetId)) this.tokens.set(widgetId, '');
   }
 
-  remove(_widgetId: string): void {
-    /* noop */
+  remove(widgetId: string): void {
+    this.tokens.delete(widgetId);
+    this.actions.delete(widgetId);
+    this.callbacks.delete(widgetId);
   }
 }

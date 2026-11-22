@@ -1,10 +1,27 @@
 export class BackgroundTasks {
-  private tasks: Promise<unknown>[] = [];
+  private tasks: Promise<PromiseSettledResult<unknown>[]>[] = [];
+  private closed = false;
+  async close(): Promise<void> {
+    try {
+      await this.drain();
+    } finally {
+      this.closed = true;
+    }
+  }
   waitUntil(task: Promise<unknown>): void {
-    this.tasks.push(task);
+    // Observe rejection even on late registrations; report the lifecycle violation once.
+    const observed = Promise.allSettled([task]);
+    if (this.closed) throw new Error('waitUntil after fixture disposal');
+    this.tasks.push(observed);
   }
   async drain(): Promise<void> {
-    await Promise.all(this.tasks.splice(0));
+    const errors: unknown[] = [];
+    // A waitUntil task can enqueue another. A rejected sibling must not strand either.
+    while (this.tasks.length) {
+      for (const result of (await Promise.all(this.tasks.splice(0))).flat())
+        if (result.status === 'rejected') errors.push(result.reason);
+    }
+    if (errors.length) throw new AggregateError(errors, 'Background task failed');
   }
 }
 

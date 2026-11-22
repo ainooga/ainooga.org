@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it } from 'vitest';
-import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/svelte';
+import { cleanup, fireEvent, render, screen } from '@testing-library/svelte';
 import { tick } from 'svelte';
 import Poll from '../../src/pages/Poll.svelte';
 import { createTurnstileContext } from '../../src/lib/context';
@@ -25,7 +25,7 @@ function setup(authenticated = false, bot = new FakeTurnstile()) {
 async function enter(bot: FakeTurnstile, label: string, value: string) {
   const input = await screen.findByLabelText(label);
   await fireEvent.input(input, { target: { value } });
-  [...bot.callbacks.values()].at(-1)!.onToken!('fresh-proof');
+  bot.solve([...bot.actions.keys()].at(-1)!, 'fresh-proof');
   await tick();
   await fireEvent.click(screen.getByRole('button', { name: 'Continue' }));
 }
@@ -42,6 +42,7 @@ describe('guest-list entry', () => {
   });
   it('falls back to a username then shows the contact address on a miss', async () => {
     const f = setup();
+    f.api.failIdentify = new PollError(403, 'ineligible', 'Not eligible');
     f.mount();
     await enter(f.bot, 'Email', 'unknown@example.com');
     await screen.findByText(
@@ -57,9 +58,15 @@ describe('guest-list entry', () => {
   });
   it('accepts the Discord fallback', async () => {
     const f = setup();
+    f.api.failIdentify = new PollError(403, 'ineligible', 'Not eligible');
     f.mount();
     await enter(f.bot, 'Email', 'unknown@example.com');
-    await enter(f.bot, 'Discord username', 'chapter.user');
+    f.api.failIdentify = null;
+    await enter(f.bot, 'Discord username', ' CHAPTER.USER ');
+    expect(f.api.identifiers).toEqual([
+      { kind: 'email', value: 'unknown@example.com' },
+      { kind: 'discord_username', value: ' CHAPTER.USER ' },
+    ]);
     expect(await screen.findByRole('heading', { name: 'Choose a topic' })).toBeTruthy();
   });
   it('keeps network failures on the email form and requires a fresh bot token', async () => {
@@ -85,21 +92,6 @@ describe('guest-list entry', () => {
   });
 });
 describe('ballots', () => {
-  it('submits a write-in, displays it, and edits the saved vote', async () => {
-    const f = setup(true);
-    f.mount();
-    await fireEvent.input(await screen.findByLabelText('Topic'), {
-      target: { value: 'AI gardens' },
-    });
-    await fireEvent.click(screen.getByRole('button', { name: 'Submit vote' }));
-    await screen.findByText('Your vote is saved.');
-    expect(screen.getAllByText('AI gardens').length).toBeGreaterThan(0);
-    await fireEvent.click(await screen.findByRole('button', { name: 'Edit vote' }));
-    await fireEvent.click(screen.getByRole('radio', { name: 'Robotics' }));
-    await fireEvent.click(screen.getByRole('button', { name: 'Save changes' }));
-    await waitFor(() => expect(f.api.submissions).toHaveLength(2));
-    expect(f.api.submissions[1]!.expectedRevision).toBe(1);
-  });
   it('retries an uncertain submission with the exact same request', async () => {
     const f = setup(true);
     f.api.failSubmit = new PollError(0, 'network', 'Lost response');
@@ -137,6 +129,11 @@ describe('ballots', () => {
     await fireEvent.click(screen.getByRole('checkbox', { name: 'Language models' }));
     await fireEvent.click(screen.getByRole('button', { name: 'Submit vote' }));
     await screen.findByText('Your vote is saved.');
+    expect(f.api.submissions).toMatchObject([{ optionIds: [1, 2] }]);
+    expect(
+      screen.getByText('Results are not shared with voters for this poll.'),
+    ).toBeTruthy();
+    expect(screen.queryByRole('table')).toBeNull();
     expect(f.api.resultsCalls).toBe(0);
   });
   it('updates the closed state at the deadline', async () => {
@@ -228,13 +225,13 @@ it('disables continuation when the bot token expires', async () => {
   const f = setup();
   f.mount();
   await screen.findByLabelText('Email');
-  const callbacks = [...f.bot.callbacks.values()].at(-1)!;
-  callbacks.onToken!('proof');
+  const widget = [...f.bot.actions.keys()].at(-1)!;
+  f.bot.solve(widget, 'proof');
   await tick();
   expect(
     (screen.getByRole('button', { name: 'Continue' }) as HTMLButtonElement).disabled,
   ).toBe(false);
-  callbacks.onExpired!();
+  f.bot.expire(widget);
   await tick();
   expect(
     (screen.getByRole('button', { name: 'Continue' }) as HTMLButtonElement).disabled,

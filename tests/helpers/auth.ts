@@ -1,5 +1,5 @@
 import { BackgroundTasks, deferred } from './background';
-import { chapterDatabase, migration } from './d1';
+import { chapterDatabase, database, initialize, migration } from './d1';
 import type { Env } from '../../worker/src/types';
 import type { AuthDependencies } from '../../worker/src/auth/types';
 import { randomToken } from '../../worker/src/auth/crypto';
@@ -58,24 +58,40 @@ export class AuthFakes extends BackgroundTasks implements AuthDependencies {
   }
 }
 
-export async function authFixture(upgrade = true) {
-  const context = await chapterDatabase();
-  await migration(context.store, '0003_voter_auth.sql');
-  await context.store.execute([
+export async function authFixture(upgrade = true, open = database, seedPolls = true) {
+  return initialize(await chapterDatabase(open), async (context) => {
+    await seedAuth(context.store, upgrade, seedPolls);
+    return authContext(context);
+  });
+}
+
+async function seedAuth(
+  store: Awaited<ReturnType<typeof database>>['store'],
+  upgrade: boolean,
+  seedPolls: boolean,
+) {
+  await migration(store, '0003_voter_auth.sql');
+  await store.execute([
     "INSERT INTO people (id,name) VALUES (1,'Organizer'),(2,'Voter'),(3,'Other')",
     "INSERT INTO person_identifiers (id,person_id,kind,value,normalized_value) VALUES (2,2,'email','voter@example.com','voter@example.com'),(3,3,'email','other@example.com','other@example.com'),(4,2,'discord','123456789012345678','123456789012345678')",
-    ...['honor', 'verified', 'other'].map(
-      (slug, index) => `INSERT INTO polls
+  ]);
+  if (seedPolls)
+    await store.execute([
+      ...['honor', 'verified', 'other'].map(
+        (slug, index) => `INSERT INTO polls
       (id,slug,title,status,identity_mode,min_selections,max_selections,allow_write_ins,results_visibility,starts_at,ends_at,allow_edits,created_by)
       VALUES (${index + 1},'${slug}','Test','published','${index === 0 ? 'honor' : 'verified'}',1,1,0,'never','2026-01-01T00:00:00.000Z','2027-01-01T00:00:00.000Z',0,1)`,
-    ),
-    'INSERT INTO poll_allowlist (poll_id,person_id) VALUES (1,2),(2,2),(3,3)',
-  ]);
+      ),
+      'INSERT INTO poll_allowlist (poll_id,person_id) VALUES (1,2),(2,2),(3,3)',
+    ]);
   if (upgrade) {
-    await migration(context.store, '0004_poll_api.sql');
-    await migration(context.store, '0005_simplify_chapter.sql');
-    await migration(context.store, '0006_member_sync.sql');
+    await migration(store, '0004_poll_api.sql');
+    await migration(store, '0005_simplify_chapter.sql');
+    await migration(store, '0006_member_sync.sql');
   }
+}
+
+function authContext(context: Awaited<ReturnType<typeof database>>) {
   const env: Env = {
     DB: context.db,
     EMAIL: undefined as unknown as SendEmail,
@@ -120,8 +136,11 @@ export async function authFixture(upgrade = true) {
     deps,
     call,
     async dispose() {
-      await deps.drain();
-      await context.dispose();
+      try {
+        await deps.close();
+      } finally {
+        await context.dispose();
+      }
     },
   };
 }

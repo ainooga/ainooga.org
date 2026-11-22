@@ -3,13 +3,16 @@ import { afterEach, expect, it } from 'vitest';
 import { pollFixture, pollInput } from '../helpers/polls';
 import { pauseBatch } from '../helpers/background';
 import { responseCookie, verifiedLogin } from '../helpers/auth';
+import { fileDatabase } from '../helpers/file-database';
+
+const open = fileDatabase();
 let f: Awaited<ReturnType<typeof pollFixture>>;
 afterEach(async () => {
   await f?.dispose();
 });
 
 it('accepts one concurrent first submission and one concurrent edit, with no losing write-ins', async () => {
-  f = await pollFixture();
+  f = await pollFixture(open);
   const cookie = await f.ready();
   const submission = await f.ballotFor(cookie);
   const send = (name: string, revision: number) =>
@@ -45,7 +48,7 @@ it('accepts one concurrent first submission and one concurrent edit, with no los
   ).toEqual([{ n: 1 }]);
 });
 it('makes simultaneous identical retries idempotent and rejects changed payloads', async () => {
-  f = await pollFixture();
+  f = await pollFixture(open);
   const cookie = await f.ready();
   const submission = await f.ballotFor(cookie);
   const input = submission([], 0, 'First');
@@ -77,7 +80,7 @@ it('makes simultaneous identical retries idempotent and rejects changed payloads
   ]);
 });
 it('uses one ballot across linked verified and honor sessions', async () => {
-  f = await pollFixture();
+  f = await pollFixture(open);
   const honor = await f.ready();
   const submission = await f.ballotFor(honor);
   const verified = responseCookie(await verifiedLogin(f));
@@ -106,7 +109,7 @@ it('uses one ballot across linked verified and honor sessions', async () => {
   ]);
 });
 it('collapses simultaneous equivalent write-ins from different voters into one option', async () => {
-  f = await pollFixture();
+  f = await pollFixture(open);
   const first = await f.ready();
   const submission = await f.ballotFor(first);
   await f.admin('/topics/allowlist', 'POST', {
@@ -161,7 +164,7 @@ it('collapses simultaneous equivalent write-ins from different voters into one o
 it.each(['logout', 'revoke', 'archive', 'identifier'] as const)(
   'rechecks %s inside the ballot transaction',
   async (action) => {
-    f = await pollFixture();
+    f = await pollFixture(open);
     const cookie = await f.ready();
     const submission = await f.ballotFor(cookie);
     const gate = pauseBatch(f.db, 'before');
@@ -202,7 +205,7 @@ it.each(['logout', 'revoke', 'archive', 'identifier'] as const)(
   },
 );
 it('rolls back the receipt and option on a later statement failure', async () => {
-  f = await pollFixture();
+  f = await pollFixture(open);
   const cookie = await f.ready();
   const submission = await f.ballotFor(cookie);
   const real = f.db;
@@ -234,7 +237,7 @@ it('rolls back the receipt and option on a later statement failure', async () =>
   ).toEqual([{ n: 0 }]);
 });
 it('orders publication against draft edits without changing published options', async () => {
-  f = await pollFixture();
+  f = await pollFixture(open);
   await f.create();
   await f.admin('/topics/allowlist', 'POST', {
     action: 'add',

@@ -1,3 +1,4 @@
+import { invitationSummarySchema } from '../../worker/src/polls/schemas.js';
 import type { PollApi } from './client.js';
 import { readEligibility, readPoll } from './files.js';
 
@@ -39,6 +40,12 @@ async function allowlist(args: string[], api: PollApi) {
     }
   }
   return { processed: completed };
+}
+export async function pollOutput(args: string[], api: PollApi) {
+  const result = await runPollCommand(args, api);
+  if (args[0] !== 'invite') return { result, exitCode: 0 };
+  const summary = invitationSummarySchema.parse(result);
+  return { result: summary, exitCode: summary.failed > 0 ? 1 : 0 };
 }
 export async function runPollCommand(args: string[], api: PollApi): Promise<unknown> {
   const command = args[0];

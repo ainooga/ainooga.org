@@ -24,23 +24,55 @@ function image(width: number, height: number) {
   return sharp({ create: { width, height, channels: 3, background: '#1B2A3C' } });
 }
 
-it('emits a 1200x630 JPEG preview card regardless of source shape', async () => {
-  await image(4, 9).png().toFile('content/events/hero.png');
+it('keeps responsive aspect ratios and crops a 1200x630 JPEG from the center', async () => {
+  // Only the centered crop keeps both sample points inside the white stripe.
+  await image(12, 3)
+    .composite([
+      { input: { create: { width: 6, height: 3, channels: 3, background: 'white' } } },
+    ])
+    .png()
+    .toFile('content/events/hero.png');
 
   const { outputs } = await processImage('content/events/hero.png', 'static/images');
 
-  expect(outputs).toContain(join('static/images', 'hero-og.jpg'));
-  expect(await sharp('static/images/hero-og.jpg').metadata()).toMatchObject({
+  for (const width of [200, 600, 800, 1600]) {
+    for (const ext of ['webp', 'avif']) {
+      const path = join('static/images', `hero-${width}w.${ext}`);
+      expect(outputs).toContain(path);
+      expect(await sharp(path).metadata()).toMatchObject({
+        width,
+        height: width / 4,
+        ...(ext === 'avif' ? { format: 'heif', compression: 'av1' } : { format: 'webp' }),
+      });
+    }
+  }
+
+  const preview = join('static/images', 'hero-og.jpg');
+  expect(outputs).toContain(preview);
+  expect(await sharp(preview).metadata()).toMatchObject({
     format: 'jpeg',
     width: 1200,
     height: 630,
   });
+  for (const left of [240, 960]) {
+    const pixel = await sharp(preview)
+      .extract({ left, top: 63, width: 1, height: 1 })
+      .raw()
+      .toBuffer();
+    expect(Math.min(...pixel)).toBeGreaterThan(240);
+  }
 });
 
-it('does not emit a preview card for GIFs', async () => {
+it('emits only the GIF without a preview card', async () => {
   await image(2, 2).gif().toFile('content/events/loop.gif');
 
-  await processImage('content/events/loop.gif', 'static/images');
+  const { outputs } = await processImage('content/events/loop.gif', 'static/images');
 
+  expect(outputs).toEqual([join('static/images', 'loop.gif')]);
+  expect(await sharp(outputs[0]).metadata()).toMatchObject({
+    format: 'gif',
+    width: 2,
+    height: 2,
+  });
   expect(existsSync('static/images/loop-og.jpg')).toBe(false);
 });

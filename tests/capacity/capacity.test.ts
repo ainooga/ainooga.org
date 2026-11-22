@@ -33,13 +33,9 @@ it('measures the current schema with 200 synthetic members and 120 retained poll
   const size = async () => (await f.db.prepare('SELECT 1').all()).meta.size_after;
   const measured: Record<string, number> = {};
   try {
-    for (const name of [
-      '0001_create_subscribers.sql',
-      '0002_chapter_schema.sql',
-      '0003_voter_auth.sql',
-      '0004_poll_api.sql',
-      '0005_simplify_chapter.sql',
-    ])
+    for (const name of (await readdir('migrations'))
+      .filter((n) => n.endsWith('.sql'))
+      .sort())
       await migration(f.store, name);
     measured.empty = await size();
     await seedChapter(f.store);

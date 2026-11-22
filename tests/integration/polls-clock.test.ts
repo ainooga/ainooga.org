@@ -3,6 +3,9 @@ import { afterEach, expect, it } from 'vitest';
 import { pollFixture, pollInput } from '../helpers/polls';
 import { pauseBatch } from '../helpers/background';
 import { DATABASE_NOW } from '../../worker/src/polls/clock';
+import { fileDatabase } from '../helpers/file-database';
+
+const open = fileDatabase();
 let f: Awaited<ReturnType<typeof pollFixture>>;
 afterEach(async () => {
   await f?.dispose();
@@ -11,7 +14,7 @@ afterEach(async () => {
 it.each(['close', 'edit', 'session'] as const)(
   'rejects a queued request crossing the %s boundary without writes',
   async (boundary) => {
-    f = await pollFixture();
+    f = await pollFixture(open);
     const cookie = await f.ready(
       pollInput({
         endsAt: '2026-09-29T12:02:00.000Z',
@@ -70,7 +73,7 @@ it.each(['close', 'edit', 'session'] as const)(
   },
 );
 it('returns an accepted ballot even if session expiry passes later in its transaction', async () => {
-  f = await pollFixture();
+  f = await pollFixture(open);
   const cookie = await f.ready();
   const submission = await f.ballotFor(cookie);
   await f.store.execute([
@@ -108,7 +111,7 @@ it('returns an accepted ballot even if session expiry passes later in its transa
   ]);
 });
 it('rejects an expired-session retry after close but allows the same retry after login', async () => {
-  f = await pollFixture();
+  f = await pollFixture(open);
   const cookie = await f.ready(pollInput({ endsAt: '2026-09-29T12:01:00.000Z' }));
   const submission = await f.ballotFor(cookie);
   const input = submission([], 0, 'Accepted');
@@ -140,7 +143,7 @@ it('rejects an expired-session retry after close but allows the same retry after
   ).toMatchObject({ revision: 1 });
 });
 it('uses the production SQLite clock for authentication and stored timestamps', async () => {
-  f = await pollFixture();
+  f = await pollFixture(open);
   const cookie = await f.ready();
   const submission = await f.ballotFor(cookie);
   await f.store.execute([
@@ -167,7 +170,7 @@ it('uses the production SQLite clock for authentication and stored timestamps', 
   expect(body.updatedAt).toBe(body.submittedAt);
 });
 it('rechecks session expiration before returning a queued detail read', async () => {
-  f = await pollFixture();
+  f = await pollFixture(open);
   const cookie = await f.ready();
   const gate = pauseBatch(f.db, 'before');
   f.deps.db = gate.db;

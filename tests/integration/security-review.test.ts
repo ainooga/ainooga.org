@@ -2,6 +2,9 @@
 import { afterEach, expect, it, vi } from 'vitest';
 import { pollFixture, pollInput } from '../helpers/polls';
 import { ORGANIZER_TOKEN } from '../helpers/auth';
+import { fileDatabase } from '../helpers/file-database';
+
+const open = fileDatabase();
 let f: Awaited<ReturnType<typeof pollFixture>>;
 afterEach(async () => {
   await f?.dispose();
@@ -9,7 +12,7 @@ afterEach(async () => {
 });
 
 it('rejects voter cookies and malformed credentials on every organizer operation without writes', async () => {
-  f = await pollFixture();
+  f = await pollFixture(open);
   const cookie = await f.ready();
   const paths = [
     ['GET', '/api/admin/me'],
@@ -52,7 +55,7 @@ it('rejects voter cookies and malformed credentials on every organizer operation
 });
 
 it('rejects organizer tokens as voter proof and foreign or absent mutation origins', async () => {
-  f = await pollFixture();
+  f = await pollFixture(open);
   const cookie = await f.ready();
   for (const suffix of ['', '/ballot', '/results']) {
     expect(
@@ -78,7 +81,7 @@ it('rejects organizer tokens as voter proof and foreign or absent mutation origi
 });
 
 it('redacts private exceptions in responses and application diagnostics', async () => {
-  f = await pollFixture();
+  f = await pollFixture(open);
   const captured: unknown[][] = [];
   vi.spyOn(console, 'error').mockImplementation((...args) => {
     captured.push(args);

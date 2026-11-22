@@ -1,39 +1,71 @@
 // @vitest-environment node
 import { afterEach, expect, it } from 'vitest';
-import { pollFixture } from '../helpers/polls';
+import { pollFixture, submission } from '../helpers/polls';
+import type { PollDetail } from '../../src/lib/polls/types';
 import { responseCookie } from '../helpers/auth';
 import { hashToken } from '../../worker/src/auth/crypto';
 
+import { fileDatabase } from '../helpers/file-database';
+
+const open = fileDatabase();
 let f: Awaited<ReturnType<typeof pollFixture>>;
 afterEach(async () => f?.dispose());
 
-it('stores a write-in description and returns it to eligible voters', async () => {
-  f = await pollFixture();
-  const cookie = await f.ready();
-  const submission = await f.ballotFor(cookie);
-  const input = { ...submission([], 0, 'Gardens'), writeInDescription: ' AI plants ' };
-  const response = await f.request('/api/polls/topics/ballot', 'PUT', input, {
-    Cookie: cookie,
+it('keeps an edited-away write-in selectable by another voter', async () => {
+  f = await pollFixture(open, false);
+  const cookie = await f.votingPoll();
+  const author = await voterDetail(cookie);
+  const predefined = author.options.find((option) => option.origin === 'predefined')!.id;
+  const first = await f.request(
+    '/api/polls/topics/ballot',
+    'PUT',
+    {
+      ...submission(author.sessionContext, [], 0, 'Space  Robots'),
+      writeInDescription: ' Original description ',
+    },
+    { Cookie: cookie },
+  );
+  expect(first.status).toBe(200);
+  const { optionIds } = (await first.json()) as { optionIds: number[] };
+  expect(optionIds).toHaveLength(1);
+  const edited = await f.request(
+    '/api/polls/topics/ballot',
+    'PUT',
+    submission(author.sessionContext, [predefined], 1),
+    { Cookie: cookie },
+  );
+  expect(edited.status).toBe(200);
+  expect(await edited.json()).toMatchObject({ revision: 2, optionIds: [predefined] });
+  const other = await otherVoter();
+  const reader = await voterDetail(other);
+  const published = reader.options.find((option) => option.id === optionIds[0]);
+  expect(published).toMatchObject({
+    label: 'Space  Robots',
+    description: 'Original description',
+    origin: 'write_in',
   });
-  expect(response.status).toBe(200);
+  expect(reader.ballot).toBeNull();
+  const second = await f.request(
+    '/api/polls/topics/ballot',
+    'PUT',
+    submission(reader.sessionContext, [published!.id]),
+    { Cookie: other },
+  );
+  expect(second.status).toBe(200);
+  expect(await second.json()).toMatchObject({
+    revision: 1,
+    optionIds,
+  });
   expect(
     await f.store.query(
       "SELECT label,description FROM poll_options WHERE origin='write_in'",
     ),
-  ).toEqual([{ label: 'Gardens', description: 'AI plants' }]);
-  const detail = await f.request('/api/polls/topics', 'GET', undefined, {
-    Cookie: cookie,
-  });
-  expect(await detail.json()).toMatchObject({
-    options: expect.arrayContaining([
-      expect.objectContaining({ label: 'Gardens', description: 'AI plants' }),
-    ]),
-  });
+  ).toEqual([{ label: 'Space  Robots', description: 'Original description' }]);
 });
 
 it('rejects write-ins after an initial ballot without one and leaves all state unchanged', async () => {
-  f = await pollFixture();
-  const cookie = await f.ready();
+  f = await pollFixture(open, false);
+  const cookie = await f.votingPoll();
   const submission = await f.ballotFor(cookie);
   const option = await f.db
     .prepare('SELECT id FROM poll_options ORDER BY id LIMIT 1')
@@ -57,8 +89,8 @@ it('rejects write-ins after an initial ballot without one and leaves all state u
 it.each([undefined, null, '', '  ', 'x'.repeat(1000)])(
   'accepts an optional description (%#)',
   async (description) => {
-    f = await pollFixture();
-    const cookie = await f.ready();
+    f = await pollFixture(open, false);
+    const cookie = await f.votingPoll();
     const submission = await f.ballotFor(cookie);
     const response = await f.request(
       '/api/polls/topics/ballot',
@@ -83,8 +115,8 @@ it.each([
   { writeIn: '   ', writeInDescription: 'Empty topic' },
   { writeIn: 'Topic', writeInDescription: 'Details', extra: true },
 ])('rejects invalid descriptions without writes (%#)', async (fields) => {
-  f = await pollFixture();
-  const cookie = await f.ready();
+  f = await pollFixture(open, false);
+  const cookie = await f.votingPoll();
   const submission = await f.ballotFor(cookie);
   const response = await f.request(
     '/api/polls/topics/ballot',
@@ -102,45 +134,49 @@ it.each([
   ).toEqual([]);
 });
 
-it('keeps the first topic and description when another voter supplies the same normalized topic', async () => {
-  f = await pollFixture();
-  const cookie = await f.ready();
-  const submission = await f.ballotFor(cookie);
-  const first = await f.request(
-    '/api/polls/topics/ballot',
-    'PUT',
-    {
-      ...submission([], 0, 'Space  Robots'),
-      writeInDescription: 'Original description',
-    },
-    { Cookie: cookie },
-  );
-  expect(first.status).toBe(200);
-  const saved = await first.json();
+async function voterDetail(cookie: string): Promise<PollDetail> {
+  const response = await f.request('/api/polls/topics', 'GET', undefined, {
+    Cookie: cookie,
+  });
+  expect(response.status).toBe(200);
+  return (await response.json()) as PollDetail;
+}
+
+async function otherVoter() {
   await f.admin('/topics/allowlist', 'POST', {
     action: 'add',
     identifiers: [{ kind: 'email', value: 'other@example.com' }],
   });
-  const other = responseCookie(
+  return responseCookie(
     await f.request('/api/polls/topics/auth/honor', 'POST', {
       identifier: { kind: 'email', value: 'other@example.com' },
       turnstileToken: 'bot',
     }),
   );
-  const otherSubmission = await f.ballotFor(other);
+}
+
+it('keeps the first topic and description when another voter supplies the same normalized topic', async () => {
+  f = await pollFixture(open, false);
+  const cookie = await f.votingPoll();
+  const author = await f.ballotFor(cookie);
+  const first = await f.request(
+    '/api/polls/topics/ballot',
+    'PUT',
+    { ...author([], 0, 'Space  Robots'), writeInDescription: 'Original description' },
+    { Cookie: cookie },
+  );
+  expect(first.status).toBe(200);
+  const { optionIds } = (await first.json()) as { optionIds: number[] };
+  const other = await otherVoter();
+  const reader = await f.ballotFor(other);
   const second = await f.request(
     '/api/polls/topics/ballot',
     'PUT',
-    {
-      ...otherSubmission([], 0, ' space robots '),
-      writeInDescription: 'Replacement description',
-    },
+    { ...reader([], 0, ' space robots '), writeInDescription: 'Replacement description' },
     { Cookie: other },
   );
   expect(second.status).toBe(200);
-  expect(await second.json()).toMatchObject({
-    optionIds: (saved as { optionIds: number[] }).optionIds,
-  });
+  expect(await second.json()).toMatchObject({ optionIds });
   expect(
     await f.store.query(
       "SELECT label,description FROM poll_options WHERE origin='write_in'",
@@ -149,8 +185,8 @@ it('keeps the first topic and description when another voter supplies the same n
 });
 
 it('retries descriptions exactly, conflicts on changes, and preserves accepted retries after close', async () => {
-  f = await pollFixture();
-  let cookie = await f.ready();
+  f = await pollFixture(open, false);
+  let cookie = await f.votingPoll();
   const submission = await f.ballotFor(cookie);
   let input = { ...submission([], 0, 'Gardens'), writeInDescription: 'AI plants' };
   const send = (body = input) =>
@@ -179,8 +215,8 @@ it('retries descriptions exactly, conflicts on changes, and preserves accepted r
 it.each([0, 1])(
   'preserves retries with legacy hashes for an accepted revision %s request',
   async (revision) => {
-    f = await pollFixture();
-    const cookie = await f.ready();
+    f = await pollFixture(open, false);
+    const cookie = await f.votingPoll();
     const submission = await f.ballotFor(cookie);
     const input = submission([], 0, 'Legacy topic');
     const send = (body: unknown) =>
@@ -213,8 +249,8 @@ it.each([0, 1])(
 );
 
 it('rolls back a new topic and description if its ballot choices cannot be saved', async () => {
-  f = await pollFixture();
-  const cookie = await f.ready();
+  f = await pollFixture(open, false);
+  const cookie = await f.votingPoll();
   const submission = await f.ballotFor(cookie);
   await f.store.execute([
     `CREATE TRIGGER fail_choices BEFORE INSERT ON poll_ballot_choices

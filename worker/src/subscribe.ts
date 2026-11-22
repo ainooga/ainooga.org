@@ -11,7 +11,7 @@ export interface SubscribeInput {
 export async function handleSubscribe(
   input: SubscribeInput,
   deps: {
-    db: DbClient;
+    db: Pick<DbClient, 'insertSubscriber' | 'invalidateConfirmation'>;
     email: EmailSender;
     turnstile: TurnstileVerifier;
     siteUrl: string;

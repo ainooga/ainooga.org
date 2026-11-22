@@ -4,7 +4,7 @@ import Poll from '../../src/pages/Poll.svelte';
 import { POLL_SERVICES } from '../../src/lib/polls/context';
 import { createTurnstileContext } from '../../src/lib/context';
 import { FakeTurnstile } from '../../src/lib/turnstile';
-import { FakePollService, FakePollRuntime } from '../helpers/poll-ui';
+import { FakePollService, FakePollRuntime, savedTopic } from '../helpers/poll-ui';
 import { PollError } from '../../src/lib/polls/types';
 afterEach(cleanup);
 it('blocks editing an accepted write-in until its labels reload successfully', async () => {
@@ -16,6 +16,7 @@ it('blocks editing an accepted write-in until its labels reload successfully', a
   await fireEvent.input(await screen.findByLabelText('Topic'), {
     target: { value: 'New choice' },
   });
+  api.savedWriteIn = savedTopic('New choice');
   api.failDetail = new PollError(0, 'network', 'Offline');
   await fireEvent.click(screen.getByRole('button', { name: 'Submit vote' }));
   await screen.findByText('Your vote is saved, but its choices could not be loaded.');
@@ -51,6 +52,7 @@ it('allows editing after a detail reload even when only results fail', async () 
     }
   }
   const api = new UnavailableResults();
+  api.savedWriteIn = savedTopic('Saved choice');
   api.authenticated = true;
   const context = new Map<symbol, unknown>(createTurnstileContext(new FakeTurnstile()));
   context.set(POLL_SERVICES, { api, runtime: new FakePollRuntime() });
