@@ -6,8 +6,8 @@ import { join } from 'node:path';
 import { readEligibility, readPoll } from '../../scripts/polls/files';
 import { runPollCommand } from '../../scripts/polls/commands';
 import { PollClient } from '../../scripts/polls/client';
-import { pollSchema } from '../../worker/src/polls/schemas';
-import { pollInput } from '../helpers/polls';
+import { ballotSchema, pollSchema } from '../../worker/src/polls/schemas';
+import { pollInput, submission } from '../helpers/polls';
 let directory: string | undefined;
 afterEach(async () => {
   if (directory) await rm(directory, { recursive: true, force: true });
@@ -100,6 +100,14 @@ it('accepts and normalizes explicit poll emails', () => {
   expect(
     pollSchema.parse({ ...pollInput(), eligibleEmails: [' VOTER@EXAMPLE.COM '] }),
   ).toMatchObject({ eligibleEmails: ['voter@example.com'] });
+});
+it('preserves legacy UUID-shaped ballot request IDs and rejects malformed IDs', () => {
+  const input = submission('a'.repeat(64), [1]);
+  const requestId = '00000000-0000-0000-0000-000000000001';
+  expect(ballotSchema.parse({ ...input, requestId }).requestId).toBe(requestId);
+  expect(ballotSchema.safeParse({ ...input, requestId: 'not-a-uuid' }).success).toBe(
+    false,
+  );
 });
 it('sends one empty-body invitation request for the entire poll', async () => {
   const calls: unknown[] = [];

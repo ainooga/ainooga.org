@@ -28,10 +28,10 @@ export const detailSchema = z
     maxSelections: z.number().int().positive().nullable(),
     allowWriteIns: z.boolean(),
     resultsVisibility: z.enum(['before_vote', 'after_vote', 'never']),
-    startsAt: z.string().datetime(),
-    endsAt: z.string().datetime(),
+    startsAt: z.iso.datetime(),
+    endsAt: z.iso.datetime(),
     allowEdits: z.boolean(),
-    editDeadline: z.string().datetime().nullable(),
+    editDeadline: z.iso.datetime().nullable(),
     options: z.array(
       z
         .object({

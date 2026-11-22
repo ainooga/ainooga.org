@@ -73,11 +73,21 @@ it('parses all content types, preserves Markdown and derives nested file slugs',
   expect(result.docs.find((doc) => doc.type === 'members')?.frontmatter).toMatchObject({
     name: 'Synthetic Member',
     joined: new Date('2026-01-01'),
+    links: { website: 'https://example.com' },
   });
   expect(result.docs.find((doc) => doc.type === 'sponsors')?.frontmatter).toMatchObject({
     tier: 'community',
     since: new Date('2026-01-01'),
     featured: false,
+  });
+});
+
+it('rejects non-string member links and points to the nested key', () => {
+  const filePath = 'content/members/person.md';
+  content(filePath, { name: 'Member', links: { website: 123 } });
+  expect(parseAll(['members'])).toEqual({
+    docs: [],
+    errors: [{ filePath, field: 'links.website', message: expect.any(String) }],
   });
 });
 
@@ -224,7 +234,7 @@ it.each(['slug', 'platform identity'])(
 it('requires a valid site configuration and preserves navigation', () => {
   expect(() => parseSiteConfig()).toThrow('content/site.yml not found');
   content('content/site.yml', { title: '', unknown: 'field' });
-  expect(() => parseSiteConfig()).toThrow('content/site.yml');
+  expect(() => parseSiteConfig()).toThrow(/^content\/site\.yml: .*"title".*"unknown"/);
   const config = {
     title: 'Synthetic chapter',
     url: 'https://example.com',

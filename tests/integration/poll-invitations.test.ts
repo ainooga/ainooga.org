@@ -162,7 +162,7 @@ it('bounds provider waits and reports uncertain delivery without an automatic re
       return { messageId: 'late' };
     },
   };
-  vi.useFakeTimers();
+  vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
   const pending = f.admin('/topics/invite', 'POST', {});
   await started.promise;
   await vi.advanceTimersByTimeAsync(10000);

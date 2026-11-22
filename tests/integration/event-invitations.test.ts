@@ -254,7 +254,6 @@ it('rejects started, draft and missing-tag invitations without sending', async (
   expect(sent).toEqual([]);
 });
 
-// eslint-disable-next-line sonarjs/code-eval -- Deliberately unsafe URL fixture tests rejection; it is never executed.
 it.each(['javascript:alert(1)', 'not a URL', 'https://user:password@example.com'])(
   'rejects an unsafe event link %s',
   async (url) => {
@@ -349,7 +348,7 @@ it('bounds provider waits and reports uncertain delivery without retrying', asyn
       return { messageId: 'late' };
     },
   };
-  vi.useFakeTimers();
+  vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
   const pending = invite();
   await started.promise;
   await vi.advanceTimersByTimeAsync(10000);

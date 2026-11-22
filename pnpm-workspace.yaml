@@ -1,5 +1,9 @@
+overrides:
+  # SonarJS still allows minimatch 10; the security fix is on 11.
+  eslint-plugin-sonarjs>minimatch: ^11.0.1
+
 allowBuilds:
-  core-js: set this to true or false
+  core-js: false
   esbuild: true
   sharp: true
   simple-git-hooks: true

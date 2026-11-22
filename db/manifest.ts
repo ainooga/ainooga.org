@@ -9,7 +9,7 @@ const manifestSchema = z
     version: z.literal(1),
     target: z.string(),
     fingerprint: z.string().regex(/^[a-f0-9]{64}$/),
-    migratedAt: z.string().datetime(),
+    migratedAt: z.iso.datetime(),
   })
   .strict();
 

@@ -101,7 +101,8 @@ export const eligibilitySchema = z
 export const eligibilityFileSchema = z.array(identifier).min(1).max(10000);
 export const ballotSchema = z
   .object({
-    requestId: z.string().uuid(),
+    // Keep accepting existing request IDs without enforcing UUID version or variant.
+    requestId: z.guid(),
     sessionContext: z.string().regex(/^[a-f0-9]{64}$/),
     expectedRevision: z.number().int().min(0).max(2147483646),
     optionIds: z.array(z.number().int().positive().safe()),

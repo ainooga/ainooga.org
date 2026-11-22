@@ -3,7 +3,6 @@ import { existsSync } from 'node:fs';
 
 function run(cmd: string) {
   console.log(`> ${cmd}`);
-  // eslint-disable-next-line sonarjs/os-command
   execSync(cmd, { stdio: 'inherit' });
 }
 

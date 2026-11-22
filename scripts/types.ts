@@ -29,7 +29,6 @@ const EventLink = z
       .max(64),
     externalId: z.string().trim().min(1).max(256),
     url: z
-      .string()
       .url()
       .max(2048)
       .refine((value) => {
@@ -89,7 +88,7 @@ export const MemberFrontmatter = z
     joined: dateField().optional(),
     avatar: z.string().optional(),
     tags: z.array(z.string()).optional(),
-    links: z.record(z.string()).optional(),
+    links: z.record(z.string(), z.string()).optional(),
     bio: z.string().optional(),
     status: z.enum(['active', 'inactive']).optional(),
   })
